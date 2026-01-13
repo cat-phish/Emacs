@@ -661,8 +661,8 @@
                                 (org-agenda-restore-windows-after-quit t)
                     			(org-agenda-start-with-log-mod t)
                     			(org-agenda-files
-                    			 '("~/org/Tasks.org")
-                    			 ("~/org/Projects.org"))
+                    			 '("~/org/main/Tasks.org")
+                    			 ("~/org/main/Projects.org"))
                     			(org-refile-targets
                     			 '(("Archive.org" :maxlevel . 1)
                     			   ("Tasks.org" :maxlevel . 1)
