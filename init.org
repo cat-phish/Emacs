@@ -651,8 +651,9 @@ Note: The Leader key is what you will press when you want to access your keybind
 
     			;; Folding
                 "o f" '(:ignore t :wk "fold")
-                "o f d" '(my/org-hide-done-entries :wk "Fold Done")
-
+                "o f d" '(my/org-cycle-done-entries :wk "Fold Done")
+                "o f t" '(my/org-cycle-todo-entries :wk "cycle todo")
+                "o f a" '(my/org-cycle-all-entries  :wk "cycle all")
 
                 ;; Clocking (Time tracking)
                 "o C" '(:ignore t :wk "clock")
@@ -1246,25 +1247,54 @@ If you want a faster and more responsive terminal emulator try out vterm.
                                       '((:discard (:scheduled t)) ; drop scheduled from backlog
                                         (:anything t)))))))))                 ;;                             (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
                                      :config
-     								;; AUTO COLLAPSE DONE TODOS ON LAUNCH
-                                    (defun my/org-hide-done-entries ()
-                                        "Collapse all DONE entries using standard Org visibility logic."
+     								;; CYCLE FOLDING OF TODOS AND DONE
+     								(defun my/org-cycle-todo-entries ()
+                                        "Cycle visibility for all active TODO entries (non-DONE states)."
                                         (interactive)
-                                        ;; 'no-recursion' prevents the hook from firing itself
-                                        (let ((org-cycle-include-done t))
-                                        (save-excursion
-                                        (goto-char (point-min))
-                                        (while (re-search-forward (concat "^\\*+ +" (regexp-opt org-done-keywords)) nil t)
-                                        ;; This 'outline-hide-subtree' is the standard way to fold
-                                        ;; It respects your ellipsis settings
+                                        (org-map-entries
+                                        (lambda ()
+                                        (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
+                                        (when is-todo
+                                        (if (outline-invisible-p (line-end-position))
+                                        (outline-show-subtree)
                                         (outline-hide-subtree)))))
-
+                                        nil 'file)
+                                        (message "Toggled TODO entries"))
+     								(defun my/org-cycle-all-entries ()
+                                        "Cycle visibility for every heading in the file."
+                                        (interactive)
+                                        (org-map-entries
+                                        (lambda ()
+                                        (if (outline-invisible-p (line-end-position))
+                                        (outline-show-subtree)
+                                        (outline-hide-subtree)))
+                                        nil 'file)
+                                        (message "Toggled all entries"))
+                                    (defun my/org-cycle-done-entries ()
+                                        "Cycle visibility for all DONE entries without hanging."
+                                        (interactive)
+                                        (org-map-entries
+                                        (lambda ()
+                                        (let ((is-done (member (org-get-todo-state) org-done-keywords)))
+                                        (when is-done
+                                        (if (outline-invisible-p (line-end-position))
+                                        (outline-show-subtree)
+                                        (outline-hide-subtree)))))
+                                        nil 'file)
+                                        (message "Toggled DONE entries"))
                                         ;; Use 'find-file-hook' instead of 'org-mode-hook' to ensure it runs
                                         ;; AFTER the buffer is fully rendered and displayed.
-                                        (add-hook 'find-file-hook
-                                            (lambda ()
-                                            (when (derived-mode-p 'org-mode)
-                                            (my/org-hide-done-entries))))
+
+     								;; AUTO COLLAPSE DONE TODOS ON LAUNCH
+                                    (defun my/org-hide-done-entries-static ()
+                                        "Force hide all DONE entries on file load."
+                                        (org-map-entries
+                                        (lambda () (outline-hide-subtree))
+                                        "/DONE" 'file))
+                                    (add-hook 'find-file-hook
+                                        (lambda ()
+                                        (when (derived-mode-p 'org-mode)
+                                        (my/org-hide-done-entries-static))))
 
      								;; CUSTOM ABBREV SHORTCUTS
                                     (with-eval-after-load 'org
