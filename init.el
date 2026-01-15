@@ -760,6 +760,7 @@
                                    ("strt"  "STARTED ")
                                    ("chk"   "- [ ] ")
                                    ("chkb"   "[ ] ")
+                                   ("chkc"   "[0/0]")
                                )))
                                 ;; Make RET context-aware like Doom
                                 ;; (define-key org-mode-map (kbd "RET") #'org-return) ;; redefined below

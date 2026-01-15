@@ -1,0 +1,16 @@
+;;-*-coding: utf-8;-*-
+(define-abbrev-table 'org-mode-abbrev-table
+  '(
+    ("assgn" "ASSIGNMENT " nil :count 0)
+    ("bll" "BILL " nil :count 0)
+    ("chk" "- [ ] " nil :count 0)
+    ("chkb" "[ ] " nil :count 0)
+    ("hld" "HOLD " nil :count 0)
+    ("nxt" "NEXT " nil :count 0)
+    ("pln" "PLANNING " nil :count 0)
+    ("rdy" "READY " nil :count 0)
+    ("rvw" "REVIEW " nil :count 0)
+    ("strt" "STARTED " nil :count 0)
+    ("td" "TODO " nil :count 0)
+   ))
+
