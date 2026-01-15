@@ -624,14 +624,15 @@
 
 (use-package org
                                 :ensure nil
-                    	  :hook (org-mode . org-indent-mode)
+                                :hook ((org-mode . org-indent-mode)
+					                   (org-mode . abbrev-mode))
                                 :custom
                                 (org-edit-src-content-indentation 4) ;; Set src block automatic indent to 4 instead of 2.
                                 (org-return-follows-link t)   ;; Sets RETURN key in org-mode to follow links
 
                                 ;; FOLDING
-                                (org-ellipsis " ▾"
-                                    org-hide-emphasis-markers t)
+                                (org-ellipsis " ▾")
+                                (org-hide-emphasis-markers t)
                                 (org-cycle-separator-lines 2)
 
                                 ;; LISTS
@@ -649,6 +650,22 @@
                                 (org-special-ctrl-k t)
                                 (org-yank-adjusted-subtrees t)
                                 (org-M-RET-may-split-line '((default . t)))
+
+								;; ABBREV
+								(define-abbrev-table 'my-org-abbrev-table '(
+                                   ("td" "TODO ")
+                                   ("assgn" "ASSIGNMENT ")
+                                   ("bll" "BILL ")
+                                   ("nxt" "NEXT ")
+                                   ("pln" "PLANNING ")
+                                   ("rvw" "REVIEW ")
+                                   ("hld" "HOLD ")
+                                   ("rdy" "READY ")
+                                   ("strt" "STARTED ")
+                                   ("chk" "[ ] ")
+                                   ))
+                                   (setq-default abbrev-table 'my-org-abbrev-table)
+
 
                            	 ;; AGENDA
                            	 (org-agenda-prefix-format
@@ -671,17 +688,18 @@
                     			(org-log-done 'time)
                     			(org-log-into-drawer t)
                     			(org-todo-keywords
-                    			 '((sequence "TODO(t)" "NEXT(n)" "PLANNING(p)" "REVIEW(v)" "READY(r)" "ACTIVE(a)" "HOLD(h)" "ASSIGNMENT(o)" "|" "DONE(d!)" "CANCELED(c!)")))
+                    			 '((sequence "TODO(t)" "ASSIGNMENT(a)" "BILL(b)" "NEXT(n)" "PLANNING(p)" "REVIEW(v)" "HOLD(h)" "READY(r)" "STARTED(s)" "|" "DONE(d!)" "CANCELED(c!)")))
                				;; Note these also have to be set matching in Org-Modern
                (org-todo-keyword-faces
                        '(("TODO"     . (:foreground "#282c34" :background "#98be65" :weight bold))
                        ("NEXT"     . (:foreground "#282c34" :background "#6f8fff" :weight bold))
                        ("PLANNING" . (:foreground "#282c34" :background "#c792ea" :weight bold))
                        ("READY"    . (:foreground "#282c34" :background "#82b7ff" :weight bold))
-                       ("ACTIVE"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
+                       ("STARTED"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
                        ("REVIEW"   . (:foreground "#282c34" :background "#e0a96d" :weight bold))
                        ("HOLD"     . (:foreground "#282c34" :background "#e6d96c" :weight bold))
                        ("ASSIGNMENT"  . (:foreground "#282c34" :background "#e5404e" :weight bold))
+                       ("BILL"  . (:foreground "#282c34" :background "#fc830a" :weight bold))
                        ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
                        ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
 
@@ -729,6 +747,20 @@
                                  '((:discard (:scheduled t)) ; drop scheduled from backlog
                                    (:anything t)))))))))                 ;;                             (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
                                 :config
+                               (with-eval-after-load 'org
+                                   (define-abbrev-table 'org-mode-abbrev-table
+                                   '(("td"    "TODO ")
+                                   ("assgn" "ASSIGNMENT ")
+                                   ("bll"   "BILL ")
+                                   ("nxt"   "NEXT ")
+                                   ("pln"   "PLANNING ")
+                                   ("rvw"   "REVIEW ")
+                                   ("hld"   "HOLD ")
+                                   ("rdy"   "READY ")
+                                   ("strt"  "STARTED ")
+                                   ("chk"   "- [ ] ")
+                                   ("chkb"   "[ ] ")
+                               )))
                                 ;; Make RET context-aware like Doom
                                 ;; (define-key org-mode-map (kbd "RET") #'org-return) ;; redefined below
                          (defun my/org-return-dwim ()
@@ -750,6 +782,7 @@
 
                            ;; Lists
                            ((org-in-item-p)
+							 (org-end-of-line)
                              (org-insert-item))
 
                            ;; Headings
@@ -758,7 +791,7 @@
 
                            ;; Fallback
                            (t
-                             (org-return))))
+                             (evil-next-line))))
 
                      (defun my/org-smart-insert-item-below ()
                     "Insert a new list item, checkbox, table row, or headline below the current line."
@@ -971,10 +1004,11 @@
         ("NEXT"     . (:foreground "#282c34" :background "#6f8fff" :weight bold))
         ("PLANNING" . (:foreground "#282c34" :background "#c792ea" :weight bold))
         ("READY"    . (:foreground "#282c34" :background "#82b7ff" :weight bold))
-        ("ACTIVE"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
+        ("STARTED"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
         ("REVIEW"   . (:foreground "#282c34" :background "#e0a96d" :weight bold))
         ("HOLD"     . (:foreground "#282c34" :background "#e6d96c" :weight bold))
         ("ASSIGNMENT"     . (:foreground "#282c34" :background "#e5404e" :weight bold))
+        ("BILL"  . (:foreground "#282c34" :background "#fc830a" :weight bold))
         ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
         ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
 
@@ -1021,8 +1055,8 @@
     :order 99))))
 
 (use-package org-tempo
-  :ensure nil
-  :after org)
+    :ensure nil
+    :after org)
 
 (use-package org-roam
     :custom

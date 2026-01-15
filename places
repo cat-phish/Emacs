@@ -1,2 +1,9 @@
 ;;; -*- coding: utf-8; mode: lisp-data -*-
-(("/home/jordan/org/main/Tasks.org" . 1420))
+(("/home/jordan/org/main/Tasks.org" . 826)
+ ("/home/jordan/.config/emacs/init.org" . 58867)
+ ("/home/jordan/org/" (dired-filename . "/home/jordan/org/main"))
+ ("/home/jordan/org/main/"
+  (dired-filename . "/home/jordan/org/main/Tasks.org"))
+ ("/home/jordan/org/main/Books.org" . 15)
+ ("/home/jordan/org/main/Music.org" . 1104)
+ ("/home/jordan/.config/emacs/bookmarks" . 251))
