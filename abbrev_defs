@@ -5,6 +5,7 @@
     ("bll" "BILL " nil :count 0)
     ("chk" "- [ ] " nil :count 0)
     ("chkb" "[ ] " nil :count 0)
+    ("chkc" "[0/0]" nil :count 4)
     ("hld" "HOLD " nil :count 0)
     ("nxt" "NEXT " nil :count 0)
     ("pln" "PLANNING " nil :count 0)

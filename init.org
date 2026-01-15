@@ -569,225 +569,230 @@ And it is also really customizable.
 
 Note: The Leader key is what you will press when you want to access your keybindings: C-SPC + .  Find file
 #+begin_src emacs-lisp
-        (use-package general
-          :config
-          ;; (general-evil-setup) ;; <- evil
-          ;; Set up 'C-SPC' as the leader key
-          (general-create-definer start/leader-keys
-            :states '(normal visual motion emacs) ;; <- evil
-            :keymaps 'override
-            :prefix "SPC"
-            :global-prefix "C-SPC") ;; Set global leader key so we can access our keybindings from any state
+            (use-package general
+              :config
+              ;; (general-evil-setup) ;; <- evil
+              ;; Set up 'C-SPC' as the leader key
+              (general-create-definer start/leader-keys
+                :states '(normal visual motion emacs) ;; <- evil
+                :keymaps 'override
+                :prefix "SPC"
+                :global-prefix "C-SPC") ;; Set global leader key so we can access our keybindings from any state
 
-          (start/leader-keys
-            "SPC" '(consult-buffer :wk "Switch Buffer")
-            "TAB" '(mode-line-other-buffer :wk "Previous Buffer")
-            "C" '(comment-line :wk "Comment lines")
-            "q" '(flymake-show-buffer-diagnostics :wk "Flymake buffer diagnostic")
-            "t" '(eat :wk "Eat terminal")
-        ;; "n" '(my/toggle-relative-line-numbers :wk "Toggle relative/absolute line numbers")
-            "p" '(projectile-command-map :wk "Projectile")
-            "s p" '(projectile-discover-projects-in-search-path :wk "Search for projects"))
+              (start/leader-keys
+                "SPC" '(consult-buffer :wk "Switch Buffer")
+                "TAB" '(mode-line-other-buffer :wk "Previous Buffer")
+                "C" '(comment-line :wk "Comment lines")
+                "q" '(flymake-show-buffer-diagnostics :wk "Flymake buffer diagnostic")
+                "t" '(eat :wk "Eat terminal")
+            ;; "n" '(my/toggle-relative-line-numbers :wk "Toggle relative/absolute line numbers")
+                "p" '(projectile-command-map :wk "Projectile")
+                "s p" '(projectile-discover-projects-in-search-path :wk "Search for projects"))
 
-          (start/leader-keys
-            "f" '(:ignore t :wk "Find")
-            "f c" '((lambda () (interactive) (find-file "~/.config/emacs/init.org")) :wk "Find emacs Config")
-            "f r" '(consult-recent-file :wk "Find recent files")
-            "f F" '(consult-fd :wk "Find files with fd")
-    		"f f" '(find-file :wk "Find File")
-            "f i" '(consult-imenu :wk "Find Imenu buffer locations")) ;; This one is really cool
+              (start/leader-keys
+                "f" '(:ignore t :wk "find")
+                "f c" '((lambda () (interactive) (find-file "~/.config/emacs/init.org")) :wk "Find emacs Config")
+                "f r" '(consult-recent-file :wk "Find recent files")
+                "f F" '(consult-fd :wk "Find files with fd")
+        		"f f" '(find-file :wk "Find File")
+                "f i" '(consult-imenu :wk "Find Imenu buffer locations")) ;; This one is really cool
 
-          (start/leader-keys
-            "s" '(:ignore t :wk "Search")
-            "s g" '(consult-ripgrep :wk "Search with ripgrep")
-            "s l" '(consult-line :wk "Search line"))
+              (start/leader-keys
+                "s" '(:ignore t :wk "search")
+                "s g" '(consult-ripgrep :wk "Search with ripgrep")
+                "s l" '(consult-line :wk "Search line"))
 
-          (start/leader-keys
-            "b" '(:ignore t :wk "Buffers")
-            "b s" '(consult-buffer :wk "Switch buffer")
-            "b k" '(kill-current-buffer :wk "Kill current buffer")
-            "b i" '(ibuffer :wk "Ibuffer")
-            "b n" '(next-buffer :wk "Next buffer")
-            "b p" '(previous-buffer :wk "Previous buffer")
-            "b r" '(revert-buffer :wk "Reload buffer"))
+              (start/leader-keys
+                "b" '(:ignore t :wk "buffers")
+                "b s" '(consult-buffer :wk "Switch buffer")
+                "b k" '(kill-current-buffer :wk "Kill current buffer")
+                "b i" '(ibuffer :wk "Ibuffer")
+                "b n" '(next-buffer :wk "Next buffer")
+                "b p" '(previous-buffer :wk "Previous buffer")
+                "b r" '(revert-buffer :wk "Reload buffer"))
 
-          (start/leader-keys
-            "e" '(:ignore t :wk "Dired")
-    		"e e" '(grease-here :wk "Explorer")
-            "e v" '(dired :wk "Open dired")
-            "e j" '(dired-jump :wk "Dired jump to current"))
+              (start/leader-keys
+                "e" '(:ignore t :wk "dired")
+        		"e e" '(grease-here :wk "Explorer")
+                "e v" '(dired :wk "Open dired")
+                "e j" '(dired-jump :wk "Dired jump to current"))
 
-          (start/leader-keys
-            "o" '(:ignore t :wk "Org")
-            "o a" '(org-agenda :wk "Agenda")
-            "o c" '(org-capture :wk "Capture")
-            "o l" '(org-store-link :wk "Store link")
+              (start/leader-keys
+                "o" '(:ignore t :wk "org")
+                "o a" '(org-agenda :wk "Agenda")
+                "o c" '(org-capture :wk "Capture")
+                "o l" '(org-store-link :wk "Store link")
 
-            "n" '(:ignore t :wk "Notes (Roam)")
-            "n f" '(org-roam-node-find :wk "Find node")
-            "n i" '(org-roam-node-insert :wk "Insert node")
-            "n b" '(org-roam-buffer-toggle :wk "Roam buffer")
-            "n a" '(org-roam-alias-add :wk "Add Alias")
-            "n r" '(org-roam-node-random :wk "Random node")
-    		"n h" '(org-id-get-create :wk "Create Heading Node")
-            ;; "n g" '(org-roam-ui-mode :wk "Graph UI")
-    		"n u" '(my/org-roam-ui-mode-custom-browser :wk "Graph UI")
-            )
-    	  (start/leader-keys
-            :major-modes 'org-mode
-            ;;"o" '(:ignore t :wk "Org Local Leader")
+                "n" '(:ignore t :wk "notes (roam)")
+                "n f" '(org-roam-node-find :wk "Find node")
+                "n i" '(org-roam-node-insert :wk "Insert node")
+                "n b" '(org-roam-buffer-toggle :wk "Roam buffer")
+                "n a" '(org-roam-alias-add :wk "Add Alias")
+                "n r" '(org-roam-node-random :wk "Random node")
+        		"n h" '(org-id-get-create :wk "Create Heading Node")
+                ;; "n g" '(org-roam-ui-mode :wk "Graph UI")
+        		"n u" '(my/org-roam-ui-mode-custom-browser :wk "Graph UI")
+                )
+        	  (start/leader-keys
+                :major-modes 'org-mode
+                ;;"o" '(:ignore t :wk "Org Local Leader")
 
-            ;; Toggles
-            "o t" '(org-todo :wk "Todo state")
-            "o ." '(org-set-tags-command :wk "Set tags")
-            "o p" '(org-priority :wk "Priority")
+                ;; Toggles
+                "o t" '(org-todo :wk "Todo State")
+                "o ." '(org-set-tags-command :wk "Set tags")
+                "o p" '(org-priority :wk "Priority")
 
-            ;; Insertion
-            "o i" '(:ignore t :wk "Insert")
-            "o i l" '(org-insert-link :wk "Insert link")
-            "o i f" '(org-footnote-action :wk "Footnote")
-            "o i n" '(org-add-note :wk "Add note")
-            "o i p" '(org-download-clipboard :wk "Paste clipboard image")
+                ;; Insertion
+                "o i" '(:ignore t :wk "insert")
+                "o i l" '(org-insert-link :wk "Insert link")
+                "o i f" '(org-footnote-action :wk "Footnote")
+                "o i n" '(org-add-note :wk "Add note")
+                "o i p" '(org-download-clipboard :wk "Paste clipboard image")
 
-            ;; Clocking (Time tracking)
-            "o C" '(:ignore t :wk "Clock")
-            "o C i" '(org-clock-in :wk "Clock in")
-            "o C o" '(org-clock-out :wk "Clock out")
-            "o C g" '(org-clock-goto :wk "Go to clock")
-
-            ;; Actions
-            "o e" '(org-export-dispatch :wk "Export")
-            "o d" '(org-deadline :wk "Deadline")
-            "o s" '(org-schedule :wk "Schedule")
-            "o b" '(org-babel-tangle :wk "Tangle code")
-    		"o r" '(org-refile :wk "Refile")
-    		)
+    			;; Folding
+                "o f" '(:ignore t :wk "fold")
+                "o f d" '(my/org-hide-done-entries :wk "Fold Done")
 
 
-          (start/leader-keys
-            "c" '(:ignore t :wk "Coding")
-            "c e" '(eglot-reconnect :wk "Eglot Reconnect")
-            "c d" '(eldoc-doc-buffer :wk "Eldoc Buffer")
-            "c f" '(eglot-format :wk "Eglot Format")
-            "c l" '(consult-flymake :wk "Consult Flymake")
-            "c r" '(eglot-rename :wk "Eglot Rename")
-            "c i" '(xref-find-definitions :wk "Find definition")
-            "c v" '(:ignore t :wk "Elisp")
-            "c v b" '(eval-buffer :wk "Evaluate elisp in buffer")
-            "c v r" '(eval-region :wk "Evaluate elisp in region"))
+                ;; Clocking (Time tracking)
+                "o C" '(:ignore t :wk "clock")
+                "o C i" '(org-clock-in :wk "Clock in")
+                "o C o" '(org-clock-out :wk "Clock out")
+                "o C g" '(org-clock-goto :wk "Go to clock")
 
-          (start/leader-keys
-            "g" '(:ignore t :wk "Git")
-            "g s" '(magit-status :wk "Magit status"))
+                ;; Actions
+                "o e" '(org-export-dispatch :wk "export")
+                "o d" '(org-deadline :wk "Deadline")
+                "o s" '(org-schedule :wk "Schedule")
+                "o b" '(org-babel-tangle :wk "Tangle code")
+        		"o r" '(org-refile :wk "Refile")
+        		)
 
-          (start/leader-keys
-            "h" '(:ignore t :wk "Help") ;; To get more help use C-h commands (describe variable, function, etc.)
-            "h q" '(save-buffers-kill-emacs :wk "Quit Emacs and Daemon")
-            ;;"h r" '((lambda () (interactive)
-              ;;        (load-file "~/.config/emacs-org/init.el"))
-                ;;    :wk "Reload Emacs config")
-            "h a" '(apropos :wk "Apropos (Search all)")
-            "h b" '(describe-bindings :wk "Describe bindings")
-            "h c" '(describe-char :wk "Describe char at point")
-            "h f" '(describe-function :wk "Describe function")
-            "h k" '(describe-key :wk "Describe key")
-            "h m" '(describe-mode :wk "Describe mode")
-            "h v" '(describe-variable :wk "Describe variable")
-            "h o" '(describe-symbol :wk "Describe symbol (DWIM)")
-            "h p" '(describe-package :wk "Describe package")
-            "h t" '(load-theme :wk "Load theme")
-            "h r" '((lambda () (interactive) (load-file user-init-file)) :wk "Reload config"))
 
-          (start/leader-keys
-            "O" '(:ignore t :wk "Options")
-            "O t" '(visual-line-mode :wk "Toggle truncated lines (wrap)")
-            "O l" '(display-line-numbers-mode :wk "Toggle line numbers")
-            "O n" '(my/toggle-relative-line-numbers :wk "Toggle relative/absolute line numbers")
-    		)
+              (start/leader-keys
+                "c" '(:ignore t :wk "coding")
+                "c e" '(eglot-reconnect :wk "Eglot Reconnect")
+                "c d" '(eldoc-doc-buffer :wk "Eldoc Buffer")
+                "c f" '(eglot-format :wk "Eglot Format")
+                "c l" '(consult-flymake :wk "Consult Flymake")
+                "c r" '(eglot-rename :wk "Eglot Rename")
+                "c i" '(xref-find-definitions :wk "Find definition")
+                "c v" '(:ignore t :wk "Elisp")
+                "c v b" '(eval-buffer :wk "Evaluate elisp in buffer")
+                "c v r" '(eval-region :wk "Evaluate elisp in region"))
 
-        (start/leader-keys
-            :major-modes 'pdf-view-mode
-            "m" '(:ignore t :wk "PDF-View Options")
-            "m t" '(pdf-view-midnight-minor-mode :wk "Toggle dark mode"))
+              (start/leader-keys
+                "g" '(:ignore t :wk "git")
+                "g s" '(magit-status :wk "Magit status"))
 
-    	  ;;  Save
-    (general-define-key
-    :states '(normal insert visual emacs)
-    "C-s" (lambda ()
-            (interactive)
-            (save-buffer)
-            (evil-normal-state)))
+              (start/leader-keys
+                "h" '(:ignore t :wk "help") ;; To get more help use C-h commands (describe variable, function, etc.)
+                "h q" '(save-buffers-kill-emacs :wk "Quit Emacs and Daemon")
+                ;;"h r" '((lambda () (interactive)
+                  ;;        (load-file "~/.config/emacs-org/init.el"))
+                    ;;    :wk "Reload Emacs config")
+                "h a" '(apropos :wk "Apropos (Search all)")
+                "h b" '(describe-bindings :wk "Describe bindings")
+                "h c" '(describe-char :wk "Describe char at point")
+                "h f" '(describe-function :wk "Describe function")
+                "h k" '(describe-key :wk "Describe key")
+                "h m" '(describe-mode :wk "Describe mode")
+                "h v" '(describe-variable :wk "Describe variable")
+                "h o" '(describe-symbol :wk "Describe symbol (DWIM)")
+                "h p" '(describe-package :wk "Describe package")
+                "h t" '(load-theme :wk "Load theme")
+                "h r" '((lambda () (interactive) (load-file user-init-file)) :wk "Reload config"))
 
-    ;; Copy/Paste
-    (general-define-key
-    :states 'visual
-    "C-S-C" 'kill-ring-save) ; Copy selection to clipboard
+              (start/leader-keys
+                "O" '(:ignore t :wk "options")
+                "O t" '(visual-line-mode :wk "Toggle truncated lines (wrap)")
+                "O l" '(display-line-numbers-mode :wk "Toggle line numbers")
+                "O n" '(my/toggle-relative-line-numbers :wk "Toggle relative/absolute line numbers")
+        		)
 
-    (general-define-key
-    :states '(normal insert visual emacs)
-    "C-S-V" 'yank)           ; Paste from clipboard
+            (start/leader-keys
+                :major-modes 'pdf-view-mode
+                "m" '(:ignore t :wk "pdf-view options")
+                "m t" '(pdf-view-midnight-minor-mode :wk "Toggle dark mode"))
 
-    ;; Move Windows
-    (general-define-key
+        	  ;;  Save
+        (general-define-key
         :states '(normal insert visual emacs)
-        "C-h" 'evil-window-left
-        "C-j" 'evil-window-down
-        "C-k" 'evil-window-up
-        "C-l" 'evil-window-right)
-    (start/leader-keys
-        "w"  '(:ignore t :wk "Windows")
-        "w d" '(evil-window-delete :wk "Delete split")
-        "w |" '(evil-window-vsplit :wk "Vertical split")
-        "w _" '(evil-window-split  :wk "Horizontal split")
-        "w =" '(balance-windows    :wk "Balance splits"))
+        "C-s" (lambda ()
+                (interactive)
+                (save-buffer)
+                (evil-normal-state)))
 
-(defun my/org-roam-ui-mode-custom-browser ()
-  "Enable org-roam-ui-mode and open the UI in Chromium."
-  (interactive)
-  (unless org-roam-ui-mode
-    (org-roam-ui-mode 1))
-  (let ((browse-url-browser-function
-         (lambda (url &optional _)
-           (shell-command (concat "firefox --new-window " url)))))
-    (org-roam-ui-open)))
+        ;; Copy/Paste
+        (general-define-key
+        :states 'visual
+        "C-S-C" 'kill-ring-save) ; Copy selection to clipboard
 
-          )
+        (general-define-key
+        :states '(normal insert visual emacs)
+        "C-S-V" 'yank)           ; Paste from clipboard
 
-    ;; PDF View Keys
-    (general-define-key
-        :states 'motion
-        :keymaps 'pdf-view-mode-map
-        "j"  'pdf-view-next-line-or-next-page
-        "k"  'pdf-view-previous-line-or-previous-page
-        "gg" 'pdf-view-first-page
-        "G"  'pdf-view-last-page
-        "u"  'pdf-view-scroll-up-or-previous-page
-        "d"  'pdf-view-scroll-down-or-next-page)
+        ;; Move Windows
+        (general-define-key
+            :states '(normal insert visual emacs)
+            "C-h" 'evil-window-left
+            "C-j" 'evil-window-down
+            "C-k" 'evil-window-up
+            "C-l" 'evil-window-right)
+        (start/leader-keys
+            "w"  '(:ignore t :wk "windows")
+            "w d" '(evil-window-delete :wk "Delete split")
+            "w |" '(evil-window-vsplit :wk "Vertical split")
+            "w _" '(evil-window-split  :wk "Horizontal split")
+            "w =" '(balance-windows    :wk "Balance splits"))
 
-        (defvar my/relative-line-numbers t
-      "Tracks whether relative line numbers are enabled.")
-
-    (defun my/toggle-relative-line-numbers ()
-      "Toggle between relative and absolute line numbers."
+    (defun my/org-roam-ui-mode-custom-browser ()
+      "Enable org-roam-ui-mode and open the UI in Chromium."
       (interactive)
-      (setq my/relative-line-numbers (not my/relative-line-numbers))
-      (setq display-line-numbers-type
-            (if my/relative-line-numbers 'relative t))
-      ;; Refresh line numbers
-      (when (bound-and-true-p display-line-numbers-mode)
-        (force-mode-line-update)
-        (redraw-display)))
+      (unless org-roam-ui-mode
+        (org-roam-ui-mode 1))
+      (let ((browse-url-browser-function
+             (lambda (url &optional _)
+               (shell-command (concat "firefox --new-window " url)))))
+        (org-roam-ui-open)))
+
+              )
+
+        ;; PDF View Keys
+        (general-define-key
+            :states 'motion
+            :keymaps 'pdf-view-mode-map
+            "j"  'pdf-view-next-line-or-next-page
+            "k"  'pdf-view-previous-line-or-previous-page
+            "gg" 'pdf-view-first-page
+            "G"  'pdf-view-last-page
+            "u"  'pdf-view-scroll-up-or-previous-page
+            "d"  'pdf-view-scroll-down-or-next-page)
+
+            (defvar my/relative-line-numbers t
+          "Tracks whether relative line numbers are enabled.")
+
+        (defun my/toggle-relative-line-numbers ()
+          "Toggle between relative and absolute line numbers."
+          (interactive)
+          (setq my/relative-line-numbers (not my/relative-line-numbers))
+          (setq display-line-numbers-type
+                (if my/relative-line-numbers 'relative t))
+          ;; Refresh line numbers
+          (when (bound-and-true-p display-line-numbers-mode)
+            (force-mode-line-update)
+            (redraw-display)))
 
 
-        ;; Fix general.el leader key not working instantly in messages buffer with evil mode
-        ;; (use-package emacs
-        ;;   :ghook ('after-init-hook
-        ;;           (lambda (&rest _)
-        ;;             (when-let ((messages-buffer (get-buffer "*Messages*")))
-        ;;               (with-current-buffer messages-buffer
-        ;;                 (evil-normalize-keymaps))))
-        ;;           nil nil t)
-        ;;   )
+            ;; Fix general.el leader key not working instantly in messages buffer with evil mode
+            ;; (use-package emacs
+            ;;   :ghook ('after-init-hook
+            ;;           (lambda (&rest _)
+            ;;             (when-let ((messages-buffer (get-buffer "*Messages*")))
+            ;;               (with-current-buffer messages-buffer
+            ;;                 (evil-normalize-keymaps))))
+            ;;           nil nil t)
+            ;;   )
 #+end_src
 
 *** Creating keybindings the built in way
@@ -1241,6 +1246,27 @@ If you want a faster and more responsive terminal emulator try out vterm.
                                       '((:discard (:scheduled t)) ; drop scheduled from backlog
                                         (:anything t)))))))))                 ;;                             (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
                                      :config
+     								;; AUTO COLLAPSE DONE TODOS ON LAUNCH
+                                    (defun my/org-hide-done-entries ()
+                                        "Collapse all DONE entries using standard Org visibility logic."
+                                        (interactive)
+                                        ;; 'no-recursion' prevents the hook from firing itself
+                                        (let ((org-cycle-include-done t))
+                                        (save-excursion
+                                        (goto-char (point-min))
+                                        (while (re-search-forward (concat "^\\*+ +" (regexp-opt org-done-keywords)) nil t)
+                                        ;; This 'outline-hide-subtree' is the standard way to fold
+                                        ;; It respects your ellipsis settings
+                                        (outline-hide-subtree)))))
+
+                                        ;; Use 'find-file-hook' instead of 'org-mode-hook' to ensure it runs
+                                        ;; AFTER the buffer is fully rendered and displayed.
+                                        (add-hook 'find-file-hook
+                                            (lambda ()
+                                            (when (derived-mode-p 'org-mode)
+                                            (my/org-hide-done-entries))))
+
+     								;; CUSTOM ABBREV SHORTCUTS
                                     (with-eval-after-load 'org
                                         (define-abbrev-table 'org-mode-abbrev-table
                                         '(("td"    "TODO ")

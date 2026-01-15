@@ -240,7 +240,7 @@
             "s p" '(projectile-discover-projects-in-search-path :wk "Search for projects"))
 
           (start/leader-keys
-            "f" '(:ignore t :wk "Find")
+            "f" '(:ignore t :wk "find")
             "f c" '((lambda () (interactive) (find-file "~/.config/emacs/init.org")) :wk "Find emacs Config")
             "f r" '(consult-recent-file :wk "Find recent files")
             "f F" '(consult-fd :wk "Find files with fd")
@@ -248,12 +248,12 @@
             "f i" '(consult-imenu :wk "Find Imenu buffer locations")) ;; This one is really cool
 
           (start/leader-keys
-            "s" '(:ignore t :wk "Search")
+            "s" '(:ignore t :wk "search")
             "s g" '(consult-ripgrep :wk "Search with ripgrep")
             "s l" '(consult-line :wk "Search line"))
 
           (start/leader-keys
-            "b" '(:ignore t :wk "Buffers")
+            "b" '(:ignore t :wk "buffers")
             "b s" '(consult-buffer :wk "Switch buffer")
             "b k" '(kill-current-buffer :wk "Kill current buffer")
             "b i" '(ibuffer :wk "Ibuffer")
@@ -262,18 +262,18 @@
             "b r" '(revert-buffer :wk "Reload buffer"))
 
           (start/leader-keys
-            "e" '(:ignore t :wk "Dired")
+            "e" '(:ignore t :wk "dired")
     		"e e" '(grease-here :wk "Explorer")
             "e v" '(dired :wk "Open dired")
             "e j" '(dired-jump :wk "Dired jump to current"))
 
           (start/leader-keys
-            "o" '(:ignore t :wk "Org")
+            "o" '(:ignore t :wk "org")
             "o a" '(org-agenda :wk "Agenda")
             "o c" '(org-capture :wk "Capture")
             "o l" '(org-store-link :wk "Store link")
 
-            "n" '(:ignore t :wk "Notes (Roam)")
+            "n" '(:ignore t :wk "notes (roam)")
             "n f" '(org-roam-node-find :wk "Find node")
             "n i" '(org-roam-node-insert :wk "Insert node")
             "n b" '(org-roam-buffer-toggle :wk "Roam buffer")
@@ -288,25 +288,30 @@
             ;;"o" '(:ignore t :wk "Org Local Leader")
 
             ;; Toggles
-            "o t" '(org-todo :wk "Todo state")
+            "o t" '(org-todo :wk "Todo State")
             "o ." '(org-set-tags-command :wk "Set tags")
             "o p" '(org-priority :wk "Priority")
 
             ;; Insertion
-            "o i" '(:ignore t :wk "Insert")
+            "o i" '(:ignore t :wk "insert")
             "o i l" '(org-insert-link :wk "Insert link")
             "o i f" '(org-footnote-action :wk "Footnote")
             "o i n" '(org-add-note :wk "Add note")
             "o i p" '(org-download-clipboard :wk "Paste clipboard image")
 
+			;; Folding
+            "o f" '(:ignore t :wk "fold")
+            "o f d" '(my/org-hide-done-entries :wk "Fold Done")
+
+
             ;; Clocking (Time tracking)
-            "o C" '(:ignore t :wk "Clock")
+            "o C" '(:ignore t :wk "clock")
             "o C i" '(org-clock-in :wk "Clock in")
             "o C o" '(org-clock-out :wk "Clock out")
             "o C g" '(org-clock-goto :wk "Go to clock")
 
             ;; Actions
-            "o e" '(org-export-dispatch :wk "Export")
+            "o e" '(org-export-dispatch :wk "export")
             "o d" '(org-deadline :wk "Deadline")
             "o s" '(org-schedule :wk "Schedule")
             "o b" '(org-babel-tangle :wk "Tangle code")
@@ -315,7 +320,7 @@
 
 
           (start/leader-keys
-            "c" '(:ignore t :wk "Coding")
+            "c" '(:ignore t :wk "coding")
             "c e" '(eglot-reconnect :wk "Eglot Reconnect")
             "c d" '(eldoc-doc-buffer :wk "Eldoc Buffer")
             "c f" '(eglot-format :wk "Eglot Format")
@@ -327,11 +332,11 @@
             "c v r" '(eval-region :wk "Evaluate elisp in region"))
 
           (start/leader-keys
-            "g" '(:ignore t :wk "Git")
+            "g" '(:ignore t :wk "git")
             "g s" '(magit-status :wk "Magit status"))
 
           (start/leader-keys
-            "h" '(:ignore t :wk "Help") ;; To get more help use C-h commands (describe variable, function, etc.)
+            "h" '(:ignore t :wk "help") ;; To get more help use C-h commands (describe variable, function, etc.)
             "h q" '(save-buffers-kill-emacs :wk "Quit Emacs and Daemon")
             ;;"h r" '((lambda () (interactive)
               ;;        (load-file "~/.config/emacs-org/init.el"))
@@ -349,7 +354,7 @@
             "h r" '((lambda () (interactive) (load-file user-init-file)) :wk "Reload config"))
 
           (start/leader-keys
-            "O" '(:ignore t :wk "Options")
+            "O" '(:ignore t :wk "options")
             "O t" '(visual-line-mode :wk "Toggle truncated lines (wrap)")
             "O l" '(display-line-numbers-mode :wk "Toggle line numbers")
             "O n" '(my/toggle-relative-line-numbers :wk "Toggle relative/absolute line numbers")
@@ -357,7 +362,7 @@
 
         (start/leader-keys
             :major-modes 'pdf-view-mode
-            "m" '(:ignore t :wk "PDF-View Options")
+            "m" '(:ignore t :wk "pdf-view options")
             "m t" '(pdf-view-midnight-minor-mode :wk "Toggle dark mode"))
 
     	  ;;  Save
@@ -385,7 +390,7 @@
         "C-k" 'evil-window-up
         "C-l" 'evil-window-right)
     (start/leader-keys
-        "w"  '(:ignore t :wk "Windows")
+        "w"  '(:ignore t :wk "windows")
         "w d" '(evil-window-delete :wk "Delete split")
         "w |" '(evil-window-vsplit :wk "Vertical split")
         "w _" '(evil-window-split  :wk "Horizontal split")
@@ -747,6 +752,27 @@
                                  '((:discard (:scheduled t)) ; drop scheduled from backlog
                                    (:anything t)))))))))                 ;;                             (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
                                 :config
+								;; AUTO COLLAPSE DONE TODOS ON LAUNCH
+                               (defun my/org-hide-done-entries ()
+                                   "Collapse all DONE entries using standard Org visibility logic."
+                                   (interactive)
+                                   ;; 'no-recursion' prevents the hook from firing itself
+                                   (let ((org-cycle-include-done t))
+                                   (save-excursion
+                                   (goto-char (point-min))
+                                   (while (re-search-forward (concat "^\\*+ +" (regexp-opt org-done-keywords)) nil t)
+                                   ;; This 'outline-hide-subtree' is the standard way to fold
+                                   ;; It respects your ellipsis settings
+                                   (outline-hide-subtree)))))
+
+                                   ;; Use 'find-file-hook' instead of 'org-mode-hook' to ensure it runs
+                                   ;; AFTER the buffer is fully rendered and displayed.
+                                   (add-hook 'find-file-hook
+                                       (lambda ()
+                                       (when (derived-mode-p 'org-mode)
+                                       (my/org-hide-done-entries))))
+
+								;; CUSTOM ABBREV SHORTCUTS
                                (with-eval-after-load 'org
                                    (define-abbrev-table 'org-mode-abbrev-table
                                    '(("td"    "TODO ")
