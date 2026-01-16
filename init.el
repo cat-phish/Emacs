@@ -492,6 +492,13 @@
 ;;(add-to-list 'default-frame-alist '(font . "JetBrains Mono")) ;; Set your favorite font
 (setq-default line-spacing 0.12)
 
+;; CUSTOM FONT SIZE BASED ON HOSTNAME
+;; Apply text scaling for laptop (equivalent to Ctrl - once)
+(when (string-match-p "fedora-laptop" (system-name))
+(setq text-scale-mode-step 1.1)  ; This is the default step
+(set-face-attribute 'default nil :height
+                    (floor (* 145 (expt text-scale-mode-step -1)))))
+
 (use-package doom-modeline
   :custom
   (doom-modeline-height 25) ;; Set modeline height
