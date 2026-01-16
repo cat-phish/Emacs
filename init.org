@@ -18,7 +18,7 @@
     - [[#show-startup-time][Show startup time]]
     - [[#package-manager][Package manager]]
     - [[#good-defaults][Good Defaults]]
-- [[#important-to-load-first][Important to load first]]
+- [[#keybindings-load-first][Keybindings (Load First)]]
     - [[#evil-mode][Evil Mode]]
     - [[#general-keybindings][General Keybindings]]
 - [[#appearance][Appearance]]
@@ -433,7 +433,7 @@ If you plan to use a different package manager, remember to remove this section 
       )
 #+end_src
 
-* Important to load first
+* Keybindings (Load First)
 Packages that we want to load first so we have them as soon as possible if something breaks.
 ** Evil Mode
 An extensible vi/vim layer for Emacs.
@@ -451,59 +451,67 @@ Notes:
 
 *To use it, remove :tangle no from the beginning of the source code block.*
 #+begin_src emacs-lisp
-          ;; Must be set before evil loads
-          ;; Basic evil customization
-          (setq evil-want-keybinding nil
-                evil-want-C-u-scroll t
-                evil-want-C-i-jump nil
-                evil-undo-system 'undo-redo)
-          (use-package evil
-              :init
-              (evil-mode 1)
-              :config
-              ;; Set initial state for eat-mode
-              (evil-set-initial-state 'eat-mode 'insert)
+    ;; Must be set before evil loads
+    ;; Basic evil customization
+    (setq evil-want-keybinding nil
+        evil-want-C-u-scroll t
+        evil-want-C-i-jump nil
+        evil-undo-system 'undo-redo)
+    (use-package evil
+        :init
+        (evil-mode 1)
+        :config
+        ;; Set initial state for eat-mode
+        (evil-set-initial-state 'eat-mode 'insert)
 
 
 
-              ;; Jump to beginning of line or first non-blank character
-              (defun start/jump-to-line-start ()
-                "If at first non-blank char, go to beginning; else go to first non-blank."
-                (interactive)
-                (let ((col (current-column))
-                      (first-non-blank (save-excursion
-                                          (back-to-indentation)
-                                          (current-column))))
-                  (if (= col first-non-blank)
-                      (move-beginning-of-line nil)
-                    (back-to-indentation))))
-              ;; H/L keybindings for motion state
-              (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
-              (define-key evil-motion-state-map "L" #'evil-end-of-line)
+        ;; Jump to beginning of line or first non-blank character
+        (defun start/jump-to-line-start ()
+        "If at first non-blank char, go to beginning; else go to first non-blank."
+        (interactive)
+        (let ((col (current-column))
+                (first-non-blank (save-excursion
+                                    (back-to-indentation)
+                                    (current-column))))
+            (if (= col first-non-blank)
+                (move-beginning-of-line nil)
+            (back-to-indentation))))
+        ;; H/L keybindings for motion state
+        (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
+        (define-key evil-motion-state-map "L" #'evil-end-of-line)
 
 
-          (defun evil-shift-right-keep-visual (beg end &optional count)
-              "Shift right but stay in visual mode."
-              (interactive "r\np")
-              (evil-shift-right beg end count)
-              (evil-normal-state)
-              (evil-visual-restore))
+        (defun evil-shift-right-keep-visual (beg end &optional count)
+            "Shift right but stay in visual mode."
+            (interactive "r\np")
+            (evil-shift-right beg end count)
+            (evil-normal-state)
+            (evil-visual-restore))
 
-              (defun evil-shift-left-keep-visual (beg end &optional count)
-              "Shift left but stay in visual mode."
-              (interactive "r\np")
-              (evil-shift-left beg end count)
-              (evil-normal-state)
-              (evil-visual-restore))
+            (defun evil-shift-left-keep-visual (beg end &optional count)
+            "Shift left but stay in visual mode."
+            (interactive "r\np")
+            (evil-shift-left beg end count)
+            (evil-normal-state)
+            (evil-visual-restore))
 
-          (define-key evil-visual-state-map (kbd ">") 'evil-shift-right-keep-visual)
-          (define-key evil-visual-state-map (kbd "<") 'evil-shift-left-keep-visual)
+        ;; Visual state - stay in visual mode while indenting
+        (define-key evil-visual-state-map (kbd ">") 'evil-shift-right-keep-visual)
+        (define-key evil-visual-state-map (kbd "<") 'evil-shift-left-keep-visual)
 
-          ;; Quick macro mapping
-          (evil-define-key 'normal 'global (kbd "Q") (kbd "@q"))
+        ;; Only bind M-h/M-l for indenting when NOT in org-mode
+        (with-eval-after-load 'evil
+        (evil-define-key 'visual 'global (kbd "M-l") 'evil-shift-right-keep-visual)
+        (evil-define-key 'visual 'global (kbd "M-h") 'evil-shift-left-keep-visual)
+        (evil-define-key 'normal 'global (kbd "M-l") 'evil-shift-right-line)
+        (evil-define-key 'normal 'global (kbd "M-h") 'evil-shift-left-line))
 
-          )
-      (use-package evil-nerd-commenter
+        ;; Quick macro mapping
+        (evil-define-key 'normal 'global (kbd "Q") (kbd "@q"))
+
+    )
+        (use-package evil-nerd-commenter
         :ensure t
         :after evil
         :config
@@ -512,49 +520,49 @@ Notes:
         ;; and 'gc' work with motions (like 'gcap' or 'gcG').
         (define-key evil-normal-state-map (kbd "gc") 'evilnc-comment-operator)  ;; Make it work in Visual mode too
         (define-key evil-visual-state-map (kbd "gc") 'evilnc-comment-or-uncomment-lines)
-      )
+        )
 
-  (use-package evil-surround
-    :ensure t
-    :after evil
-    :config
-    (global-evil-surround-mode 1)
+      (use-package evil-surround
+        :ensure t
+        :after evil
+        :config
+        (global-evil-surround-mode 1)
 
-    ;; --- NORMAL MODE MAPPINGS ---
+        ;; --- NORMAL MODE MAPPINGS ---
 
-    ;; gsa Add surrounding (Usage: gsaw")
-    (evil-define-key 'normal evil-surround-mode-map (kbd "gsa") 'evil-surround-region)
+        ;; gsa Add surrounding (Usage: gsaw")
+        (evil-define-key 'normal evil-surround-mode-map (kbd "gsa") 'evil-surround-region)
 
-    ;; gsd Delete surrounding (Usage: gsd")
-    (evil-define-key 'normal evil-surround-mode-map (kbd "gsd") 'evil-surround-delete)
+        ;; gsd Delete surrounding (Usage: gsd")
+        (evil-define-key 'normal evil-surround-mode-map (kbd "gsd") 'evil-surround-delete)
 
-    ;; gsr Replace surrounding (Usage: gsr'")
-    (evil-define-key 'normal evil-surround-mode-map (kbd "gsr") 'evil-surround-change)
+        ;; gsr Replace surrounding (Usage: gsr'")
+        (evil-define-key 'normal evil-surround-mode-map (kbd "gsr") 'evil-surround-change)
 
 
-    ;; --- VISUAL MODE MAPPINGS ---
+        ;; --- VISUAL MODE MAPPINGS ---
 
-    ;; In Visual Mode, 'gsa' adds to the selection
-    (evil-define-key 'visual evil-surround-mode-map (kbd "gsa") 'evil-surround-region)
+        ;; In Visual Mode, 'gsa' adds to the selection
+        (evil-define-key 'visual evil-surround-mode-map (kbd "gsa") 'evil-surround-region)
 
-    ;; Disable the default 's' in visual mode if it interferes
-    (evil-define-key 'visual evil-surround-mode-map (kbd "s") nil))
-(with-eval-after-load 'evil-surround
-  (add-to-list 'evil-surround-pairs-alist '(?s . ("~" . "~"))) ; gsa s for ~code~
-  (add-to-list 'evil-surround-pairs-alist '(?b . ("*" . "*"))) ; gsa b for *bold*
-  (add-to-list 'evil-surround-pairs-alist '(?i . ("/" . "/")))) ; gsa i for /italics/
+        ;; Disable the default 's' in visual mode if it interferes
+        (evil-define-key 'visual evil-surround-mode-map (kbd "s") nil))
+    (with-eval-after-load 'evil-surround
+      (add-to-list 'evil-surround-pairs-alist '(?s . ("~" . "~"))) ; gsa s for ~code~
+      (add-to-list 'evil-surround-pairs-alist '(?b . ("*" . "*"))) ; gsa b for *bold*
+      (add-to-list 'evil-surround-pairs-alist '(?i . ("/" . "/")))) ; gsa i for /italics/
 
-          ;; Evil-collection (after evil)
-          (use-package evil-collection
-              :after evil
-              :config
-              (setq evil-collection-mode-list
-          	'(dired ibuffer magit corfu vertico consult info org))
-              (evil-collection-init)
+              ;; Evil-collection (after evil)
+              (use-package evil-collection
+                  :after evil
+                  :config
+                  (setq evil-collection-mode-list
+              	'(dired ibuffer magit corfu vertico consult info org))
+                  (evil-collection-init)
 
-              ;; Reapply global H/L after evil-collection might override
-              (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
-              (define-key evil-motion-state-map "L" #'evil-end-of-line))
+                  ;; Reapply global H/L after evil-collection might override
+                  (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
+                  (define-key evil-motion-state-map "L" #'evil-end-of-line))
 #+end_src
 
 ** General Keybindings
@@ -620,6 +628,7 @@ Note: The Leader key is what you will press when you want to access your keybind
               (start/leader-keys
                 "o" '(:ignore t :wk "org")
                 "o a" '(org-agenda :wk "Agenda")
+    			"o o" '((lambda () (interactive) (org-agenda nil "d")) :wk "Overview")
                 "o c" '(org-capture :wk "Capture")
                 "o l" '(org-store-link :wk "Store link")
 
@@ -652,8 +661,8 @@ Note: The Leader key is what you will press when you want to access your keybind
     			;; Folding
                 "o f" '(:ignore t :wk "fold")
                 "o f d" '(my/org-cycle-done-entries :wk "Fold Done")
-                "o f t" '(my/org-cycle-todo-entries :wk "cycle todo")
-                "o f a" '(my/org-cycle-all-entries  :wk "cycle all")
+                "o f t" '(my/org-cycle-todo-entries :wk "Fold Todo")
+                "o f a" '(my/org-cycle-all-todo-done-entries  :wk "Fold All Todo/Done")
 
                 ;; Clocking (Time tracking)
                 "o C" '(:ignore t :wk "clock")
@@ -1122,359 +1131,431 @@ If you want a faster and more responsive terminal emulator try out vterm.
  - Literate Documentation: It's a document, not just source code.
  - Fast Navigation: Quickly jump to sections with something like Imenu.
  #+begin_src emacs-lisp
-                                 (use-package org
-                                     :ensure nil
-                                     :hook ((org-mode . org-indent-mode)
-     					                   (org-mode . abbrev-mode))
-                                     :custom
-                                     (org-edit-src-content-indentation 4) ;; Set src block automatic indent to 4 instead of 2.
-                                     (org-return-follows-link t)   ;; Sets RETURN key in org-mode to follow links
+     (use-package org
+         :ensure nil
+         :hook ((org-mode . org-indent-mode)
+                             (org-mode . abbrev-mode))
+         :custom
+         (org-edit-src-content-indentation 4) ;; Set src block automatic indent to 4 instead of 2.
+         (org-return-follows-link t)   ;; Sets RETURN key in org-mode to follow links
 
-                                     ;; FOLDING
-                                     (org-ellipsis " ▾")
-                                     (org-hide-emphasis-markers t)
-                                     (org-cycle-separator-lines 2)
+         ;; FOLDING
+         (org-ellipsis " ▾")
+         (org-hide-emphasis-markers t)
+         (org-cycle-separator-lines 2)
 
-                                     ;; LISTS
-                                     (org-list-allow-alphabetical t)
-                                     (org-list-indent-offset 2)
-                                     (org-adapt-indentation nil)
+         ;; LISTS
+         (org-list-allow-alphabetical t)
+         (org-list-indent-offset 2)
+         (org-adapt-indentation nil)
 
-                                     ;; TABLES
-                                     (org-table-convert-region-max-lines 10000)
-                                     (org-table-copy-increment t
-                                         org-table-export-default-format "orgtbl-to-csv")
+         ;; TABLES
+         (org-table-convert-region-max-lines 10000)
+         (org-table-copy-increment t
+             org-table-export-default-format "orgtbl-to-csv")
 
-                                     ;; STRUCTURE / FLOW
-                                     (org-special-ctrl-a/e t)
-                                     (org-special-ctrl-k t)
-                                     (org-yank-adjusted-subtrees t)
-                                     (org-M-RET-may-split-line '((default . t)))
+         ;; STRUCTURE / FLOW
+         (org-special-ctrl-a/e t)
+         (org-special-ctrl-k t)
+         (org-yank-adjusted-subtrees t)
+         (org-M-RET-may-split-line '((default . t)))
 
-     								;; ABBREV
-     								(define-abbrev-table 'my-org-abbrev-table '(
-                                        ("td" "TODO ")
-                                        ("assgn" "ASSIGNMENT ")
-                                        ("bll" "BILL ")
-                                        ("nxt" "NEXT ")
-                                        ("pln" "PLANNING ")
-                                        ("rvw" "REVIEW ")
-                                        ("hld" "HOLD ")
-                                        ("rdy" "READY ")
-                                        ("strt" "STARTED ")
-                                        ("chk" "[ ] ")
-                                        ))
-                                        (setq-default abbrev-table 'my-org-abbrev-table)
-
-
-                                	 ;; AGENDA
-                                	 (org-agenda-prefix-format
-                                         '((agenda . " %i %-12:c%?-12t% s")
-                                         (todo   . " %i %-12:c")
-                                         (tags   . " %i %-12:c")
-                                         (search . " %i %-12:c")))
-                                     (org-agenda-span 'week)
-                                     (org-agenda-window-setup 'current-window)
-                                     (org-agenda-restore-windows-after-quit t)
-                         			(org-agenda-start-with-log-mod t)
-                         			(org-agenda-files
-                         			 '("~/org/main/Tasks.org")
-                         			 ("~/org/main/Projects.org"))
-                         			(org-refile-targets
-                         			 '(("Archive.org" :maxlevel . 1)
-                         			   ("Tasks.org" :maxlevel . 1)
-                         			   ("Projects.org" :maxlevel . 1)))
-                         			(advice-add 'org-refile :after 'org-save-all-org-buffers)
-                         			(org-log-done 'time)
-                         			(org-log-into-drawer t)
-                         			(org-todo-keywords
-                         			 '((sequence "TODO(t)" "ASSIGNMENT(a)" "BILL(b)" "NEXT(n)" "PLANNING(p)" "REVIEW(v)" "HOLD(h)" "READY(r)" "STARTED(s)" "|" "DONE(d!)" "CANCELED(c!)")))
-                    				;; Note these also have to be set matching in Org-Modern
-                    (org-todo-keyword-faces
-                            '(("TODO"     . (:foreground "#282c34" :background "#98be65" :weight bold))
-                            ("NEXT"     . (:foreground "#282c34" :background "#6f8fff" :weight bold))
-                            ("PLANNING" . (:foreground "#282c34" :background "#c792ea" :weight bold))
-                            ("READY"    . (:foreground "#282c34" :background "#82b7ff" :weight bold))
-                            ("STARTED"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
-                            ("REVIEW"   . (:foreground "#282c34" :background "#e0a96d" :weight bold))
-                            ("HOLD"     . (:foreground "#282c34" :background "#e6d96c" :weight bold))
-                            ("ASSIGNMENT"  . (:foreground "#282c34" :background "#e5404e" :weight bold))
-                            ("BILL"  . (:foreground "#282c34" :background "#fc830a" :weight bold))
-                            ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
-                            ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
-
-                                     ;; (org-agenda-custom-commands
-                                         ;; '(("d" "Daily agenda"
-                                             ;; agenda ""
-                                             ;; ((org-super-agenda-groups
-                                             ;; '((:name "Today" :scheduled today)
-                                                 ;; (:name "Overdue" :deadline past)
-                                                 ;; (:name "Everything else" :anything t)))))))
-                            	 ;; Custom agenda command
-                    (org-agenda-custom-commands
-                          '(("d" "📅 Daily overview"
-                             ((agenda ""
-                                      ((org-agenda-span 5)   ; Span of 3 days
-                                       (org-agenda-start-day "0d")
-                                       (org-agenda-overriding-header "Today & Upcoming (next 5 days)")
-                                       (org-super-agenda-groups
-                                        '((:name "🔥 Today"
-                                                 :time-grid t
-                                                 :scheduled today
-                                                 :deadline today
-                                                 :order 1)
-                                          (:name "⚠ Overdue"
-                                                 :deadline past
-                    							 :scheduled past  ; Catch items scheduled in the past too
-                                                 :order 2)
-                                          (:name "📅 Upcoming"
-                                                 :scheduled future
-                                                 :deadline future
-                                                 :order 3)
-                                          (:discard (:anything t))))))
-
-                              (todo "NEXT"
-                                    ((org-agenda-overriding-header "🚀 Next tasks")
-                                     (org-super-agenda-groups
-                                      '((:name "High priority"
-                                               :priority "A")
-                                        (:name "Normal"
-                                               :anything t)))))
-
-                              (todo "TODO"
-                                    ((org-agenda-overriding-header "📦 Backlog")
-                                     (org-super-agenda-groups
-                                      '((:discard (:scheduled t)) ; drop scheduled from backlog
-                                        (:anything t)))))))))                 ;;                             (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
-                                     :config
-     								;; CYCLE FOLDING OF TODOS AND DONE
-     								(defun my/org-cycle-todo-entries ()
-                                        "Cycle visibility for all active TODO entries (non-DONE states)."
-                                        (interactive)
-                                        (org-map-entries
-                                        (lambda ()
-                                        (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
-                                        (when is-todo
-                                        (if (outline-invisible-p (line-end-position))
-                                        (outline-show-subtree)
-                                        (outline-hide-subtree)))))
-                                        nil 'file)
-                                        (message "Toggled TODO entries"))
-     								(defun my/org-cycle-all-entries ()
-                                        "Cycle visibility for every heading in the file."
-                                        (interactive)
-                                        (org-map-entries
-                                        (lambda ()
-                                        (if (outline-invisible-p (line-end-position))
-                                        (outline-show-subtree)
-                                        (outline-hide-subtree)))
-                                        nil 'file)
-                                        (message "Toggled all entries"))
-                                    (defun my/org-cycle-done-entries ()
-                                        "Cycle visibility for all DONE entries without hanging."
-                                        (interactive)
-                                        (org-map-entries
-                                        (lambda ()
-                                        (let ((is-done (member (org-get-todo-state) org-done-keywords)))
-                                        (when is-done
-                                        (if (outline-invisible-p (line-end-position))
-                                        (outline-show-subtree)
-                                        (outline-hide-subtree)))))
-                                        nil 'file)
-                                        (message "Toggled DONE entries"))
-                                        ;; Use 'find-file-hook' instead of 'org-mode-hook' to ensure it runs
-                                        ;; AFTER the buffer is fully rendered and displayed.
-
-     								;; AUTO COLLAPSE DONE TODOS ON LAUNCH
-                                    (defun my/org-hide-done-entries-static ()
-                                        "Force hide all DONE entries on file load."
-                                        (org-map-entries
-                                        (lambda () (outline-hide-subtree))
-                                        "/DONE" 'file))
-                                    (add-hook 'find-file-hook
-                                        (lambda ()
-                                        (when (derived-mode-p 'org-mode)
-                                        (my/org-hide-done-entries-static))))
-
-     								;; CUSTOM ABBREV SHORTCUTS
-                                    (with-eval-after-load 'org
-                                        (define-abbrev-table 'org-mode-abbrev-table
-                                        '(("td"    "TODO ")
-                                        ("assgn" "ASSIGNMENT ")
-                                        ("bll"   "BILL ")
-                                        ("nxt"   "NEXT ")
-                                        ("pln"   "PLANNING ")
-                                        ("rvw"   "REVIEW ")
-                                        ("hld"   "HOLD ")
-                                        ("rdy"   "READY ")
-                                        ("strt"  "STARTED ")
-                                        ("chk"   "- [ ] ")
-                                        ("chkb"   "[ ] ")
-                                        ("chkc"   "[0/0]")
-                                    )))
-                                     ;; Make RET context-aware like Doom
-                                     ;; (define-key org-mode-map (kbd "RET") #'org-return) ;; redefined below
-                              (defun my/org-return-dwim ()
-                                "Context-aware RET for Org (normal mode only)."
-                                (interactive)
-                                (cond
-                                ;; Toggle checkbox
-                                ((org-at-item-checkbox-p)
-                                  (org-toggle-checkbox))
-
-                                ;; Follow links
-                                ((and org-return-follows-link
-                                      (org-in-regexp org-link-any-re))
-                                  (org-open-at-point))
-
-                                ;; Tables
-                                ((org-at-table-p)
-                                  (org-table-next-row))
-
-                                ;; Lists
-                                ((org-in-item-p)
-     							 (org-end-of-line)
-                                  (org-insert-item))
-
-                                ;; Headings
-                                ((org-at-heading-p)
-                                  (org-cycle))
-
-                                ;; Fallback
-                                (t
-                                  (evil-next-line))))
-
-                          (defun my/org-smart-insert-item-below ()
-                         "Insert a new list item, checkbox, table row, or headline below the current line."
-                         (interactive)
-                           (org-back-to-heading)
-                         (cond
-                         ;; 1. In a Table
-                         ((org-at-table-p)
-                             (org-table-insert-row 'below))
-
-                         ;; 2. On a Checkbox
-                         ((org-at-item-checkbox-p)
-                             (org-end-of-line)
-                             (org-insert-item t)) ;; The 't' argument forces a checkbox
-
-                         ;; 3. In a List (Ordered or Unordered)
-                         ((org-in-item-p)
-                             (org-end-of-line)
-                             (org-insert-item))
-
-                         ;; 4. On a Heading / TODO
-                         ((org-at-heading-p)
-                             (org-insert-heading-respect-content)
-                             (when (org-entry-is-todo-p)
-                             (org-todo 'nextset))) ;; Optional: matches TODO state of above line
-
-                         ;; 5. Default: Just a normal newline
-                         (t
-                             (end-of-line)
-                             (newline-and-indent)))
-                         (org-update-checkbox-count t)
-                         )
-
-     ;;           (defun my/org-smart-insert-subheading ()
-     ;;             "Insert a subheading after the current entry's content without splitting text."
-     ;;             (interactive)
-     ;;             ;; 1. Go to the start of the current heading
-     ;;             (org-back-to-heading)
-     ;;             ;; 2. Move to thenullgit  absolute end of that specific line
-     ;aa3i1do; while for #n\0while b1;             (move-end-of-line 1)
-     ;;             ;; 3. Insert heading at the end of all current sub-content
-     ;;             (org-insert-heading-respect-content)
-     ;;             ;; 4. Turn that new heading into a subheading
-     ;;         (org-demote)
-     ;; )
-     (defun my/org-smart-insert-sub-heading ()
-       "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
-       (interactive)
-       (cond
-        ;; 1. On a Checkbox -> Insert a nested checkbox
-        ((org-at-item-checkbox-p)
-         (org-end-of-line)
-         (org-insert-item t)nullgit
-         (org-indent-item))
-
-        ;; 2. In a List -> Insert a nested list item
-        ((org-in-item-p)
-         (org-end-of-line)
-         (org-insert-item)
-         (org-indent-item))
-
-        ;; 3. On a Heading -> Insert a demoted heading at the end of content
-        ((org-at-heading-p)
-         ;; We use save-excursion to ensure we don't split the line
-         (save-excursion
-           (org-back-to-heading)
-           (move-end-of-line 1)
-           (org-insert-heading-respect-content)
-           (org-demote))
-         ;; Move point to the new heading
-         (org-end-of-subtree t t)
-         (unless (bolp) (insert "\n"))
-         (forward-line -1)
-         (goto-char (line-end-position))
-         (evil-insert-state))
-
-        ;; 4. Default -> Normal behavior
-        (t
-         (end-of-line)
-         (newline-and-indent)))
-       (org-update-checkbox-count t))
-
-                      (defun my/org-roam-ui-open-in-emacs ()
-                        "Open org-roam-ui in an Emacs xwidget buffer."
-                        (interactive)
-                        (require 'xwidget)
-                        (xwidget-webkit-browse-url "http://localhost:35901"))
+                                 ;; ABBREV
+                                 (define-abbrev-table 'my-org-abbrev-table '(
+         ("td" "TODO ")
+         ("assgn" "ASSIGNMENT ")
+         ("bll" "BILL ")
+         ("nxt" "NEXT ")
+         ("pln" "PLANNING ")
+         ("rvw" "REVIEW ")
+         ("hld" "HOLD ")
+         ("rdy" "READY ")
+         ("strt" "STARTED ")
+         ("chk" "[ ] ")
+         ))
+         (setq-default abbrev-table 'my-org-abbrev-table)
 
 
-                          )
+         ;; AGENDA
+         (org-agenda-prefix-format
+         '((agenda . " %i %-12:c%?-12t% s")
+         (todo   . " %i %-12:c")
+         (tags   . " %i %-12:c")
+         (search . " %i %-12:c")))
+         (org-agenda-span 'week)
+         (org-agenda-window-setup 'current-window)
+         (org-agenda-restore-windows-after-quit t)
+         (org-agenda-start-with-log-mod t)
+         (org-agenda-files
+             '("~/org/main/Tasks.org")
+             ("~/org/main/Projects.org"))
+         (org-refile-targets
+             '(("Archive.org" :maxlevel . 1)
+             ("Tasks.org" :maxlevel . 1)
+             ("Projects.org" :maxlevel . 1)))
+         (advice-add 'org-refile :after 'org-save-all-org-buffers)
+         (org-log-done 'time)
+         (org-log-into-drawer t)
+         (org-todo-keywords
+             '((sequence "TODO(t)" "ASSIGNMENT(a)" "BILL(b)" "NEXT(n)" "PLANNING(P)" "REVIEW(V)" "HOLD(H)" "READY(R)" "ACTIVE(A)" "|" "DONE(d!)" "CANCELED(c!)")))
+         ;; Note these also have to be set matching in Org-Modern
+         (org-todo-keyword-faces
+                 '(("TODO"     . (:foreground "#282c34" :background "#98be65" :weight bold))
+                 ("NEXT"     . (:foreground "#282c34" :background "#6f8fff" :weight bold))
+                 ("PLANNING" . (:foreground "#282c34" :background "#c792ea" :weight bold))
+                 ("READY"    . (:foreground "#282c34" :background "#82b7ff" :weight bold))
+                 ("ACTIVE"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
+                 ("REVIEW"   . (:foreground "#282c34" :background "#e0a96d" :weight bold))
+                 ("HOLD"     . (:foreground "#282c34" :background "#e6d96c" :weight bold))
+                 ("ASSIGNMENT"  . (:foreground "#282c34" :background "#e5404e" :weight bold))
+                 ("BILL"  . (:foreground "#282c34" :background "#fc830a" :weight bold))
+                 ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
+                 ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
 
-                          (with-eval-after-load 'org
-                            (define-key org-mode-map (kbd "RET") #'org-return))
+        ;; Custom agenda command
+        (org-agenda-custom-commands
+                '(("d" "📅 Daily overview"
+                    ((todo "NEXT"
+                        ((org-agenda-overriding-header "🚀 NEXT TASKS")
+                            (org-super-agenda-groups
+                            '((:name "High priority"
+                                    :priority "A")
+                            (:name "Normal"
+                                    :anything t)))))
+                    (agenda ""
+                            ((org-agenda-span 1)   ; Span of 3 days
+                            (org-agenda-start-day "0d")
+                            (org-agenda-overriding-header "🔥 TODAY")
+                            (org-super-agenda-groups
+                            '((:name "❗Overdue"
+                                        :deadline past
+                                        :scheduled past  ; Catch items scheduled in the past too
+                                        :order 1)
+                                (:name "Today"
+                                        :time-grid t
+                                        :scheduled today
+                                        :deadline today
+                                        :order 2)
+                                (:discard (:anything t))))))
+                    (agenda ""
+                        ((org-agenda-span 7)   ; Next 7 days
+                        (org-agenda-start-day "+1d")
+                        (org-agenda-start-on-weekday nil)  ; Don't snap to week start
+                        (org-agenda-time-grid nil)  ; Remove time grid
+                        (org-agenda-overriding-header "📅 UPCOMING (NEXT 7 DAYS)")
+                        (org-super-agenda-groups nil)))  ; Completely disable super-agenda
+                                        (todo "TODO"
+                        ((org-agenda-overriding-header "📦 TODO BACKLOG")
+                            (org-super-agenda-groups
+                            '((:discard (:scheduled t)) ; drop scheduled from backlog
+                            (:anything t)))))))))
+        :config
+         ;; CYCLE FOLDING OF TODOS AND DONE
+         (defun my/org-toggle-todo-entries ()
+             "Cycle visibility for all active TODO entries (non-DONE states)."
+             (interactive)
+             (org-map-entries
+             (lambda ()
+             (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
+             (when is-todo
+             (if (outline-invisible-p (line-end-position))
+             (outline-show-subtree)
+             (outline-hide-subtree)))))
+             nil 'file)
+             (message "Toggled TODO entries"))
+         (defun my/org-toggle-done-entries ()
+             "Cycle visibility for all DONE entries without hanging."
+             (interactive)
+             (org-map-entries
+             (lambda ()
+             (let ((is-done (member (org-get-todo-state) org-done-keywords)))
+             (when is-done
+             (if (outline-invisible-p (line-end-position))
+             (outline-show-subtree)
+             (outline-hide-subtree)))))
+             nil 'file)
+             (message "Toggled DONE entries"))
+         (defun my/org-cycle-all-todo-done-entries ()
+             "Cycle visibility for all entries with TODO states (both TODO and DONE).
+             If any are visible, hide all. If all are hidden, show all."
+             (interactive)
+             (let ((any-visible nil))
+                 ;; First pass: check if any TODO-state entries are visible
+                 (org-map-entries
+                 (lambda ()
+                 (let ((has-todo-state (org-get-todo-state)))
+                     (when (and has-todo-state (not (outline-invisible-p (line-end-position))))
+                     (setq any-visible t))))
+                 nil 'file)
+                 ;; Second pass: apply consistent action to all TODO-state entries
+                 (org-map-entries
+                 (lambda ()
+                 (let ((has-todo-state (org-get-todo-state)))
+                     (when has-todo-state
+                     (if any-visible
+                         (outline-hide-subtree)
+                         (outline-show-subtree)))))
+                 nil 'file)
+                 (message (if any-visible "Hidden all TODO-state entries" "Shown all TODO-state entries"))))
+         (defun my/org-cycle-todo-entries ()
+             "Cycle visibility for all TODO entries (non-DONE states).
+             If any are visible, hide all. If all are hidden, show all."
+             (interactive)
+             (let ((any-visible nil))
+                 ;; First pass: check if any TODO entries are visible
+                 (org-map-entries
+                 (lambda ()
+                 (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
+                     (when (and is-todo (not (outline-invisible-p (line-end-position))))
+                     (setq any-visible t))))
+                 nil 'file)
+                 ;; Second pass: apply consistent action to all TODO entries
+                 (org-map-entries
+                 (lambda ()
+                 (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
+                     (when is-todo
+                     (if any-visible
+                         (outline-hide-subtree)
+                         (outline-show-subtree)))))
+                 nil 'file)
+                 (message (if any-visible "Hidden TODO entries" "Shown TODO entries"))))
+         (defun my/org-cycle-done-entries ()
+             "Cycle visibility for all DONE entries.
+             If any are visible, hide all. If all are hidden, show all."
+             (interactive)
+             (let ((any-visible nil))
+                 ;; First pass: check if any DONE entries are visible
+                 (org-map-entries
+                 (lambda ()
+                 (let ((is-done (member (org-get-todo-state) org-done-keywords)))
+                     (when (and is-done (not (outline-invisible-p (line-end-position))))
+                     (setq any-visible t))))
+                 nil 'file)
+                 ;; Second pass: apply consistent action to all DONE entries
+                 (org-map-entries
+                 (lambda ()
+                 (let ((is-done (member (org-get-todo-state) org-done-keywords)))
+                     (when is-done
+                     (if any-visible
+                         (outline-hide-subtree)
+                         (outline-show-subtree)))))
+                 nil 'file)
+                 (message (if any-visible "Hidden DONE entries" "Shown DONE entries"))))
 
-                           (with-eval-after-load 'org
-                           (add-hook 'emacs-startup-hook
-                           	    (lambda ()
-                           	    (run-at-time "0.5 sec" nil
-                           			(lambda ()
-                           			    (org-agenda nil "d"))))))
+
+         ;; ;; AUTO COLLAPSE DONE TODOS ON LAUNCH
+         (defun my/org-hide-done-entries-static ()
+             "Force hide all DONE entries on file load."
+             (org-map-entries
+             (lambda () (outline-hide-subtree))
+             "/DONE" 'file))
+             ;; Use 'find-file-hook' instead of 'org-mode-hook' to ensure it runs
+             ;; AFTER the buffer is fully rendered and displayed.
+         (add-hook 'find-file-hook
+             (lambda ()
+             (when (derived-mode-p 'org-mode)
+             (my/org-hide-done-entries-static))))
+
+     	;; AUTO COLLAPSE KEYWORD HEADINGS
+        ;; List of top-level heading names to auto-collapse
+        (defvar my/org-collapse-headings '("Future Bills" "Archive")
+            "List of top-level heading names to automatically collapse on file load.
+            Case-sensitive matching.")
+        (defun my/org-hide-matching-top-level-headings ()
+            "Force hide all top-level headings that match names in `my/org-collapse-headings'."
+            (org-map-entries
+            (lambda ()
+                (when (= (org-current-level) 1)  ; Only top-level headings
+                (let ((heading (org-get-heading t t t t)))  ; Get heading without tags, todo, etc.
+                    (when (member heading my/org-collapse-headings)
+                    (outline-hide-subtree)))))
+            nil 'file))
+        ;; Hook to auto collapse
+        (add-hook 'find-file-hook
+            (lambda ()
+                (when (derived-mode-p 'org-mode)
+                (my/org-hide-matching-top-level-headings))))
+
+        ;; CUSTOM ABBREV SHORTCUTS
+         (with-eval-after-load 'org
+             (define-abbrev-table 'org-mode-abbrev-table
+             '(("td"    "TODO ")
+             ("assgn" "ASSIGNMENT ")
+             ("bll"   "BILL ")
+             ("nxt"   "NEXT ")
+             ("pln"   "PLANNING ")
+             ("rvw"   "REVIEW ")
+             ("hld"   "HOLD ")
+             ("rdy"   "READY ")
+             ("strt"  "STARTED ")
+             ("chk"   "- [ ] ")
+             ("chkb"   "[ ] ")
+             ("chkc"   "[0/0]")
+         )))
+         ;; Make RET context-aware like Doom
+         ;; (define-key org-mode-map (kbd "rET") #'org-return) ;; redefined below
+         (defun my/org-return-dwim ()
+             "Context-aware RET for Org (normal mode only)."
+             (interactive)
+             (cond
+             ;; Toggle checkbox
+             ((org-at-item-checkbox-p)
+                 (org-toggle-checkbox))
+
+             ;; Follow links
+             ((and org-return-follows-link
+                     (org-in-regexp org-link-any-re))
+                 (org-open-at-point))
+
+             ;; Tables
+             ((org-at-table-p)
+                 (org-table-next-row))
+
+             ;; Lists
+             ((org-in-item-p)
+                 (org-end-of-line)
+                 (org-insert-item))
+
+             ;; Headings
+             ((org-at-heading-p)
+                 (org-cycle))
+
+             ;; Fallback
+             (t
+                 (evil-next-line))))
+
+     	;; INSERT SUBHEADINGS
+         (defun my/org-smart-insert-item-below ()
+                 "Insert a new list item, checkbox, table row, or headline below the current line."
+                 (interactive)
+                 (org-back-to-heading)
+                 (cond
+                 ;; 1. In a Table
+                 ((org-at-table-p)
+                     (org-table-insert-row 'below))
+
+                 ;; 2. On a Checkbox
+                 ((org-at-item-checkbox-p)
+                     (org-end-of-line)
+                     (org-insert-item t)) ;; The 't' argument forces a checkbox
+
+                 ;; 3. In a List (Ordered or Unordered)
+                 ((org-in-item-p)
+                     (org-end-of-line)
+                     (org-insert-item))
+
+                 ;; 4. On a Heading / TODO
+                 ((org-at-heading-p)
+                     (org-insert-heading-respect-content)
+                     (when (org-entry-is-todo-p)
+                     (org-todo 'nextset))) ;; Optional: matches TODO state of above line
+
+                 ;; 5. Default: Just a normal newline
+                 (t
+                     (end-of-line)
+                     (newline-and-indent)))
+                 (org-update-checkbox-count t)
+                 )
+
+          ;;           (defun my/org-smart-insert-subheading ()
+          ;;             "Insert a subheading after the current entry's content without splitting text."
+          ;;             (interactive)
+          ;;             ;; 1. Go to the start of the current heading
+          ;;             (org-back-to-heading)
+          ;;             ;; 2. Move to thenullgit  absolute end of that specific line
+          ;aa3i1do; while for #n\0while b1;             (move-end-of-line 1)
+          ;;             ;; 3. Insert heading at the end of all current sub-content
+          ;;             (org-insert-heading-respect-content)
+          ;;             ;; 4. Turn that new heading into a subheading
+          ;;         (org-demote)
+          ;; )
+          (defun my/org-smart-insert-sub-heading ()
+            "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
+            (interactive)
+            (cond
+             ;; 1. On a Checkbox -> Insert a nested checkbox
+             ((org-at-item-checkbox-p)
+              (org-end-of-line)
+              (org-insert-item t)nullgit
+              (org-indent-item))
+
+             ;; 2. In a List -> Insert a nested list item
+             ((org-in-item-p)
+              (org-end-of-line)
+              (org-insert-item)
+              (org-indent-item))
+
+             ;; 3. On a Heading -> Insert a demoted heading at the end of content
+             ((org-at-heading-p)
+              ;; We use save-excursion to ensure we don't split the line
+              (save-excursion
+                (org-back-to-heading)
+                (move-end-of-line 1)
+                (org-insert-heading-respect-content)
+                (org-demote))
+              ;; Move point to the new heading
+              (org-end-of-subtree t t)
+              (unless (bolp) (insert "\n"))
+              (forward-line -1)
+              (goto-char (line-end-position))
+              (evil-insert-state))
+
+             ;; 4. Default -> Normal behavior
+             (t
+              (end-of-line)
+              (newline-and-indent)))
+            (org-update-checkbox-count t))
+
+        (defun my/org-roam-ui-open-in-emacs ()
+            "Open org-roam-ui in an Emacs xwidget buffer."
+            (interactive)
+            (require 'xwidget)
+            (xwidget-webkit-browse-url "http://localhost:35901"))
+
+
+            )
+
+            (with-eval-after-load 'org
+                (define-key org-mode-map (kbd "RET") #'org-return))
+
+            (with-eval-after-load 'org
+            (add-hook 'emacs-startup-hook
+                        (lambda ()
+                        (run-at-time "0.5 sec" nil
+                                    (lambda ()
+                                        (org-agenda nil "d"))))))
      #+end_src
 
 ** Evil-Org-Mode
 #+begin_src emacs-lisp
-(defun my/org-meta-left-smart ()
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaleft) (evil-shift-left (line-beginning-position) (line-end-position))))
+    (defun my/org-meta-left-smart ()
+        (interactive)
+        (if (or (org-at-heading-p) (org-at-item-p)) (org-metaleft) (evil-shift-left (line-beginning-position) (line-end-position))))
 
-(defun my/org-meta-right-smart ()
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaright) (evil-shift-right (line-beginning-position) (line-end-position))))
+        (defun my/org-meta-right-smart ()
+        (interactive)
+        (if (or (org-at-heading-p) (org-at-item-p)) (org-metaright) (evil-shift-right (line-beginning-position) (line-end-position))))
 
-(defun my/org-meta-down-smart ()
-  "Move headline/item down if on one, otherwise drag the current line down."
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p))
-      (org-metadown)
-    (let ((col (current-column)))
-      (forward-line 1)
-      (transpose-lines 1)
-      (forward-line -1)
-      (move-to-column col))))
+        (defun my/org-meta-down-smart ()
+        "Move headline/item down if on one, otherwise drag the current line down."
+        (interactive)
+        (if (or (org-at-heading-p) (org-at-item-p))
+            (org-metadown)
+            (let ((col (current-column)))
+            (forward-line 1)
+            (transpose-lines 1)
+            (forward-line -1)
+            (move-to-column col))))
 
-(defun my/org-meta-up-smart ()
-  "Move headline/item up if on one, otherwise drag the current line up."
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p))
-      (org-metaup)
-    (let ((col (current-column)))
-      (transpose-lines 1)
-      (forward-line -2)
-      (move-to-column col))))
+    (defun my/org-meta-up-smart ()
+        "Move headline/item up if on one, otherwise drag the current line up."
+        (interactive)
+        (if (or (org-at-heading-p) (org-at-item-p))
+            (org-metaup)
+            (let ((col (current-column)))
+            (transpose-lines 1)
+            (forward-line -2)
+            (move-to-column col))))
     (use-package evil-org
         :ensure t
         :after org
@@ -1512,34 +1593,34 @@ If you want a faster and more responsive terminal emulator try out vterm.
                         ;; (kbd "M-l") 'org-metaright
                         ;; )))
     	;; Smart Meta Movements (Normal & Insert states combined)
-    (evil-define-key '(normal insert) org-mode-map
-        (kbd "M-h") #'my/org-meta-left-smart
-        (kbd "M-j") #'my/org-meta-down-smart
-        (kbd "M-k") #'my/org-meta-up-smart
-        (kbd "M-l") #'my/org-meta-right-smart)
-    	)
-    (with-eval-after-load 'evil-org
-        ;; Normal mode mappings
-        (evil-define-key 'normal org-mode-map (kbd "RET") #'my/org-return-dwim)
-        (evil-define-key 'normal org-mode-map (kbd "C-<return>") #'my/org-smart-insert-item-below)
-        (evil-define-key 'normal org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
-        (evil-define-key 'normal org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
-        ;; Map double left click to cycle headings/logic in Normal state
-        (evil-define-key 'normal org-mode-map
-        (kbd "<double-mouse-1>")
-        (lambda (event)
-            (interactive "e")
-            (mouse-set-point event) ; Move the cursor to where you double-clicked
-            (my/org-return-dwim)))
+        (evil-define-key '(normal insert) org-mode-map
+            (kbd "M-h") #'my/org-meta-left-smart
+            (kbd "M-j") #'my/org-meta-down-smart
+            (kbd "M-k") #'my/org-meta-up-smart
+            (kbd "M-l") #'my/org-meta-right-smart)
+            )
+        (with-eval-after-load 'evil-org
+            ;; Normal mode mappings
+            (evil-define-key 'normal org-mode-map (kbd "RET") #'my/org-return-dwim)
+            (evil-define-key 'normal org-mode-map (kbd "C-<return>") #'my/org-smart-insert-item-below)
+            (evil-define-key 'normal org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
+            (evil-define-key 'normal org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
+            ;; Map double left click to cycle headings/logic in Normal state
+            (evil-define-key 'normal org-mode-map
+            (kbd "<double-mouse-1>")
+            (lambda (event)
+                (interactive "e")
+                (mouse-set-point event) ; Move the cursor to where you double-clicked
+                (my/org-return-dwim)))
 
-            ;; Insert mode mappings
-            (evil-define-key 'insert org-mode-map (kbd "C-<return>") #'my/org-smart-insert-item-below)
-            (evil-define-key 'insert org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
-            (evil-define-key 'insert org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
-            (evil-define-key 'normal org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subheading)
-            (evil-define-key 'insert org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subheading)
-            (evil-define-key 'normal org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subheading)
-            (evil-define-key 'insert org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subheading)
+                ;; Insert mode mappings
+                (evil-define-key 'insert org-mode-map (kbd "C-<return>") #'my/org-smart-insert-item-below)
+                (evil-define-key 'insert org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
+                (evil-define-key 'insert org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
+                (evil-define-key 'normal org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subheading)
+                (evil-define-key 'insert org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subheading)
+                (evil-define-key 'normal org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subheading)
+                (evil-define-key 'insert org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subheading)
     )
 
 #+end_src
@@ -1573,7 +1654,7 @@ individually via the org-modern customization group.
             ("NEXT"     . (:foreground "#282c34" :background "#6f8fff" :weight bold))
             ("PLANNING" . (:foreground "#282c34" :background "#c792ea" :weight bold))
             ("READY"    . (:foreground "#282c34" :background "#82b7ff" :weight bold))
-            ("STARTED"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
+            ("ACTIVE"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
             ("REVIEW"   . (:foreground "#282c34" :background "#e0a96d" :weight bold))
             ("HOLD"     . (:foreground "#282c34" :background "#e6d96c" :weight bold))
             ("ASSIGNMENT"     . (:foreground "#282c34" :background "#e5404e" :weight bold))
