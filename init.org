@@ -1251,11 +1251,13 @@ If you want a faster and more responsive terminal emulator try out vterm.
                         (org-agenda-time-grid nil)  ; Remove time grid
                         (org-agenda-overriding-header "📅 UPCOMING (NEXT 7 DAYS)")
                         (org-super-agenda-groups nil)))  ; Completely disable super-agenda
-                                        (todo "TODO"
+                    (todo "TODO"
                         ((org-agenda-overriding-header "📦 TODO BACKLOG")
-                            (org-super-agenda-groups
-                            '((:discard (:scheduled t)) ; drop scheduled from backlog
-                            (:anything t)))))))))
+                        ;; This skips any entry that has a scheduled or deadline date
+                        (org-agenda-todo-ignore-scheduled 'all)
+                        (org-agenda-todo-ignore-deadlines 'all)
+                        (org-super-agenda-groups
+                            '((:anything t)))))))))
         :config
          ;; CYCLE FOLDING OF TODOS AND DONE
          (defun my/org-toggle-todo-entries ()
@@ -1363,25 +1365,35 @@ If you want a faster and more responsive terminal emulator try out vterm.
              (when (derived-mode-p 'org-mode)
              (my/org-hide-done-entries-static))))
 
-     	;; AUTO COLLAPSE KEYWORD HEADINGS
-        ;; List of top-level heading names to auto-collapse
-        (defvar my/org-collapse-headings '("Future Bills" "Archive")
-            "List of top-level heading names to automatically collapse on file load.
-            Case-sensitive matching.")
-        (defun my/org-hide-matching-top-level-headings ()
-            "Force hide all top-level headings that match names in `my/org-collapse-headings'."
-            (org-map-entries
-            (lambda ()
-                (when (= (org-current-level) 1)  ; Only top-level headings
-                (let ((heading (org-get-heading t t t t)))  ; Get heading without tags, todo, etc.
-                    (when (member heading my/org-collapse-headings)
-                    (outline-hide-subtree)))))
-            nil 'file))
-        ;; Hook to auto collapse
-        (add-hook 'find-file-hook
-            (lambda ()
-                (when (derived-mode-p 'org-mode)
-                (my/org-hide-matching-top-level-headings))))
+;; AUTO COLLAPSE KEYWORD HEADINGS
+;; Alist of heading names and optional level restrictions
+(defvar my/org-collapse-headings
+    '(("Future Bills" .  1)   ; Only level 1
+      ("Archive" . nil)         ; Any level
+      ("#Repeaters" . nil))            ; Any level
+    "Alist of (heading-name . level).
+    If level is nil, collapse at any level.
+    If level is a number, only collapse at that level.")
+(defun my/org-hide-matching-headings ()
+    "Force hide all headings that match entries in `my/org-collapse-headings'.
+    Respects level restrictions if specified."
+    (org-map-entries
+     (lambda ()
+       (let ((heading (org-get-heading t t t t))  ; Get heading without tags, todo, etc.
+             (current-level (org-current-level)))
+         (dolist (entry my/org-collapse-headings)
+           (let ((target-heading (car entry))
+                 (target-level (cdr entry)))
+             (when (and (string= heading target-heading)
+                        (or (null target-level)  ; No level restriction
+                            (= current-level target-level)))  ; Matches specific level
+               (outline-hide-subtree))))))
+     nil 'file))
+;; Hook to auto collapse
+(add-hook 'find-file-hook
+    (lambda ()
+        (when (derived-mode-p 'org-mode)
+          (my/org-hide-matching-headings))))
 
         ;; CUSTOM ABBREV SHORTCUTS
          (with-eval-after-load 'org
@@ -1535,100 +1547,147 @@ If you want a faster and more responsive terminal emulator try out vterm.
 
 ** Evil-Org-Mode
 #+begin_src emacs-lisp
-    (defun my/org-meta-left-smart ()
-        (interactive)
-        (if (or (org-at-heading-p) (org-at-item-p)) (org-metaleft) (evil-shift-left (line-beginning-position) (line-end-position))))
+                (defun my/org-meta-left-smart ()
+                    (interactive)
+                    (if (or (org-at-heading-p) (org-at-item-p)) (org-metaleft) (evil-shift-left (line-beginning-position) (line-end-position))))
 
-        (defun my/org-meta-right-smart ()
-        (interactive)
-        (if (or (org-at-heading-p) (org-at-item-p)) (org-metaright) (evil-shift-right (line-beginning-position) (line-end-position))))
+                (defun my/org-meta-right-smart ()
+                    (interactive)
+                    (if (or (org-at-heading-p) (org-at-item-p)) (org-metaright) (evil-shift-right (line-beginning-position) (line-end-position))))
 
-        (defun my/org-meta-down-smart ()
-        "Move headline/item down if on one, otherwise drag the current line down."
-        (interactive)
-        (if (or (org-at-heading-p) (org-at-item-p))
-            (org-metadown)
-            (let ((col (current-column)))
-            (forward-line 1)
-            (transpose-lines 1)
-            (forward-line -1)
-            (move-to-column col))))
+                (defun my/org-meta-down-smart ()
+                    "Move headline/item down if on one, otherwise drag the current line down."
+                    (interactive)
+                    (if (or (org-at-heading-p) (org-at-item-p))
+                        (org-metadown)
+                        (let ((col (current-column)))
+                        (forward-line 1)
+                        (transpose-lines 1)
+                        (forward-line -1)
+                        (move-to-column col))))
 
-    (defun my/org-meta-up-smart ()
-        "Move headline/item up if on one, otherwise drag the current line up."
-        (interactive)
-        (if (or (org-at-heading-p) (org-at-item-p))
-            (org-metaup)
-            (let ((col (current-column)))
-            (transpose-lines 1)
-            (forward-line -2)
-            (move-to-column col))))
-    (use-package evil-org
-        :ensure t
-        :after org
-        ;;:hook (org-mode . evil-org-mode)
-        :hook (org-mode . (lambda () evil-org-mode))
-        :config
-        (require 'evil-org-agenda)
-        (evil-org-agenda-set-keys)
-        (evil-org-set-key-theme '(textobjects insert navigation additional shift todo heading))
-        ;; Set additional keybindings
+                (defun my/org-meta-up-smart ()
+                    "Move headline/item up if on one, otherwise drag the current line up."
+                    (interactive)
+                    (if (or (org-at-heading-p) (org-at-item-p))
+                        (org-metaup)
+                        (let ((col (current-column)))
+                        (transpose-lines 1)
+                        (forward-line -2)
+                        (move-to-column col))))
 
-        ;; Org element motions (Doom-style)
-        (evil-define-key 'normal org-mode-map
-            (kbd "gj") #'org-forward-element
-            (kbd "gk") #'org-backward-element)
-        (evil-define-key 'normal org-mode-map
-            (kbd "]]") #'org-next-visible-heading
-            (kbd "[[") #'org-previous-visible-heading
-            (kbd "]h") #'org-forward-heading-same-level
-            (kbd "[h") #'org-backward-heading-same-level)
+        (defun my/evil-org-delete-heading-dwim2 (count)
+          "Delete subtree if heading is folded; otherwise delete line normally."
+          (interactive "p")
+          (cond
+           ;; If on a folded heading, delete the entire subtree
+           ((and (org-at-heading-p)
+                 (or (and (fboundp 'org-fold-folded-p)
+                          (org-fold-folded-p))
+                     (outline-invisible-p (line-end-position))))
+            (org-cut-subtree))
+           ;; Otherwise, use evil's native line deletion
+           (t
+            (evil-delete (line-beginning-position)
+                         (line-beginning-position (1+ count))
+                         'line
+                         ?\")))) ; Register as character, not a call
 
-        ;; Ensure org-mode keybindings are overridden
-        ;; (evil-define-key 'normal org-mode-map
-            ;; (kbd "M-h") 'org-metaleft
-            ;; (kbd "M-j") 'org-metadown
-            ;; (kbd "M-k") 'org-metaup
-            ;; (kbd "M-l") 'org-metaright
-            ;; )
-        ;; (add-hook 'org-mode-hook
-                    ;; (lambda ()
-                    ;; (evil-define-key 'insert org-mode-map
+(defun my/evil-org-delete-heading-dwim (count)
+  "Delete subtree if heading is folded (linewise); otherwise delete line normally."
+  (interactive "p")
+  (cond
+   ;; CASE 1: Folded Heading -> Delete Subtree Linewise
+   ((and (org-at-heading-p)
+         (or (and (fboundp 'org-fold-folded-p)
+                  (org-fold-folded-p))
+             (outline-invisible-p (line-end-position))))
+    (let ((beg (line-beginning-position))
+          (end (save-excursion
+                 ;; 't t' forces it to move to the start of the NEXT heading
+                 (org-end-of-subtree t t)
+                 (point))))
+      ;; If at End of Buffer, ensure we claim the final newline so no gap remains
+      (when (eobp) (setq end (point-max)))
+
+      (evil-delete beg end 'line)))
+
+   ;; CASE 2: Everything else -> Standard Evil Line Delete
+   (t
+    (evil-delete (line-beginning-position)
+                 (line-beginning-position (1+ count))
+                 'line
+                 ?\"))))
+
+                (use-package evil-org
+                    :ensure t
+                    :after org
+                    ;;:hook (org-mode . evil-org-mode)
+                    :hook (org-mode . (lambda () evil-org-mode))
+                    :config
+                    (require 'evil-org-agenda)
+                    (evil-org-agenda-set-keys)
+                    (evil-org-set-key-theme '(textobjects insert navigation additional shift todo heading))
+                    ;; Set additional keybindings
+
+                    ;; Map 'dd' specifically for Org-mode
+                    (evil-define-key 'normal org-mode-map (kbd "d d") #'my/evil-org-delete-heading-dwim)
+
+                    ;; Org element motions (Doom-style)
+                    (evil-define-key 'normal org-mode-map
+                        (kbd "gj") #'org-forward-element
+                        (kbd "gk") #'org-backward-element)
+                    (evil-define-key 'normal org-mode-map
+                        (kbd "]]") #'org-next-visible-heading
+                        (kbd "[[") #'org-previous-visible-heading
+                        (kbd "]h") #'org-forward-heading-same-level
+                        (kbd "[h") #'org-backward-heading-same-level)
+
+                    ;; Ensure org-mode keybindings are overridden
+                    ;; (evil-define-key 'normal org-mode-map
                         ;; (kbd "M-h") 'org-metaleft
                         ;; (kbd "M-j") 'org-metadown
                         ;; (kbd "M-k") 'org-metaup
                         ;; (kbd "M-l") 'org-metaright
-                        ;; )))
-    	;; Smart Meta Movements (Normal & Insert states combined)
-        (evil-define-key '(normal insert) org-mode-map
-            (kbd "M-h") #'my/org-meta-left-smart
-            (kbd "M-j") #'my/org-meta-down-smart
-            (kbd "M-k") #'my/org-meta-up-smart
-            (kbd "M-l") #'my/org-meta-right-smart)
-            )
-        (with-eval-after-load 'evil-org
-            ;; Normal mode mappings
-            (evil-define-key 'normal org-mode-map (kbd "RET") #'my/org-return-dwim)
-            (evil-define-key 'normal org-mode-map (kbd "C-<return>") #'my/org-smart-insert-item-below)
-            (evil-define-key 'normal org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
-            (evil-define-key 'normal org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
-            ;; Map double left click to cycle headings/logic in Normal state
-            (evil-define-key 'normal org-mode-map
-            (kbd "<double-mouse-1>")
-            (lambda (event)
-                (interactive "e")
-                (mouse-set-point event) ; Move the cursor to where you double-clicked
-                (my/org-return-dwim)))
+                        ;; )
+                    ;; (add-hook 'org-mode-hook
+                                ;; (lambda ()
+                                ;; (evil-define-key 'insert org-mode-map
+                                    ;; (kbd "M-h") 'org-metaleft
+                                    ;; (kbd "M-j") 'org-metadown
+                                    ;; (kbd "M-k") 'org-metaup
+                                    ;; (kbd "M-l") 'org-metaright
+                                    ;; )))
+                	;; Smart Meta Movements (Normal & Insert states combined)
+                    (evil-define-key '(normal insert) org-mode-map
+                        (kbd "M-h") #'my/org-meta-left-smart
+                        (kbd "M-j") #'my/org-meta-down-smart
+                        (kbd "M-k") #'my/org-meta-up-smart
+                        (kbd "M-l") #'my/org-meta-right-smart)
+                        )
+                    (with-eval-after-load 'evil-org
+                        ;; Normal mode mappings
+                        (evil-define-key 'normal org-mode-map (kbd "RET") #'my/org-return-dwim)
+                        (evil-define-key 'normal org-mode-map (kbd "C-<return>") #'my/org-smart-insert-item-below)
+                        (evil-define-key 'normal org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
+                        (evil-define-key 'normal org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
+                        ;; Map double left click to cycle headings/logic in Normal state
+                        (evil-define-key 'normal org-mode-map
+                        (kbd "<double-mouse-1>")
+                        (lambda (event)
+                            (interactive "e")
+                            (mouse-set-point event) ; Move the cursor to where you double-clicked
+                            (my/org-return-dwim)))
 
-                ;; Insert mode mappings
-                (evil-define-key 'insert org-mode-map (kbd "C-<return>") #'my/org-smart-insert-item-below)
-                (evil-define-key 'insert org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
-                (evil-define-key 'insert org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
-                (evil-define-key 'normal org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subheading)
-                (evil-define-key 'insert org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subheading)
-                (evil-define-key 'normal org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subheading)
-                (evil-define-key 'insert org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subheading)
-    )
+                            ;; Insert mode mappings
+                            (evil-define-key 'insert org-mode-map (kbd "C-<return>") #'my/org-smart-insert-item-below)
+                            (evil-define-key 'insert org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
+                            (evil-define-key 'insert org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
+                            (evil-define-key 'normal org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subheading)
+                            (evil-define-key 'insert org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subheading)
+                            (evil-define-key 'normal org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subheading)
+                            (evil-define-key 'insert org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subheading)
+                )
 
 #+end_src
 
