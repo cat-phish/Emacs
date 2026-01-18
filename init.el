@@ -278,7 +278,7 @@
           (start/leader-keys
             "o" '(:ignore t :wk "org")
             "o a" '(org-agenda :wk "Agenda")
-			"o o" '((lambda () (interactive) (org-agenda nil "d")) :wk "Overview")
+			"o o" '((lambda () (interactive) (org-agenda nil "d")) :wk "Overview (Daily)")
             "o c" '(org-capture :wk "Capture")
             "o l" '(org-store-link :wk "Store link")
 
@@ -321,11 +321,12 @@
             "o C g" '(org-clock-goto :wk "Go to clock")
 
             ;; Actions
-            "o e" '(org-export-dispatch :wk "export")
+            "o e" '(org-export-dispatch :wk "Export")
             "o d" '(org-deadline :wk "Deadline")
             "o s" '(org-schedule :wk "Schedule")
-            "o b" '(org-babel-tangle :wk "Tangle code")
-    		"o r" '(org-refile :wk "Refile")
+            "o S" '(org-sort :wk "Sort region/list")
+            "o T" '(org-babel-tangle :wk "Tangle code")
+            "o r" '(org-refile :wk "Refile")
     		)
 
 
@@ -874,8 +875,8 @@
 ;; AUTO COLLAPSE KEYWORD HEADINGS
 ;; Alist of heading names and optional level restrictions
 (defvar my/org-collapse-headings
-    '(("Future Bills" .  1)   ; Only level 1
-      ("Archive" . nil)         ; Any level
+    '(("#Future-Bills" .  1)   ; Only level 1
+      ("#Archive" . nil)         ; Any level
       ("#Repeaters" . nil))            ; Any level
     "Alist of (heading-name . level).
     If level is nil, collapse at any level.
@@ -1135,6 +1136,8 @@
 
                     ;; Map 'dd' specifically for Org-mode
                     (evil-define-key 'normal org-mode-map (kbd "d d") #'my/evil-org-delete-heading-dwim)
+					;; This ensures that when you highlight text, 'd' just deletes the selection.
+                    (evil-define-key 'visual org-mode-map (kbd "d") #'evil-delete)
 
                     ;; Org element motions (Doom-style)
                     (evil-define-key 'normal org-mode-map
@@ -1475,7 +1478,7 @@
   (which-key-sort-uppercase-first nil)
   (which-key-add-column-padding 1) ;; Number of spaces to add to the left of each column
   (which-key-min-display-lines 6)  ;; Increase the minimum lines to display because the default is only 1
-  (which-key-idle-delay 0.8)       ;; Set the time delay (in seconds) for the which-key popup to appear
+  (which-key-idle-delay 0.4)       ;; Set the time delay (in seconds) for the which-key popup to appear
   (which-key-max-description-length 25)
   (which-key-allow-imprecise-window-fit nil)) ;; Fixes which-key window slipping out in Emacs Daemon
 
