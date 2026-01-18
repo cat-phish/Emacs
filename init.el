@@ -881,6 +881,7 @@
     "Alist of (heading-name . level).
     If level is nil, collapse at any level.
     If level is a number, only collapse at that level.")
+
 (defun my/org-hide-matching-headings ()
     "Force hide all headings that match entries in `my/org-collapse-headings'.
     Respects level restrictions if specified."
