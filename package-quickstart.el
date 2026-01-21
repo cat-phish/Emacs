@@ -143,7 +143,7 @@ See `ws-butler-mode' for more information on Ws-Butler mode.
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/with-editor-20251101.2100/with-editor-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/with-editor-20260101.1848/with-editor-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -236,23 +236,7 @@ else like the former.
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/websocket-20230809.305/websocket-autoloads.el")(load-true-file-name load-file-name))
-
-
-
-(add-to-list 'load-path (or (and load-file-name (directory-file-name (file-name-directory load-file-name))) (car load-path)))
-
-
-
-
-(register-definition-prefixes "websocket" '("websocket-"))
-
-
-(provide 'websocket-autoloads)
-
-
-)
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/vertico-20251230.1832/vertico-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/vertico-20260105.1514/vertico-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -783,7 +767,7 @@ This allows Dash symbols to be looked up with \\[info-lookup-symbol]." t)
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/cond-let-20251101.1942/cond-let-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/cond-let-20260101.1828/cond-let-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -799,7 +783,7 @@ This allows Dash symbols to be looked up with \\[info-lookup-symbol]." t)
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/transient-20251215.2209/transient-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/transient-20260108.2011/transient-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -912,34 +896,6 @@ disabled.
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/simple-httpd-20230821.1458/simple-httpd-autoloads.el")(load-true-file-name load-file-name))
-
-
-
-(add-to-list 'load-path (or (and load-file-name (directory-file-name (file-name-directory load-file-name))) (car load-path)))
-
-
-
-
-(autoload 'httpd-start "simple-httpd" "\
-Start the web server process. If the server is already
-running, this will restart the server. There is only one server
-instance per Emacs instance." t)
-(autoload 'httpd-stop "simple-httpd" "\
-Stop the web server if it is currently running, otherwise do nothing." t)
-(autoload 'httpd-running-p "simple-httpd" "\
-Return non-nil if the simple-httpd server is running.")
-(autoload 'httpd-serve-directory "simple-httpd" "\
-Start the web server with given `directory' as `httpd-root'.
-
-(fn DIRECTORY)" t)
-(register-definition-prefixes "simple-httpd" '("defservlet" "httpd" "with-httpd-buffer"))
-
-
-(provide 'simple-httpd-autoloads)
-
-
-)
 (let* ((load-file-name "/home/jordan/.config/emacs/elpa/ht-20230703.558/ht-autoloads.el")(load-true-file-name load-file-name))
 
 
@@ -956,7 +912,7 @@ Start the web server with given `directory' as `httpd-root'.
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/sideline-20250517.508/sideline-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/sideline-20260101.540/sideline-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -1018,7 +974,7 @@ Use to force render the next post command.
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/sideline-flymake-20250514.2147/sideline-flymake-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/sideline-flymake-20260101.541/sideline-flymake-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -1110,7 +1066,7 @@ Disable `rainbow-delimiters-mode'.")
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/projectile-20250704.908/projectile-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/projectile-20260109.1335/projectile-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -1480,6 +1436,22 @@ Switch to the project specific term buffer if it already exists.
 Use a prefix argument ARG to indicate creation of a new process instead.
 
 (fn &optional ARG)" t)
+(autoload 'projectile-run-eat "projectile" "\
+Invoke `eat' in the project's root.
+
+Switch to the project specific eat buffer if it already exists.
+
+Use a prefix argument ARG to indicate creation of a new process instead.
+
+(fn &optional ARG)" t)
+(autoload 'projectile-run-eat-other-window "projectile" "\
+Invoke `eat' in the project's root.
+
+Switch to the project specific eat buffer if it already exists.
+
+Use a prefix argument ARG to indicate creation of a new process instead.
+
+(fn &optional ARG)" t)
 (autoload 'projectile-replace "projectile" "\
 Replace literal string in project using non-regexp `tags-query-replace'.
 
@@ -1710,48 +1682,6 @@ disabled.
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/org-superstar-20250914.1308/org-superstar-autoloads.el")(load-true-file-name load-file-name))
-
-
-
-(add-to-list 'load-path (or (and load-file-name (directory-file-name (file-name-directory load-file-name))) (car load-path)))
-
-
-
-
-(put 'org-superstar-leading-bullet 'safe-local-variable #'char-or-string-p)
-(autoload 'org-superstar-toggle-lightweight-lists "org-superstar" "\
-Toggle syntax checking for plain list items.
-
-Disabling syntax checking will cause Org Superstar to display
-lines looking like plain lists (for example in code) like plain
-lists.  However, this may cause significant speedup for org files
-containing several hundred list items." t)
-(autoload 'org-superstar-mode "org-superstar" "\
-Use UTF8 bullets for headlines and plain lists.
-
-This is a minor mode.  If called interactively, toggle the
-`Org-Superstar mode' mode.  If the prefix argument is positive, enable
-the mode, and if it is zero or negative, disable the mode.
-
-If called from Lisp, toggle the mode if ARG is `toggle'.  Enable the
-mode if ARG is nil, omitted, or is a positive number.  Disable the mode
-if ARG is a negative number.
-
-To check whether the minor mode is enabled in the current buffer,
-evaluate the variable `org-superstar-mode'.
-
-The mode's hook is called both when the mode is enabled and when it is
-disabled.
-
-(fn &optional ARG)" t)
-(register-definition-prefixes "org-superstar" '("org-superstar-"))
-
-
-(provide 'org-superstar-autoloads)
-
-
-)
 (let* ((load-file-name "/home/jordan/.config/emacs/elpa/org-super-agenda-20250421.130/org-super-agenda-autoloads.el")(load-true-file-name load-file-name))
 
 
@@ -1781,7 +1711,7 @@ With prefix argument ARG, turn on if positive, otherwise off.
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/emacsql-20251130.1841/emacsql-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/emacsql-20260101.1849/emacsql-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -1830,7 +1760,7 @@ A prefix argument causes the SQL to be printed into the current buffer.
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/llama-20251101.2002/llama-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/llama-20260101.1830/llama-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -1930,7 +1860,7 @@ disabled.
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/magit-section-20251220.917/magit-section-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/magit-section-20260101.1850/magit-section-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -1985,7 +1915,7 @@ with the variables' values as arguments, which were recorded by
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/org-roam-20251229.1740/org-roam-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/org-roam-20260103.1921/org-roam-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -2290,103 +2220,7 @@ Collect and print info for `org-roam' issues." t)
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/org-roam-ui-20221105.1040/org-roam-ui-autoloads.el")(load-true-file-name load-file-name))
-
-
-
-(add-to-list 'load-path (or (and load-file-name (directory-file-name (file-name-directory load-file-name))) (car load-path)))
-
-
-
-
-(defvar org-roam-ui-mode nil "\
-Non-nil if org-roam-ui mode is enabled.
-See the `org-roam-ui-mode' command
-for a description of this minor mode.
-Setting this variable directly does not take effect;
-either customize it (see the info node `Easy Customization')
-or call the function `org-roam-ui-mode'.")
-(custom-autoload 'org-roam-ui-mode "org-roam-ui" nil)
-(autoload 'org-roam-ui-mode "org-roam-ui" "\
-Enable org-roam-ui.
-
-This serves the web-build and API over HTTP.
-
-This is a global minor mode.  If called interactively, toggle the
-`org-roam-ui mode' mode.  If the prefix argument is positive, enable the
-mode, and if it is zero or negative, disable the mode.
-
-If called from Lisp, toggle the mode if ARG is `toggle'.  Enable the
-mode if ARG is nil, omitted, or is a positive number.  Disable the mode
-if ARG is a negative number.
-
-To check whether the minor mode is enabled in the current buffer,
-evaluate `(default-value \\='org-roam-ui-mode)'.
-
-The mode's hook is called both when the mode is enabled and when it is
-disabled.
-
-(fn &optional ARG)" t)
-(autoload 'org-roam-ui-open "org-roam-ui" "\
-Ensure `org-roam-ui' is running, then open the `org-roam-ui' webpage." t)
-(autoload 'org-roam-ui-node-zoom "org-roam-ui" "\
-Move the view of the graph to current node.
-or optionally a node of your choosing.
-Optionally takes three arguments:
-The ID of the node you want to travel to.
-The SPEED in ms it takes to make the transition.
-The PADDING around the nodes in the viewport.
-
-(fn &optional ID SPEED PADDING)" t)
-(autoload 'org-roam-ui-node-local "org-roam-ui" "\
-Open the local graph view of the current node.
-Optionally with ID (string), SPEED (number, ms) and PADDING (number, px).
-
-(fn &optional ID SPEED PADDING)" t)
-(autoload 'org-roam-ui-add-to-local-graph "org-roam-ui" "\
-Add current node to the local graph. If not in local mode, open local-graph for this node.
-
-(fn &optional ID)" t)
-(autoload 'org-roam-ui-remove-from-local-graph "org-roam-ui" "\
-Remove current node from the local graph. If not in local mode, open local-graph for this node.
-
-(fn &optional ID)" t)
-(autoload 'org-roam-ui-sync-theme "org-roam-ui" "\
-Sync your current Emacs theme with org-roam-ui." t)
-(defvar org-roam-ui-follow-mode nil "\
-Non-nil if org-roam-ui-Follow mode is enabled.
-See the `org-roam-ui-follow-mode' command
-for a description of this minor mode.
-Setting this variable directly does not take effect;
-either customize it (see the info node `Easy Customization')
-or call the function `org-roam-ui-follow-mode'.")
-(custom-autoload 'org-roam-ui-follow-mode "org-roam-ui" nil)
-(autoload 'org-roam-ui-follow-mode "org-roam-ui" "\
-Set whether ORUI should follow your every move in Emacs.
-
-This is a global minor mode.  If called interactively, toggle the
-`org-roam-ui-Follow mode' mode.  If the prefix argument is positive,
-enable the mode, and if it is zero or negative, disable the mode.
-
-If called from Lisp, toggle the mode if ARG is `toggle'.  Enable the
-mode if ARG is nil, omitted, or is a positive number.  Disable the mode
-if ARG is a negative number.
-
-To check whether the minor mode is enabled in the current buffer,
-evaluate `(default-value \\='org-roam-ui-follow-mode)'.
-
-The mode's hook is called both when the mode is enabled and when it is
-disabled.
-
-(fn &optional ARG)" t)
-(register-definition-prefixes "org-roam-ui" '("img/:file" "node/:id" "org-roam-ui-"))
-
-
-(provide 'org-roam-ui-autoloads)
-
-
-)
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/org-modern-20251219.1424/org-modern-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/org-modern-20260106.1539/org-modern-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -2660,7 +2494,7 @@ Enable org-download.")
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/orderless-20251128.2028/orderless-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/orderless-20260104.1108/orderless-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -2708,7 +2542,7 @@ Match COMPONENT against the keywords in `orderless-kwd-alist'.
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/nerd-icons-20251230.1532/nerd-icons-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/nerd-icons-20260113.244/nerd-icons-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -2920,7 +2754,7 @@ disabled.
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/marginalia-20251231.1612/marginalia-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/marginalia-20260104.1119/marginalia-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -2965,7 +2799,7 @@ Cycle between annotators in `marginalia-annotators'." t)
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/magit-20251217.1836/magit-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/magit-20260111.931/magit-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -6944,7 +6778,7 @@ Enable flashing the mode-line on error.")
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/doom-modeline-20251227.1916/doom-modeline-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/doom-modeline-20260110.517/doom-modeline-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -7448,7 +7282,7 @@ Setup post initialization hooks unless a command line argument is provided.")
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/corfu-20251228.1514/corfu-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/corfu-20260106.1142/corfu-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -7516,6 +7350,10 @@ and nil means \"don't use\".  There's an implicit nil at the end of the
 list.")
 (custom-autoload 'global-corfu-modes "corfu" t)
 (register-definition-prefixes "corfu" '("corfu-" "global-corfu-minibuffer"))
+
+
+
+(register-definition-prefixes "corfu-auto" '("corfu-auto-"))
 
 
 
@@ -7657,7 +7495,7 @@ Complete candidate using quick keys." t)
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/consult-20251224.1132/consult-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/consult-20260113.1815/consult-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -7886,7 +7724,7 @@ The input string is split at a punctuation character, which is given as
 the first character of the input string.  The format is similar to
 Perl-style regular expressions, e.g., /regexp/.  Furthermore command
 line options can be passed to grep, specified behind --.  The overall
-prompt input has the form `#async-input -- grep-opts#filter-string'.
+prompt input has the form `#async-input --grep-opt#filter-string'.
 
 Note that the grep input string is transformed from Emacs regular
 expressions to Posix regular expressions.  Always enter Emacs regular
@@ -7902,7 +7740,7 @@ Here we give a few example inputs:
 #alpha beta         : Search for alpha and beta in any order.
 #alpha.*beta        : Search for alpha before beta.
 #\\(alpha\\|beta\\) : Search for alpha or beta (Note Emacs syntax!)
-#word -- -C3        : Search for word, include 3 lines as context
+#word -C3           : Search for word, include 3 lines as context
 #first#second       : Search for first, quick filter for second.
 
 The symbol at point is added to the future history.
@@ -8105,7 +7943,7 @@ FETCHER and ALIST arguments.
 
 
 )
-(let* ((load-file-name "/home/jordan/.config/emacs/elpa/cape-20251224.1110/cape-autoloads.el")(load-true-file-name load-file-name))
+(let* ((load-file-name "/home/jordan/.config/emacs/elpa/cape-20260104.1103/cape-autoloads.el")(load-true-file-name load-file-name))
 
 
 
@@ -8653,22 +8491,22 @@ When FAMILY is non-nil, limit the candidates to the icon set matching it.
 (setq package-activated-list
 	  (delete-dups
 	   (append
-		'(yasnippet yasnippet-snippets ws-butler with-editor websocket
-					vertico undo-fu-session dash s ts cond-let
-					transient toc-org simple-httpd ht sideline
-					sideline-flymake f shrink-path rainbow-delimiters
-					projectile org-table-sticky-header org-superstar
-					org-super-agenda emacsql llama magit-section
-					org-roam org-roam-ui org-modern async org-download
-					orderless nerd-icons nerd-icons-ibuffer
-					nerd-icons-dired nerd-icons-corfu
-					nerd-icons-completion marginalia magit ivy
-					elisp-refs helpful autothemer gruvbox-theme
-					goto-chg general evil-terminal-cursor-changer evil
-					evil-surround evil-org evil-nerd-commenter
-					annalist evil-collection eat doom-themes
-					doom-modeline diminish diff-hl dashboard corfu
-					consult cape avy all-the-icons)
+		'(yasnippet yasnippet-snippets ws-butler with-editor vertico
+					undo-fu-session dash s ts cond-let transient
+					toc-org ht sideline sideline-flymake f shrink-path
+					rainbow-delimiters projectile
+					org-table-sticky-header org-super-agenda emacsql
+					llama magit-section org-roam org-modern async
+					org-download orderless nerd-icons
+					nerd-icons-ibuffer nerd-icons-dired
+					nerd-icons-corfu nerd-icons-completion marginalia
+					magit ivy elisp-refs helpful autothemer
+					gruvbox-theme goto-chg general
+					evil-terminal-cursor-changer evil evil-surround
+					evil-org evil-nerd-commenter annalist
+					evil-collection eat doom-themes doom-modeline
+					diminish diff-hl dashboard corfu consult cape avy
+					all-the-icons)
 		package-activated-list)))
 (progn
   (require 'info) (info-initialize)
@@ -8678,14 +8516,14 @@ When FAMILY is non-nil, limit the candidates to the icon set matching it.
 		   "/home/jordan/.config/emacs/elpa/annalist-20240501.1201"
 		   "/home/jordan/.config/emacs/elpa/evil-20251108.138"
 		   "/home/jordan/.config/emacs/elpa/ivy-20251123.1023"
-		   "/home/jordan/.config/emacs/elpa/magit-20251217.1836"
-		   "/home/jordan/.config/emacs/elpa/orderless-20251128.2028"
-		   "/home/jordan/.config/emacs/elpa/org-roam-20251229.1740"
-		   "/home/jordan/.config/emacs/elpa/magit-section-20251220.917"
+		   "/home/jordan/.config/emacs/elpa/magit-20260111.931"
+		   "/home/jordan/.config/emacs/elpa/orderless-20260104.1108"
+		   "/home/jordan/.config/emacs/elpa/org-roam-20260103.1921"
+		   "/home/jordan/.config/emacs/elpa/magit-section-20260101.1850"
 		   "/home/jordan/.config/emacs/elpa/org-super-agenda-20250421.130"
-		   "/home/jordan/.config/emacs/elpa/transient-20251215.2209"
+		   "/home/jordan/.config/emacs/elpa/transient-20260108.2011"
 		   "/home/jordan/.config/emacs/elpa/dash-20250312.1307"
-		   "/home/jordan/.config/emacs/elpa/with-editor-20251101.2100")
+		   "/home/jordan/.config/emacs/elpa/with-editor-20260101.1848")
 		 Info-directory-list)))
 
 ;; Local Variables:
