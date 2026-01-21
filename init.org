@@ -1478,19 +1478,7 @@ If you want a faster and more responsive terminal emulator try out vterm.
                       (org-update-checkbox-count t)
                       )
 
-               ;;           (defun my/org-smart-insert-subheading ()
-               ;;             "Insert a subheading after the current entry's content without splitting text."
-               ;;             (interactive)
-               ;;             ;; 1. Go to the start of the current heading
-               ;;             (org-back-to-heading)
-               ;;             ;; 2. Move to thenullgit  absolute end of that specific line
-               ;aa3i1do; while for #n\0while b1;             (move-end-of-line 1)
-               ;;             ;; 3. Insert heading at the end of all current sub-content
-               ;;             (org-insert-heading-respect-content)
-               ;;             ;; 4. Turn that new heading into a subheading
-               ;;         (org-demote)
-               ;; )
-               (defun my/org-smart-insert-sub-heading ()
+               (defun my/org-smart-insert-subheading ()
                  "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
                  (interactive)
                  (cond
@@ -1526,13 +1514,6 @@ If you want a faster and more responsive terminal emulator try out vterm.
                    (end-of-line)
                    (newline-and-indent)))
                  (org-update-checkbox-count t))
-
-             (defun my/org-roam-ui-open-in-emacs ()
-                 "Open org-roam-ui in an Emacs xwidget buffer."
-                 (interactive)
-                 (require 'xwidget)
-                 (xwidget-webkit-browse-url "http://localhost:35901"))
-
 
                  )
 
@@ -1823,14 +1804,7 @@ Org-tempo allows for '<s' followed by TAB to expand to a begin_src tag.
         org-roam-ui-follow t
         org-roam-ui-update-on-save t
         org-roam-ui-open-on-start t)
-  ;; This is the key setting for internal browsing
-  ;; (when (featurep 'xwidget-internal)
-    ;; (setq org-roam-ui-browser-function #'xwidget-webkit-browse-url))
  )
-;; (with-eval-after-load 'org-roam-ui
-  ;; (advice-add
-   ;; 'org-roam-ui-open
-   ;; :override #'my/org-roam-ui-open-in-emacs))
 (with-eval-after-load 'org-roam-ui
 )
 #+end_src>

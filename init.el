@@ -984,19 +984,7 @@
                  (org-update-checkbox-count t)
                  )
 
-          ;;           (defun my/org-smart-insert-subheading ()
-          ;;             "Insert a subheading after the current entry's content without splitting text."
-          ;;             (interactive)
-          ;;             ;; 1. Go to the start of the current heading
-          ;;             (org-back-to-heading)
-          ;;             ;; 2. Move to thenullgit  absolute end of that specific line
-          ;aa3i1do; while for #n\0while b1;             (move-end-of-line 1)
-          ;;             ;; 3. Insert heading at the end of all current sub-content
-          ;;             (org-insert-heading-respect-content)
-          ;;             ;; 4. Turn that new heading into a subheading
-          ;;         (org-demote)
-          ;; )
-          (defun my/org-smart-insert-sub-heading ()
+          (defun my/org-smart-insert-subheading ()
             "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
             (interactive)
             (cond
@@ -1032,13 +1020,6 @@
               (end-of-line)
               (newline-and-indent)))
             (org-update-checkbox-count t))
-
-        (defun my/org-roam-ui-open-in-emacs ()
-            "Open org-roam-ui in an Emacs xwidget buffer."
-            (interactive)
-            (require 'xwidget)
-            (xwidget-webkit-browse-url "http://localhost:35901"))
-
 
             )
 
