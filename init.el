@@ -675,17 +675,17 @@
          (org-M-RET-may-split-line '((default . t)))
 
                                  ;; ABBREV
-                                 (define-abbrev-table 'my-org-abbrev-table '(
-         ("td" "TODO ")
-         ("assgn" "ASSIGNMENT ")
-         ("bll" "BILL ")
-         ("nxt" "NEXT ")
-         ("pln" "PLANNING ")
-         ("rvw" "REVIEW ")
-         ("hld" "HOLD ")
-         ("rdy" "READY ")
+   (define-abbrev-table 'my-org-abbrev-table '(
+         ("td" "TODO")
+         ("assgn" "ASSIGNMENT")
+         ("bll" "BILL")
+         ("nxt" "NEXT")
+         ("pln" "PLANNING")
+         ("rvw" "REVIEW")
+         ("hld" "HOLD")
+         ("rdy" "READY")
          ("strt" "STARTED ")
-         ("chk" "[ ] ")
+         ("chk" "- [ ]")
          ))
          (setq-default abbrev-table 'my-org-abbrev-table)
 
@@ -1550,6 +1550,18 @@
     (setq grease-preview-window-width 0.4) ; Preview takes 40% of frame width
     (setq grease-preview-writable nil)     ; Set to t to make file previews editable
     )
+
+(use-package undo-fu-session
+  :ensure t
+  :config
+  ;; Set the path to .local/state/undo-fu-session/
+  (setq undo-fu-session-directory (expand-file-name ".local/state/undo-fu-session/" user-emacs-directory))
+
+  ;; Create the directory if it's missing
+  (unless (file-exists-p undo-fu-session-directory)
+    (make-directory undo-fu-session-directory t))
+
+  (global-undo-fu-session-mode))
 
 ;; Make gc pauses faster by decreasing the threshold.
 (setq gc-cons-threshold (* 2 1000 1000))
