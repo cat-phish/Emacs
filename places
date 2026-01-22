@@ -1,7 +1,8 @@
 ;;; -*- coding: utf-8; mode: lisp-data -*-
-(("/home/jordan/org/main/Tasks.org" . 4263)
- ("/home/jordan/" (dired-filename . "/home/jordan/mediaserver"))
- ("/home/jordan/.config/emacs/init.org" . 99145)
- ("/home/jordan/.config/emacs/"
-  (dired-filename . "/home/jordan/.config"))
- ("/home/jordan/.config/" (dired-filename . "/home/jordan")))
+(("/home/jordan/org/main/Tasks.org" . 3699)
+ ("/home/jordan/.config/emacs/init.org" . 95606)
+ ("/home/jordan/org/main/Music.org" . 1651)
+ ("/home/jordan/org/" (dired-filename . "/home/jordan/org/main"))
+ ("/home/jordan/org/main/"
+  (dired-filename . "/home/jordan/org/main/Tasks.org"))
+ ("/home/jordan/org/main/Books.org" . 15))
