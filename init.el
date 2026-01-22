@@ -778,6 +778,13 @@
               (org-super-agenda-groups
                '((:anything t)))))))))
   :config
+  ;; AUTO SAVE ORG MODE BUFFERS
+  (setq auto-save-timeout 10)
+  ;; Set "threshold" to 20 characters
+  ;; Emacs also auto-saves after a certain number of characters typed.
+  ;; Setting this lower ensures it saves even if you are typing slowly.
+  (setq auto-save-interval 20)
+  (add-hook 'auto-save-hook 'org-save-all-org-buffers)
 
   ;; AUTO-FORMAT SRC BLOCKS
   ;; Function to indent every source block in the file

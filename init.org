@@ -74,7 +74,7 @@
     - [[#grease][Grease]]
     - [[#pdf-tools][PDF Tools]]
     - [[#rainbow-mode][Rainbow-Mode]]
-    - [[#super-save][Super Save]]
+    - [[#super-save-disabled][Super Save (Disabled)]]
     - [[#undo-fu-session][Undo-Fu-Session]]
 - [[#runtime-performance][Runtime Performance]]
 
@@ -1266,6 +1266,13 @@ If you want a faster and more responsive terminal emulator try out vterm.
               (org-super-agenda-groups
                '((:anything t)))))))))
   :config
+  ;; AUTO SAVE ORG MODE BUFFERS
+  (setq auto-save-timeout 10)
+  ;; Set "threshold" to 20 characters
+  ;; Emacs also auto-saves after a certain number of characters typed.
+  ;; Setting this lower ensures it saves even if you are typing slowly.
+  (setq auto-save-interval 20)
+  (add-hook 'auto-save-hook 'org-save-all-org-buffers)
 
   ;; AUTO-FORMAT SRC BLOCKS
   ;; Function to indent every source block in the file
@@ -2278,9 +2285,13 @@ Evil Terminal Cursor Changer changes the cursor shape in terminal Emacs.
          css-mode
          conf-mode)
 #+end_src>
-** Super Save
+** Super Save (Disabled)
+This was intended to be used for auto save. But I disabled in favor of
+using the built in auto-save hook for Org buffers only (in the Org Mode
+:config section above)
 #+begin_src emacs-lisp
 (use-package super-save
+  :disabled t
   :ensure t
   :custom
   (super-save-auto-save-idle t) ;; Ensure idle saving is explicitly ON
