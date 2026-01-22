@@ -101,7 +101,7 @@
     ;====================================================================;
 #+end_src
 ** About This Config
-This is my personal Emacs config, it is built on top of the wonderful
+This is my personal Emacs config, it is built on top of the excellent
 Kickstart.emacs project by MiniApollo. This is an Org Mode first config.
 Although this config is set up for basic coding operations, I do not
 personally write code in Emacs, so there are very few optimizations in
@@ -1172,7 +1172,7 @@ If you want a faster and more responsive terminal emulator try out vterm.
                ("rvw" "REVIEW")
                ("hld" "HOLD")
                ("rdy" "READY")
-               ("strt" "STARTED ")
+               ("strt" "STARTED")
                ("chk" "- [ ]")
                ))
                (setq-default abbrev-table 'my-org-abbrev-table)
@@ -1398,17 +1398,17 @@ If you want a faster and more responsive terminal emulator try out vterm.
               ;; CUSTOM ABBREV SHORTCUTS
                (with-eval-after-load 'org
                    (define-abbrev-table 'org-mode-abbrev-table
-                   '(("td"    "TODO ")
-                   ("assgn" "ASSIGNMENT ")
-                   ("bll"   "BILL ")
-                   ("nxt"   "NEXT ")
-                   ("pln"   "PLANNING ")
-                   ("rvw"   "REVIEW ")
-                   ("hld"   "HOLD ")
-                   ("rdy"   "READY ")
-                   ("strt"  "STARTED ")
-                   ("chk"   "- [ ] ")
-                   ("chkb"   "[ ] ")
+                   '(("td"    "TODO")
+                   ("assg" "ASSIGNMENT")
+                   ("bll"   "BILL")
+                   ("nxt"   "NEXT")
+                   ("pln"   "PLANNING")
+                   ("rvw"   "REVIEW")
+                   ("hld"   "HOLD")
+                   ("rdy"   "READY")
+                   ("strt"  "STARTED")
+                   ("chk"   "- [ ]")
+                   ("chkb"   "[ ]")
                    ("chkc"   "[0/0]")
                )))
                ;; Make RET context-aware like Doom
