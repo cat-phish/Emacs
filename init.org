@@ -1258,12 +1258,11 @@ If you want a faster and more responsive terminal emulator try out vterm.
                '((:anything t)))))))))
   :config
   ;; AUTO SAVE ORG MODE BUFFERS
-  (setq auto-save-timeout 10)
-  ;; Set "threshold" to 20 characters
-  ;; Emacs also auto-saves after a certain number of characters typed.
-  ;; Setting this lower ensures it saves even if you are typing slowly.
-  (setq auto-save-interval 20)
-  (add-hook 'auto-save-hook 'org-save-all-org-buffers)
+  (setq auto-save-timeout 30)
+  ;; Set interval to 300 characters
+  (setq auto-save-interval 300)
+  ;; Use idle timer instead for more predictable behavior
+  (run-with-idle-timer 30 t 'org-save-all-org-buffers)
 
   ;; AUTO-FORMAT SRC BLOCKS
   ;; Function to indent every source block in the file

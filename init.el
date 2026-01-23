@@ -1,17 +1,6 @@
 ;; The default is 800 kilobytes. Measured in bytes.
 (setq gc-cons-threshold (* 50 1000 1000))
 
-;; (defun start/org-babel-tangle-config ()
-;; "Automatically tangle our init.org config file and refresh package-quickstart when we save it. Credit to Emacs From Scratch for this one!"
-;; (interactive)
-;; (when (string-equal (file-name-directory (buffer-file-name))
-;; (expand-file-name user-emacs-directory))
-;; ;; Dynamic scoping to the rescue
-;; (let ((org-confirm-babel-evaluate nil))
-;; (org-babel-tangle)
-;; (package-quickstart-refresh)
-;; )
-;; ))
 (defun start/org-babel-tangle-config ()
   "Automatically tangle and refresh quickstart, strictly suppressing warnings."
   (interactive)
@@ -56,7 +45,9 @@
   (menu-bar-mode nil)         ;; Disable the menu bar
   (scroll-bar-mode nil)       ;; Disable the scroll bar
   (tool-bar-mode nil)         ;; Disable the tool bar
-  ;;(inhibit-startup-screen t)  ;; Disable welcome screen
+  (inhibit-startup-screen t)  ;; Disable welcome screen
+  (inhibit-startup-message t) ;; Disable screen that shows on first install
+
 
   (delete-selection-mode t)   ;; Select text and delete it by typing.
   (electric-indent-mode nil)  ;; Turn off the weird indenting that Emacs does by default.
@@ -128,8 +119,6 @@
   ;; Set initial state for eat-mode
   (evil-set-initial-state 'eat-mode 'insert)
 
-
-
   ;; Jump to beginning of line or first non-blank character
   (defun start/jump-to-line-start ()
     "If at first non-blank char, go to beginning; else go to first non-blank."
@@ -192,23 +181,15 @@
   :config
   (global-evil-surround-mode 1)
 
-  ;; --- NORMAL MODE MAPPINGS ---
-
+  ;; SURROUNDS
   ;; gsa Add surrounding (Usage: gsaw")
   (evil-define-key 'normal evil-surround-mode-map (kbd "gsa") 'evil-surround-region)
-
   ;; gsd Delete surrounding (Usage: gsd")
   (evil-define-key 'normal evil-surround-mode-map (kbd "gsd") 'evil-surround-delete)
-
   ;; gsr Replace surrounding (Usage: gsr'")
   (evil-define-key 'normal evil-surround-mode-map (kbd "gsr") 'evil-surround-change)
-
-
-  ;; --- VISUAL MODE MAPPINGS ---
-
   ;; In Visual Mode, 'gsa' adds to the selection
   (evil-define-key 'visual evil-surround-mode-map (kbd "gsa") 'evil-surround-region)
-
   ;; Disable the default 's' in visual mode if it interferes
   (evil-define-key 'visual evil-surround-mode-map (kbd "s") nil))
 (with-eval-after-load 'evil-surround
@@ -264,14 +245,14 @@
   (start/leader-keys
     "b" '(:ignore t :wk "buffers")
     "b s" '(consult-buffer :wk "Switch buffer")
-    "b k" '(kill-current-buffer :wk "Kill current buffer")
+    "b d" '(kill-current-buffer :wk "Delete current buffer")
     "b i" '(ibuffer :wk "Ibuffer")
     "b n" '(next-buffer :wk "Next buffer")
     "b p" '(previous-buffer :wk "Previous buffer")
     "b r" '(revert-buffer :wk "Reload buffer"))
 
   (start/leader-keys
-    "e" '(:ignore t :wk "dired")
+    "e" '(:ignore t :wk "Explorer")
     "e e" '(grease-here :wk "Explorer")
     "e v" '(dired :wk "Open dired")
     "e j" '(dired-jump :wk "Dired jump to current"))
@@ -350,9 +331,6 @@
   (start/leader-keys
     "h" '(:ignore t :wk "help") ;; To get more help use C-h commands (describe variable, function, etc.)
     "h q" '(save-buffers-kill-emacs :wk "Quit Emacs and Daemon")
-    ;;"h r" '((lambda () (interactive)
-    ;;        (load-file "~/.config/emacs-org/init.el"))
-    ;;    :wk "Reload Emacs config")
     "h a" '(apropos :wk "Apropos (Search all)")
     "h b" '(describe-bindings :wk "Describe bindings")
     "h c" '(describe-char :wk "Describe char at point")
@@ -785,12 +763,11 @@
                '((:anything t)))))))))
   :config
   ;; AUTO SAVE ORG MODE BUFFERS
-  (setq auto-save-timeout 10)
-  ;; Set "threshold" to 20 characters
-  ;; Emacs also auto-saves after a certain number of characters typed.
-  ;; Setting this lower ensures it saves even if you are typing slowly.
-  (setq auto-save-interval 20)
-  (add-hook 'auto-save-hook 'org-save-all-org-buffers)
+  (setq auto-save-timeout 30)
+  ;; Set interval to 300 characters
+  (setq auto-save-interval 300)
+  ;; Use idle timer instead for more predictable behavior
+  (run-with-idle-timer 30 t 'org-save-all-org-buffers)
 
   ;; AUTO-FORMAT SRC BLOCKS
   ;; Function to indent every source block in the file
