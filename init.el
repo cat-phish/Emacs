@@ -928,15 +928,17 @@
   ;; Alist of heading names and optional level restrictions
   (defvar my/org-collapse-headings
     '(("#Future-Bills" .  1)   ; Only level 1
+      ("#Coffee-Roasting" . 1)
       ("#Archive" . nil)         ; Any level
-      ("#Repeaters" . nil))            ; Any level
+      ("#Repeaters" . nil)          ; Any level
+      )
     "Alist of (heading-name . level).
-                  If level is nil, collapse at any level.
-                  If level is a number, only collapse at that level.")
+    If level is nil, collapse at any level.
+    If level is a number, only collapse at that level.")
 
   (defun my/org-hide-matching-headings ()
     "Force hide all headings that match entries in `my/org-collapse-headings'.
-                  Respects level restrictions if specified."
+    Respects level restrictions if specified."
     (org-map-entries
      (lambda ()
        (let ((heading (org-get-heading t t t t))  ; Get heading without tags, todo, etc.
@@ -1005,12 +1007,24 @@
       (evil-next-line))))
 
   ;; INSERT HEADING BELOW
-  (defun my/org-insert-heading-below ()
-	"Jump to heading, insert a new one below, and enter insert state."
+  (defun my/org-insert-parent-heading-below ()
+	"Insert a new heading at the appropriate level.
+If on a heading line, go up one level and insert a sibling.
+If in content (checkbox, text, etc.), insert a sibling of current heading."
 	(interactive)
-	(org-back-to-heading)
-	(org-insert-heading-respect-content)
-	(evil-insert-state))
+	(if (org-at-heading-p)
+		;; We're ON a heading line - go up one level
+		(progn
+          (org-back-to-heading)
+          (when (> (org-current-level) 1)  ; Only go up if not already at level 1
+			(org-up-heading-safe))
+          (org-insert-heading-respect-content)
+          (evil-insert-state))
+      ;; We're in content - insert sibling of current heading
+      (progn
+		(org-back-to-heading)
+		(org-insert-heading-respect-content)
+		(evil-insert-state))))
 
   ;; INSERT ITEM BELOW
   (defun my/org-smart-insert-item-below ()
@@ -1225,13 +1239,13 @@
   ;; DWIM RETURN KEY
   (evil-define-key 'normal org-mode-map (kbd "RET") #'my/org-return-dwim)
 
-  ;; INSERT HEADING
+  ;; INSERT PARENT HEADING
   ;; Add Alt-Ret (Meta-Return) mappings
-  (evil-define-key 'normal org-mode-map (kbd "M-RET") #'my/org-insert-heading-below)
-  (evil-define-key 'insert org-mode-map (kbd "M-RET") #'my/org-insert-heading-below)
+  (evil-define-key 'normal org-mode-map (kbd "M-RET") #'my/org-insert-parent-heading-below)
+  (evil-define-key 'insert org-mode-map (kbd "M-RET") #'my/org-insert-parent-heading-below)
   ;; Some terminals/launchers treat M-RET as M-J, so adding this as a fallback:
-  (evil-define-key 'normal org-mode-map (kbd "M-<return>") #'my/org-insert-heading-below)
-  (evil-define-key 'insert org-mode-map (kbd "M-<return>") #'my/org-insert-heading-below)
+  (evil-define-key 'normal org-mode-map (kbd "M-<return>") #'my/org-insert-parent-heading-below)
+  (evil-define-key 'insert org-mode-map (kbd "M-<return>") #'my/org-insert-parent-heading-below)
 
   ;; SMART INSERT BELOW
   (evil-define-key 'normal org-mode-map (kbd "C-<return>") #'my/org-smart-insert-item-below)
