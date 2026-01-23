@@ -685,15 +685,20 @@
   ;; ABBREV
   (define-abbrev-table 'my-org-abbrev-table '(
 											  ("td" "TODO")
-											  ("assgn" "ASSIGNMENT")
+											  ("assg" "ASSIGNMENT")
 											  ("bll" "BILL")
+											  ("chr" "CHORE")
 											  ("nxt" "NEXT")
 											  ("pln" "PLANNING")
 											  ("rvw" "REVIEW")
 											  ("hld" "HOLD")
 											  ("rdy" "READY")
-											  ("strt" "STARTED")
+											  ("actv" "ACTIVE")
+											  ("dn" "DONE")
+											  ("cncld" "CANCELED")
 											  ("chk" "- [ ]")
+											  ("chkb" "[ ]")
+											  ("chkc" "[0/0]")
 											  ))
   (setq-default abbrev-table 'my-org-abbrev-table)
 
@@ -719,7 +724,7 @@
   (org-log-done 'time)
   (org-log-into-drawer t)
   (org-todo-keywords
-   '((sequence "TODO(t)" "ASSIGNMENT(a)" "BILL(b)" "NEXT(n)" "PLANNING(P)" "REVIEW(V)" "HOLD(H)" "READY(R)" "ACTIVE(A)" "|" "DONE(d!)" "CANCELED(c!)")))
+   '((sequence "TODO(t)" "ASSIGNMENT(a)" "BILL(b)" "CHORE(c)" "NEXT(n)" "PLANNING(P)" "REVIEW(V)" "HOLD(H)" "READY(R)" "ACTIVE(A)" "|" "DONE(d!)" "CANCELED(C!)")))
   ;; Note these also have to be set matching in Org-Modern
   (org-todo-keyword-faces
    '(("TODO"     . (:foreground "#282c34" :background "#98be65" :weight bold))
@@ -731,6 +736,7 @@
      ("HOLD"     . (:foreground "#282c34" :background "#e6d96c" :weight bold))
      ("ASSIGNMENT"  . (:foreground "#282c34" :background "#e5404e" :weight bold))
      ("BILL"  . (:foreground "#282c34" :background "#fc830a" :weight bold))
+     ("CHORE"  . (:foreground "#282c34" :background "#e2b93d" :weight bold))
      ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
      ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
 
@@ -796,10 +802,28 @@
           (let ((element (org-element-at-point)))
             (when (eq (org-element-type element) 'src-block)
               (org-babel-do-in-edit-buffer (indent-region (point-min) (point-max)))))))))
-
   ;; Run the function automatically before saving
   (add-hook 'before-save-hook #'my/org-indent-all-src-blocks)
 
+  ;; FIX STRANGE REFILE DISPLAY ISSUES
+  ;; This will refile to a new heading, if it was already folded
+  ;; it will remain so, otherwise will remain unfolded. Fixes
+  ;; weird display issues after refiling as well.
+  (add-hook 'org-after-refile-insert-hook
+			(lambda ()
+              (save-excursion
+				(org-back-to-heading t)
+				;; Move to the parent heading to check its state
+				(when (org-up-heading-safe)
+                  ;; Check if the parent heading is currently folded
+                  (let ((folded (save-excursion
+                                  (end-of-line)
+                                  (invisible-p (point)))))
+					(when folded
+                      ;; If it was folded, re-hide the subtree we just moved
+                      ;; This fixes the 'ghost' display issue
+                      (org-back-to-heading t)
+                      (org-flag-subtree t)))))))
   ;; CYCLE FOLDING OF TODOS AND DONE
   (defun my/org-toggle-todo-entries ()
     "Cycle visibility for all active TODO entries (non-DONE states)."
@@ -963,12 +987,15 @@
       '(("td"    "TODO")
         ("assg" "ASSIGNMENT")
         ("bll"   "BILL")
+        ("chr"   "CHORE")
         ("nxt"   "NEXT")
         ("pln"   "PLANNING")
         ("rvw"   "REVIEW")
         ("hld"   "HOLD")
         ("rdy"   "READY")
-        ("strt"  "STARTED")
+        ("actv"  "ACTIVE")
+        ("dn"  "DONE")
+        ("cncld"  "CANCELED")
         ("chk"   "- [ ]")
         ("chkb"   "[ ]")
         ("chkc"   "[0/0]")
@@ -1284,13 +1311,14 @@ If in content (checkbox, text, etc.), insert a sibling of current heading."
   (org-modern-todo-faces
    '(("TODO"     . (:foreground "#282c34" :background "#98be65" :weight bold))
      ("NEXT"     . (:foreground "#282c34" :background "#6f8fff" :weight bold))
+     ("ASSIGNMENT"     . (:foreground "#282c34" :background "#e5404e" :weight bold))
+     ("BILL"  . (:foreground "#282c34" :background "#fc830a" :weight bold))
+     ("CHORE"  . (:foreground "#282c34" :background "#e2b93d" :weight bold))
      ("PLANNING" . (:foreground "#282c34" :background "#c792ea" :weight bold))
      ("READY"    . (:foreground "#282c34" :background "#82b7ff" :weight bold))
      ("ACTIVE"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
      ("REVIEW"   . (:foreground "#282c34" :background "#e0a96d" :weight bold))
      ("HOLD"     . (:foreground "#282c34" :background "#e6d96c" :weight bold))
-     ("ASSIGNMENT"     . (:foreground "#282c34" :background "#e5404e" :weight bold))
-     ("BILL"  . (:foreground "#282c34" :background "#fc830a" :weight bold))
      ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
      ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
 
