@@ -8,9 +8,7 @@
 * Table of Contents                                                     :toc:
 - [[#introduction][Introduction]]
     - [[#about-this-config][About This Config]]
-    - [[#ctrl--meta][Ctrl & Meta]]
-    - [[#where-to-start][Where to start?]]
-    - [[#getting-help][Getting Help]]
+    - [[#first-timer-tips][First Timer Tips]]
 - [[#core-setup--performance][Core Setup & Performance]]
     - [[#startup-performance][Startup Performance]]
     - [[#auto-tangle-configuration-file][Auto-tangle Configuration file]]
@@ -101,23 +99,30 @@
 										;====================================================================;
 #+end_src
 ** About This Config
-This is my personal Emacs config, it is built on top of the excellent
-Kickstart.emacs project by MiniApollo. This is an Org Mode first config.
-Although this config is set up for basic coding operations, I do not
-personally write code in Emacs, so there are very few optimizations in
-this config for that.
+This is my personal Org Mode first Emacs config. It is built on top of
+the excellent Kickstart.emacs project by MiniApollo. Although this
+config is set up for basic coding operations, I do not personally write
+code in Emacs, as such, there are very few optimizations in this config
+for that.
 
-The goal for this config was to mirrror my personal Neovim config as
+The goal for this config was to mirror my personal Neovim config as
 closely as possible, while adding in some simple QOL functions and
 mappings to make my Org Mode experience a little more intuitive and
 seamless.
+
+This config is heavily inspired by Doom Emacs. However, for my use case,
+I found that Doom was overly comlicated for my use case, and generally
+I tend to not prefer that level of abstraction in my configs. I did try
+to implement my favorite aspects from Doom, while keeping things as
+simple and focused as possible.
 
 Feel free to borrow and build on this config if you'd like, or just
 steal some snippets.
 
 It is *recommended* to configure it from the *init.org* file. Saving the
 init.org file should tangle the code into the init.el file automagically.
-** Ctrl & Meta
+** First Timer Tips
+*** Ctrl & Meta
 This is from the Emacs tutorial, but I put this here for safety.
 
 Emacs commands generally involve the CONTROL key (often labeled CTRL)
@@ -130,7 +135,7 @@ in full each time, we'll use the following abbreviations:
 	  If there is no META or ALT key, instead press and release the
 	  ESC key and then type <chr>.  We write <ESC> for the ESC key.
 
-** Where to start?
+*** Where to start?
 First I recommend starting with the Emacs tutorial with the following keybinding: C-h t
 Or running the command with M-x: help-with-tutorial
 Even if you plan on using Vim keybindings later on, it's a good idea to learn the standard Emacs keybindings.
@@ -150,8 +155,7 @@ https://learnxinyminutes.com/elisp/
 
 Or if you want to know everything about elisp:
 https://www.gnu.org/software/emacs/manual/html_node/eintr/
-
-** Getting Help
+*** Getting Help
 If you get stuck or confused about something, you're in luck:
 Because Emacs has a really good help functionality.
 Everything under C-h is used for help keybindings.
@@ -208,7 +212,8 @@ Using goto-node:
 
 * Core Setup & Performance
 These are essential settings and small tweaks that must load before any packages.
-They impact the entire configuration, skipping these could result in significantly slower configuration and potential breakage of your setup.
+They impact the entire configuration, skipping these could result in significantly
+slower configuration and potential breakage of your setup.
 ** Startup Performance
 Make startup faster by reducing the frequency of garbage collection. This will be set back when startup finishes.
 #+begin_src emacs-lisp
@@ -230,17 +235,6 @@ This snippet adds a hook to org-mode buffers so that start/org-babel-tangle-conf
 This function checks to see if the file being saved is the init.org file you’re looking at right now, and if so,
 automatically exports the configuration here to the associated output files.
 #+begin_src emacs-lisp
-;; (defun start/org-babel-tangle-config ()
-;; "Automatically tangle our init.org config file and refresh package-quickstart when we save it. Credit to Emacs From Scratch for this one!"
-;; (interactive)
-;; (when (string-equal (file-name-directory (buffer-file-name))
-;; (expand-file-name user-emacs-directory))
-;; ;; Dynamic scoping to the rescue
-;; (let ((org-confirm-babel-evaluate nil))
-;; (org-babel-tangle)
-;; (package-quickstart-refresh)
-;; )
-;; ))
 (defun start/org-babel-tangle-config ()
   "Automatically tangle and refresh quickstart, strictly suppressing warnings."
   (interactive)
@@ -368,7 +362,9 @@ If you plan to use a different package manager, remember to remove this section 
   (menu-bar-mode nil)         ;; Disable the menu bar
   (scroll-bar-mode nil)       ;; Disable the scroll bar
   (tool-bar-mode nil)         ;; Disable the tool bar
-  ;;(inhibit-startup-screen t)  ;; Disable welcome screen
+  (inhibit-startup-screen t)  ;; Disable welcome screen
+  (inhibit-startup-message t) ;; Disable screen that shows on first install
+
 
   (delete-selection-mode t)   ;; Select text and delete it by typing.
   (electric-indent-mode nil)  ;; Turn off the weird indenting that Emacs does by default.
@@ -430,6 +426,7 @@ If you plan to use a different package manager, remember to remove this section 
 
 * Keybindings (Load First)
 Packages that we want to load first so we have them as soon as possible if something breaks.
+
 ** Evil Mode
 An extensible vi/vim layer for Emacs.
 For users who find Emacs's native keybindings less intuitive.
@@ -458,8 +455,6 @@ Notes:
   :config
   ;; Set initial state for eat-mode
   (evil-set-initial-state 'eat-mode 'insert)
-
-
 
   ;; Jump to beginning of line or first non-blank character
   (defun start/jump-to-line-start ()
@@ -523,23 +518,15 @@ Notes:
   :config
   (global-evil-surround-mode 1)
 
-  ;; --- NORMAL MODE MAPPINGS ---
-
+  ;; SURROUNDS
   ;; gsa Add surrounding (Usage: gsaw")
   (evil-define-key 'normal evil-surround-mode-map (kbd "gsa") 'evil-surround-region)
-
   ;; gsd Delete surrounding (Usage: gsd")
   (evil-define-key 'normal evil-surround-mode-map (kbd "gsd") 'evil-surround-delete)
-
   ;; gsr Replace surrounding (Usage: gsr'")
   (evil-define-key 'normal evil-surround-mode-map (kbd "gsr") 'evil-surround-change)
-
-
-  ;; --- VISUAL MODE MAPPINGS ---
-
   ;; In Visual Mode, 'gsa' adds to the selection
   (evil-define-key 'visual evil-surround-mode-map (kbd "gsa") 'evil-surround-region)
-
   ;; Disable the default 's' in visual mode if it interferes
   (evil-define-key 'visual evil-surround-mode-map (kbd "s") nil))
 (with-eval-after-load 'evil-surround
@@ -608,14 +595,14 @@ Note: The Leader key is what you will press when you want to access your keybind
   (start/leader-keys
     "b" '(:ignore t :wk "buffers")
     "b s" '(consult-buffer :wk "Switch buffer")
-    "b k" '(kill-current-buffer :wk "Kill current buffer")
+    "b d" '(kill-current-buffer :wk "Delete current buffer")
     "b i" '(ibuffer :wk "Ibuffer")
     "b n" '(next-buffer :wk "Next buffer")
     "b p" '(previous-buffer :wk "Previous buffer")
     "b r" '(revert-buffer :wk "Reload buffer"))
 
   (start/leader-keys
-    "e" '(:ignore t :wk "dired")
+    "e" '(:ignore t :wk "Explorer")
     "e e" '(grease-here :wk "Explorer")
     "e v" '(dired :wk "Open dired")
     "e j" '(dired-jump :wk "Dired jump to current"))
@@ -694,9 +681,6 @@ Note: The Leader key is what you will press when you want to access your keybind
   (start/leader-keys
     "h" '(:ignore t :wk "help") ;; To get more help use C-h commands (describe variable, function, etc.)
     "h q" '(save-buffers-kill-emacs :wk "Quit Emacs and Daemon")
-    ;;"h r" '((lambda () (interactive)
-    ;;        (load-file "~/.config/emacs-org/init.el"))
-    ;;    :wk "Reload Emacs config")
     "h a" '(apropos :wk "Apropos (Search all)")
     "h b" '(describe-bindings :wk "Describe bindings")
     "h c" '(describe-char :wk "Describe char at point")
@@ -815,6 +799,7 @@ This code block is not tangled, it is just an example.
 To read more about using the built in methods, check out this awesome article from [[https://www.masteringemacs.org/article/mastering-key-bindings-emacs][masteringemacs]].
 
 * Appearance
+
 ** Set Theme
 Set gruvbox theme, if you want some themes try out doom-themes.
 Use consult-theme to easily try out themes (*Epilepsy* Warning).
