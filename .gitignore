@@ -1,62 +1,129 @@
-/url/cache
-/.emacs.desktop
-/auto-save-list
-/network-security.data
-/.session
-/session.*
+# Emacs temporary files
+*~
+\#*\#
+.\#*
+
+# Auto-save files
+auto-save-list/
+*.autosave
+
+# Backup files
+*.bak
+
+# Compiled files
 *.elc
+*.eln
+eln-cache/
+
+# Lock files
+.*.lock
+
+# Package management
+elpa/
+elpa-*
+straight/
+elpaca/
+package-quickstart.el
+site-lisp/package/
+.cask/
+
+# Org-roam database
+.org-roam.db
+.org-roam.db-shm
+.org-roam.db-wal
+org-roam.db
+
+# Org-mode files
+.org-id-locations
+org-clock-save.el
+
+# Session and history files
+.emacs.desktop
+.session
+session.*
+places
+recentf
+history
+abbrev_defs
+bookmarks
+.bookmarks.el
+ido.last
+.smex-items
+smex-items
+helm-adaptive-history
+.historian
+.uptimes.el
+projects
+
+# Projectile
+projectile-bookmarks.eld
+projectile.cache
+
+# Transient state
+transient/
+undo-tree-hist/
+
+# Cache directories
+.cache/
+var/
+cache/
+
+# LSP and Tree-sitter
+.lsp-session-*
+.lsp-session-v1
+lsp-cache/
+tree-sitter/
+
+# Language servers and tools
+anaconda-mode/
+swank
+
+# Network and security
+network-security.data
+cookies
+url/
+request/
+tramp
+
+# Shell
+eshell/
+.sqli_history
+
+# Media and images
+thumbs/
+image-dired/
+emms/
+
+# Forge (GitHub/GitLab integration)
+forge-database.sqlite
+forge-*.sqlite
+magithub
+
+# Frame and window state
+frame-restore-parameters
+
+# External tools
+ditaa*.jar
+plantuml.jar
+rake.cache
+
+# Plugin-specific
+.mc-lists.el
+.achievements
+.sx/
+newsticker
+viper
+
+# Custom files (user-specific settings)
+custom-vars.el
+custom.el
+
+# Version control
 CVS
 .svn
-*~
 .cvsignore
-.*.lock
-/tramp
-/TODO
-/.org-id-locations
-cookies
-/newsticker
-\#*
-/tree-sitter
-/elpa
-/elpa-*
-site-lisp/package/
-/swank
-/.mc-lists.el
-/var
-/.sqli_history
-/frame-restore-parameters
-/.achievements
-/.bookmarks.el
-/history
-/helm-adaptive-history
-/thumbs/
-/emms/
-/.smex-items
-/image-dired/
-/eshell
-/.cask/
-/.sx/
-/org-clock-save.el
-/ditaa*.jar
-/ido.last
-/recentf
-/viper
-/projectile-bookmarks.eld
-/anaconda-mode/
-/.historian
-/.uptimes.el
-/rake.cache
-/plantuml.jar
-/magithub
-.cache/
-/forge-database.sqlite
-/transient
-/.lsp-session-v1
-/smex-items
-/eln-cache/
-/projects
-/forge-*.sqlite
-/projectile.cache
-/bookmarks
-/custom-vars.el
-/custom.el
+TODO
+
+# Miscellaneous
+*.log
+.DS_Store
