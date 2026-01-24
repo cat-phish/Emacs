@@ -770,8 +770,8 @@
   :config
   ;; AUTO-SAVE ORG MODE BUFFERS
   ;; (ref:auto-save)
-  (defun my/org-save-all-except-init ()
-	"Save all Org buffers except for the main init.org file."
+  (defun my/org-save-all-except ()
+	"Save all Org buffers except for files matching specific strings."
 	(interactive)
 	(dolist (buf (buffer-list))
       (with-current-buffer buf
@@ -782,9 +782,10 @@
 				   (not (string-match-p "init\\.org" (buffer-file-name)))
 				   )
           (save-buffer)))))
-  (run-with-idle-timer 30 t #'my/org-save-all-except-init)
+  (run-with-idle-timer 30 t #'my/org-save-all-except)
 
   ;; AUTO-FORMAT SRC BLOCKS
+  ;; (ref:format-src)
   ;; Function to indent every source block in the file
   (defun my/org-indent-all-src-blocks ()
     (when (derived-mode-p 'org-mode)
@@ -797,10 +798,10 @@
   (add-hook 'before-save-hook #'my/org-indent-all-src-blocks)
 
   ;; FIX STRANGE REFILE DISPLAY ISSUES
+  ;; (ref:refile-fix)
   ;; This will refile to a new heading, if it was already folded
   ;; it will remain so, otherwise will remain unfolded. Fixes
   ;; weird display issues after refiling as well.
-  ;; (ref:refile-fix)
   (add-hook 'org-after-refile-insert-hook
 			(lambda ()
               (save-excursion
@@ -867,7 +868,7 @@
       (message (if any-visible "Hidden all TODO-state entries" "Shown all TODO-state entries"))))
   (defun my/org-cycle-todo-entries ()
     "Cycle visibility for all TODO entries (non-DONE states).
-                               If any are visible, hide all. If all are hidden, show all."
+    If any are visible, hide all. If all are hidden, show all."
     (interactive)
     (let ((any-visible nil))
       ;; First pass: check if any TODO entries are visible
@@ -911,7 +912,8 @@
       (message (if any-visible "Hidden DONE entries" "Shown DONE entries"))))
 
 
-  ;; 1. The "Dynamic" Hide Function
+  ;; COLLAPSE DONE ENTRIES ON LAUNCH
+  ;; (ref:launch-done-collapse)
   (defun my/org-hide-done-entries-dynamic ()
     "Hide all entries that are in any 'DONE' state defined in the current buffer."
     (interactive)
@@ -923,6 +925,8 @@
              (outline-hide-subtree))))
        t 'file)))
 
+  ;; COLLAPSE DONE ENTRIES WHEN MARKED
+  ;; (ref:mark-done-collapse)
   (defun my/org-collapse-on-done ()
     "Collapse the current heading if moved to a DONE state, with a tiny delay to catch the Logbook."
     (let ((state org-state))
@@ -943,6 +947,7 @@
   (add-hook 'org-after-todo-state-change-hook #'my/org-collapse-on-done)
 
   ;; AUTO COLLAPSE KEYWORD HEADINGS
+  ;; (ref:collapse-keyword-headings)
   ;; Alist of heading names and optional level restrictions
   (defvar my/org-collapse-headings
     '(("#Future-Bills" .  1)   ; Only level 1
@@ -969,31 +974,10 @@
                             (= current-level target-level)))  ; Matches specific level
                (outline-hide-subtree))))))
      nil 'file))
-  ;; Hook to auto collapse
   (add-hook 'find-file-hook
             (lambda ()
               (when (derived-mode-p 'org-mode)
                 (my/org-hide-matching-headings))))
-
-  ;; CUSTOM ABBREV SHORTCUTS
-  (with-eval-after-load 'org
-    (define-abbrev-table 'org-mode-abbrev-table
-      '(("td"    "TODO")
-        ("assg" "ASSIGNMENT")
-        ("bll"   "BILL")
-        ("chr"   "CHORE")
-        ("nxt"   "NEXT")
-        ("pln"   "PLANNING")
-        ("rvw"   "REVIEW")
-        ("hld"   "HOLD")
-        ("rdy"   "READY")
-        ("actv"  "ACTIVE")
-        ("dn"  "DONE")
-        ("cncld"  "CANCELED")
-        ("chk"   "- [ ]")
-        ("chkb"   "[ ]")
-        ("chkc"   "[0/0]")
-        )))
 
   ;; Make RET context-aware like Doom
   ;; (define-key org-mode-map (kbd "rET") #'org-return) ;; redefined below
