@@ -644,8 +644,8 @@
 
   ;; TABLES
   (org-table-convert-region-max-lines 10000)
-  (org-table-copy-increment t
-							org-table-export-default-format "orgtbl-to-csv")
+  (org-table-copy-increment t)
+  (org-table-export-default-format "orgtbl-to-csv")
 
   ;; STRUCTURE / FLOW
   (org-special-ctrl-a/e t)
@@ -660,7 +660,8 @@
   (org-src-preserve-indentation t)
   (org-adapt-indentation nil)
 
-  ;; ABBREV
+  ;; TEXT EXPANSION
+  ;; (ref:text-expansion)
   (define-abbrev-table 'my-org-abbrev-table '(
 											  ("td" "TODO")
 											  ("assg" "ASSIGNMENT")
@@ -701,6 +702,9 @@
   (advice-add 'org-refile :after 'org-save-all-org-buffers)
   (org-log-done 'time)
   (org-log-into-drawer t)
+
+  ;; TODO KEYWORDS
+  ;; (ref:todo-keywords)
   (org-todo-keywords
    '((sequence "TODO(t)" "ASSIGNMENT(a)" "BILL(b)" "CHORE(c)" "NEXT(n)" "PLANNING(P)" "REVIEW(V)" "HOLD(H)" "READY(R)" "ACTIVE(A)" "|" "DONE(d!)" "CANCELED(C!)")))
   ;; Note these also have to be set matching in Org-Modern
@@ -718,7 +722,8 @@
      ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
      ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
 
-  ;; Custom agenda command
+  ;; AGENDA OVERVIEW
+  ;; (ref:agenda-overview)
   (org-agenda-custom-commands
    '(("d" "📅 Daily overview"
       ((todo "NEXT"
@@ -746,13 +751,13 @@
                           :order 2)
                    (:discard (:anything t))))))
        (agenda ""
-               ((org-agenda-span 7)   ; Next 7 days
+               ((org-agenda-span 7)
                 (org-agenda-start-day "+1d")
-                (org-agenda-start-on-weekday nil)  ; Don't snap to week start
-                (org-agenda-time-grid nil)  ; Remove time grid
+                (org-agenda-start-on-weekday nil)  ; don't snap to week start
+                (org-agenda-time-grid nil)
                 (org-agenda-overriding-header "📅 UPCOMING (NEXT 7 DAYS)")
-                (org-agenda-prefix-format "  %-20b %s")  ; Show category
-                (org-super-agenda-groups nil)))  ; Completely disable super-agenda
+                (org-agenda-prefix-format "  %-20b %s")
+                (org-super-agenda-groups nil)))  ; disable super-agenda for this group
        (todo "TODO"
              ((org-agenda-overriding-header "📦 TODO BACKLOG")
               ;; This skips any entry that has a scheduled or deadline date
@@ -761,13 +766,23 @@
               (org-agenda-prefix-format "  %-20b %s")  ; Show category
               (org-super-agenda-groups
                '((:anything t)))))))))
+
   :config
-  ;; AUTO SAVE ORG MODE BUFFERS
-  (setq auto-save-timeout 30)
-  ;; Set interval to 300 characters
-  (setq auto-save-interval 300)
-  ;; Use idle timer instead for more predictable behavior
-  (run-with-idle-timer 30 t 'org-save-all-org-buffers)
+  ;; AUTO-SAVE ORG MODE BUFFERS
+  ;; (ref:auto-save)
+  (defun my/org-save-all-except-init ()
+	"Save all Org buffers except for the main init.org file."
+	(interactive)
+	(dolist (buf (buffer-list))
+      (with-current-buffer buf
+		(when (and (derived-mode-p 'org-mode)
+                   (buffer-file-name)
+                   (buffer-modified-p)
+				   ;; Exempt buffer names
+				   (not (string-match-p "init\\.org" (buffer-file-name)))
+				   )
+          (save-buffer)))))
+  (run-with-idle-timer 30 t #'my/org-save-all-except-init)
 
   ;; AUTO-FORMAT SRC BLOCKS
   ;; Function to indent every source block in the file
@@ -779,13 +794,13 @@
           (let ((element (org-element-at-point)))
             (when (eq (org-element-type element) 'src-block)
               (org-babel-do-in-edit-buffer (indent-region (point-min) (point-max)))))))))
-  ;; Run the function automatically before saving
   (add-hook 'before-save-hook #'my/org-indent-all-src-blocks)
 
   ;; FIX STRANGE REFILE DISPLAY ISSUES
   ;; This will refile to a new heading, if it was already folded
   ;; it will remain so, otherwise will remain unfolded. Fixes
   ;; weird display issues after refiling as well.
+  ;; (ref:refile-fix)
   (add-hook 'org-after-refile-insert-hook
 			(lambda ()
               (save-excursion
@@ -801,7 +816,9 @@
                       ;; This fixes the 'ghost' display issue
                       (org-back-to-heading t)
                       (org-flag-subtree t)))))))
+
   ;; CYCLE FOLDING OF TODOS AND DONE
+  ;; (ref:todo-cycle)
   (defun my/org-toggle-todo-entries ()
     "Cycle visibility for all active TODO entries (non-DONE states)."
     (interactive)
@@ -828,7 +845,7 @@
     (message "Toggled DONE entries"))
   (defun my/org-cycle-all-todo-done-entries ()
     "Cycle visibility for all entries with TODO states (both TODO and DONE).
-                           If any are visible, hide all. If all are hidden, show all."
+                               If any are visible, hide all. If all are hidden, show all."
     (interactive)
     (let ((any-visible nil))
       ;; First pass: check if any TODO-state entries are visible
@@ -850,7 +867,7 @@
       (message (if any-visible "Hidden all TODO-state entries" "Shown all TODO-state entries"))))
   (defun my/org-cycle-todo-entries ()
     "Cycle visibility for all TODO entries (non-DONE states).
-                           If any are visible, hide all. If all are hidden, show all."
+                               If any are visible, hide all. If all are hidden, show all."
     (interactive)
     (let ((any-visible nil))
       ;; First pass: check if any TODO entries are visible
@@ -872,7 +889,7 @@
       (message (if any-visible "Hidden TODO entries" "Shown TODO entries"))))
   (defun my/org-cycle-done-entries ()
     "Cycle visibility for all DONE entries.
-                           If any are visible, hide all. If all are hidden, show all."
+                               If any are visible, hide all. If all are hidden, show all."
     (interactive)
     (let ((any-visible nil))
       ;; First pass: check if any DONE entries are visible
@@ -934,12 +951,12 @@
       ("#Repeaters" . nil)          ; Any level
       )
     "Alist of (heading-name . level).
-    If level is nil, collapse at any level.
-    If level is a number, only collapse at that level.")
+        If level is nil, collapse at any level.
+        If level is a number, only collapse at that level.")
 
   (defun my/org-hide-matching-headings ()
     "Force hide all headings that match entries in `my/org-collapse-headings'.
-    Respects level restrictions if specified."
+        Respects level restrictions if specified."
     (org-map-entries
      (lambda ()
        (let ((heading (org-get-heading t t t t))  ; Get heading without tags, todo, etc.
@@ -1013,8 +1030,8 @@
   ;; INSERT HEADING BELOW
   (defun my/org-insert-parent-heading-below ()
 	"Insert a new heading at the appropriate level.
-If on a heading line, go up one level and insert a sibling.
-If in content (checkbox, text, etc.), insert a sibling of current heading."
+    If on a heading line, go up one level and insert a sibling.
+    If in content (checkbox, text, etc.), insert a sibling of current heading."
 	(interactive)
 	(if (org-at-heading-p)
 		;; We're ON a heading line - go up one level
@@ -1202,9 +1219,9 @@ If in content (checkbox, text, etc.), insert a sibling of current heading."
   ;; Set additional keybindings
 
   ;; Map 'dd' specifically for Org-mode
-  (evil-define-key 'normal org-mode-map (kbd "d d") #'my/evil-org-delete-heading-dwim)
+  ;; (evil-define-key 'normal org-mode-map (kbd "d d") #'my/evil-org-delete-heading-dwim)
   ;; This ensures that when you highlight text, 'd' just deletes the selection.
-  (evil-define-key 'visual org-mode-map (kbd "d") #'evil-delete)
+  ;; (evil-define-key 'visual org-mode-map (kbd "d") #'evil-delete)
 
   ;; Org element motions (Doom-style)
   (evil-define-key 'normal org-mode-map
@@ -1216,21 +1233,6 @@ If in content (checkbox, text, etc.), insert a sibling of current heading."
     (kbd "]h") #'org-forward-heading-same-level
     (kbd "[h") #'org-backward-heading-same-level)
 
-  ;; Ensure org-mode keybindings are overridden
-  ;; (evil-define-key 'normal org-mode-map
-  ;; (kbd "M-h") 'org-metaleft
-  ;; (kbd "M-j") 'org-metadown
-  ;; (kbd "M-k") 'org-metaup
-  ;; (kbd "M-l") 'org-metaright
-  ;; )
-  ;; (add-hook 'org-mode-hook
-  ;; (lambda ()
-  ;; (evil-define-key 'insert org-mode-map
-  ;; (kbd "M-h") 'org-metaleft
-  ;; (kbd "M-j") 'org-metadown
-  ;; (kbd "M-k") 'org-metaup
-  ;; (kbd "M-l") 'org-metaright
-  ;; )))
   ;; Smart Meta Movements (Normal & Insert states combined)
   (evil-define-key '(normal insert) org-mode-map
     (kbd "M-h") #'my/org-meta-left-smart
@@ -1273,6 +1275,17 @@ If in content (checkbox, text, etc.), insert a sibling of current heading."
       (mouse-set-point event) ; Move the cursor to where you double-clicked
       (my/org-return-dwim)))
   )
+(with-eval-after-load 'evil-org
+  ;; Use 'evil-define-minor-mode-key' or standard 'evil-define-key'
+  ;; but avoid shadowing the base 'd' operator.
+
+  ;; 1. Remap the 'evil-delete-line' (which is what dd usually calls)
+  ;; This is the "cleanest" way to intercept 'dd' without breaking 'dw'
+  (evil-define-key 'normal org-mode-map (kbd "dd") #'my/evil-org-delete-heading-dwim)
+
+  ;; 2. Ensure 'd' is still recognized as the operator for everything else
+  ;; If 'dw' still fails, add this to force the operator to stay active:
+  (evil-define-key 'normal org-mode-map (kbd "d") 'evil-delete))
 
 (use-package toc-org
   :commands toc-org-enable
