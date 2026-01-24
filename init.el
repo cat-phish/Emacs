@@ -742,7 +742,7 @@
                 (org-super-agenda-groups
                  '((:name "❗Overdue"
                           :deadline past
-                          :scheduled past  ; Catch items scheduled in the past too
+                          :scheduled past
                           :order 1)
                    (:name "Today"
                           :time-grid t
@@ -979,8 +979,8 @@
               (when (derived-mode-p 'org-mode)
                 (my/org-hide-matching-headings))))
 
-  ;; Make RET context-aware like Doom
-  ;; (define-key org-mode-map (kbd "rET") #'org-return) ;; redefined below
+  ;; CONTEXT AWARE RET KEY
+  ;; (ref:ret-dwim)
   (defun my/org-return-dwim ()
     "Context-aware RET for Org (normal mode only)."
     (interactive)
@@ -988,30 +988,22 @@
      ;; Toggle checkbox
      ((org-at-item-checkbox-p)
       (org-toggle-checkbox))
-
      ;; Follow links
      ((and org-return-follows-link
            (org-in-regexp org-link-any-re))
       (org-open-at-point))
-
      ;; Tables
      ((org-at-table-p)
       (org-table-next-row))
-
-     ;; Lists
-     ((org-in-item-p)
-      (org-end-of-line)
-      (org-insert-item))
-
      ;; Headings
      ((org-at-heading-p)
       (org-cycle))
-
      ;; Fallback
      (t
       (evil-next-line))))
 
-  ;; INSERT HEADING BELOW
+  ;; INSERT PARENT HEADING BELOW
+  ;; (ref:insert-parent-heading)
   (defun my/org-insert-parent-heading-below ()
 	"Insert a new heading at the appropriate level.
     If on a heading line, go up one level and insert a sibling.
@@ -1032,34 +1024,32 @@
 		(evil-insert-state))))
 
   ;; INSERT ITEM BELOW
+  ;; (ref:insert-item-below)
   (defun my/org-smart-insert-item-below ()
     "Insert a new list item, checkbox, table row, or headline below the current line."
     (interactive)
     ;; (org-back-to-heading)
     (cond
-     ;; 1. In a Table
+     ;; Tables
      ((org-at-table-p)
       (org-table-insert-row 'below))
-
-     ;; 2. On a Checkbox
+     ;; Checkboxes
      ((org-at-item-checkbox-p)
       (org-end-of-line)
       (org-insert-item t) ;; The 't' argument forces a checkbox
 	  (evil-insert-state))
-
-     ;; 3. In a List (Ordered or Unordered)
+     ;; Lists
      ((org-in-item-p)
       (org-end-of-line)
       (org-insert-item)
 	  (evil-insert-state))
-
-     ;; 4. On a Heading / TODO
+     ;; Headings/TODOs
      ((org-at-heading-p)
       (org-insert-heading-respect-content)
       (when (org-entry-is-todo-p)
-        (org-todo 'nextset)) ;; Optional: matches TODO state of above line
+        (org-todo 'nextset)) ;; matches TODO state of above line
 	  (evil-insert-state))
-     ;; 5. Default: Just a normal newline
+     ;; Default: Just a normal newline
      (t
       (end-of-line)
       (newline-and-indent)
@@ -1067,27 +1057,27 @@
     (org-update-checkbox-count t)
     )
 
-  (defun my/org-smart-insert-subheading ()
+  ;; INSERT SUBITEM BELOW
+  ;; (ref:insert-subitem-below)
+  (defun my/org-smart-insert-subitem ()
     "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
     (interactive)
     (cond
-     ;; 1. On a Checkbox -> Insert a nested checkbox
+     ;; Checkbox -> Insert a nested checkbox
      ((org-at-item-checkbox-p)
       (org-end-of-line)
       (org-insert-item t)
       (org-indent-item)
 	  (evil-insert-state))
-
-     ;; 2. In a List -> Insert a nested list item
+     ;; List -> Insert a nested list item
      ((org-in-item-p)
       (org-end-of-line)
       (org-insert-item)
       (org-indent-item)
 	  (evil-insert-state))
-
-     ;; 3. On a Heading -> Insert a demoted heading at the end of content
+     ;; On a Heading -> Insert a demoted heading at the end of content
      ((org-at-heading-p)
-      ;; We use save-excursion to ensure we don't split the line
+      ;; Use save-excursion to ensure we don't split the line
       (save-excursion
         (org-back-to-heading)
         (move-end-of-line 1)
@@ -1099,8 +1089,8 @@
       (forward-line -1)
       (goto-char (line-end-position))
       (evil-insert-state))
+     ;; Default -> Normal behavior
 
-     ;; 4. Default -> Normal behavior
      (t
       (end-of-line)
       (newline-and-indent)
@@ -1245,11 +1235,11 @@
   (evil-define-key 'insert org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
   (evil-define-key 'insert org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
 
-  ;; SMART INSERT SUBHEADING
-  (evil-define-key 'normal org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subheading)
-  (evil-define-key 'normal org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subheading)
-  (evil-define-key 'insert org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subheading)
-  (evil-define-key 'insert org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subheading)
+  ;; SMART INSERT SUBITEM
+  (evil-define-key 'normal org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subitem)
+  (evil-define-key 'normal org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subitem)
+  (evil-define-key 'insert org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subitem)
+  (evil-define-key 'insert org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subitem)
 
   ;; DOUBLE CLICK TO CYCLE HEADINGS
   (evil-define-key 'normal org-mode-map
@@ -1274,185 +1264,6 @@
 (use-package toc-org
   :commands toc-org-enable
   :hook (org-mode . toc-org-mode))
-
-;; (use-package org-superstar
-;; :after org
-;; :hook (org-mode . org-superstar-mode))
-
-(use-package org-modern
-  :after org
-  :custom
-  (org-modern-todo-faces
-   '(("TODO"     . (:foreground "#282c34" :background "#98be65" :weight bold))
-     ("NEXT"     . (:foreground "#282c34" :background "#6f8fff" :weight bold))
-     ("ASSIGNMENT"     . (:foreground "#282c34" :background "#e5404e" :weight bold))
-     ("BILL"  . (:foreground "#282c34" :background "#fc830a" :weight bold))
-     ("CHORE"  . (:foreground "#282c34" :background "#e2b93d" :weight bold))
-     ("PLANNING" . (:foreground "#282c34" :background "#c792ea" :weight bold))
-     ("READY"    . (:foreground "#282c34" :background "#82b7ff" :weight bold))
-     ("ACTIVE"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
-     ("REVIEW"   . (:foreground "#282c34" :background "#e0a96d" :weight bold))
-     ("HOLD"     . (:foreground "#282c34" :background "#e6d96c" :weight bold))
-     ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
-     ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
-
-  :hook (org-mode . org-modern-mode)
-  )
-
-(with-eval-after-load 'org-modern
-  (custom-set-variables
-   '(org-modern-checkbox
-     '((?X . "☑")  ; checked
-       (?- . "❍")  ; intermediate
-       (?\s . "☐")))))  ; unchecked
-
-(use-package org-table-sticky-header
-  :after org
-  :hook (org-mode . org-table-sticky-header-mode))
-
-(use-package org-super-agenda
-  :after org
-  :hook (org-agenda-mode . org-super-agenda-mode)
-
-  :custom
-  (org-super-agenda-groups
-   '(
-     (:name "🔥 Today"
-			:time-grid t
-			:scheduled today
-			:order 1)
-
-     (:name "⚠ Overdue"
-			:deadline past
-			:order 2)
-
-     (:name "📌 Important"
-			:priority "A"
-			:order 3)
-
-     (:name "📅 Upcoming"
-			:deadline future
-			:order 4)
-
-     (:name "🧾 Other"
-			:anything t
-			:order 99))))
-
-(use-package org-tempo
-  :ensure nil
-  :after org)
-
-(use-package org-roam
-  :custom
-  (org-roam-directory (file-truename "~/org/roam"))
-  (org-roam-completion-everywhere t)
-  (org-roam-node-display-template
-   (concat "${title:*} "
-           (propertize "${tags:20}" 'face 'org-tag)))
-  :bind (("C-c n f" . org-roam-node-find)
-         ("C-c n i" . org-roam-node-insert)
-         ("C-c n b" . org-roam-buffer-toggle))
-  :config
-  (org-roam-db-autosync-mode)
-  (setq org-roam-capture-templates
-        '(("d" "default" plain
-           "%?"
-           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
-                              "#+title: ${title}\n")
-           :unnarrowed t))))
-
-(use-package org-download
-  :after org
-  :hook ((dired-mode . org-download-enable)
-		 (org-mode . org-download-enable))
-  :config
-  (setq org-download-method 'directory)             ;; Save images to a directory
-  (setq org-download-image-dir "images")            ;; The directory name (e.g. ./images)
-  (setq org-download-heading-lvl nil)               ;; Don't use headings for sub-folders
-  (setq org-download-timestamp "%Y%m%d-%H%M%S_")    ;; Timestamp file names
-  (setq org-download-screenshot-method "xclip")     ;; "scrot", "gnome-screenshot", or "xclip" (Linux)
-  ;; On Mac, it uses "pngpaste" automatically if installed
-  )
-
-;; (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
-
-;; (require 'start-multiFileExample)
-
-;; (start/hello)
-
-(use-package magit
-  :defer
-  :custom (magit-diff-refine-hunk (quote all)) ;; Shows inline diff
-  :config (define-key transient-map (kbd "<escape>") 'transient-quit-one) ;; Make escape quit magit prompts
-  )
-
-(use-package diff-hl
-  :hook ((dired-mode         . diff-hl-dired-mode-unless-remote)
-         (magit-post-refresh . diff-hl-magit-post-refresh))
-  :init (global-diff-hl-mode))
-
-(use-package corfu
-  ;; Optional customizations
-  :custom
-  (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
-  (corfu-auto t)                 ;; Enable auto completion
-  (corfu-auto-trigger ".") ;; Custom trigger characters
-  (corfu-auto-prefix 2)          ;; Minimum length of prefix for auto completion.
-  (corfu-popupinfo-mode t)       ;; Enable popup information
-  (corfu-popupinfo-delay 0.5)    ;; Lower popup info delay to 0.5 seconds from 2 seconds
-  (corfu-separator ?\s)          ;; Orderless field separator, Use M-SPC to enter separator
-  (corfu-quit-at-boundary t)   ;; Never quit at completion boundary
-  (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
-  ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
-  ;; (corfu-scroll-margin 5)        ;; Use scroll margin
-  (completion-ignore-case t)
-  (corfu-preselect 'prompt)      ;; Focus stays on your typing, not the first result
-  (corfu-preview-current t)      ;; Preview changes in buffer as you cycle
-  (corfu-on-exact-match nil)     ;; Don't finish just because you typed the word
-
-  ;; Emacs 30 and newer: Disable Ispell completion function.
-  ;; Try `cape-dict' as an alternative.
-  (text-mode-ispell-word-completion nil)
-
-  ;; Enable indentation+completion using the TAB key.
-  ;; `completion-at-point' is often bound to M-TAB.
-  (tab-always-indent 'complete)
-
-  ;; Recommended: Enable Corfu globally.  This is recommended since Dabbrev can
-  ;; be used globally (M-/).  See also the customization variable
-  ;; `global-corfu-modes' to exclude certain modes.
-  :init
-  (global-corfu-mode)
-
-  )
-
-(use-package nerd-icons-corfu
-  :after corfu
-  :init (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
-
-(use-package cape
-  :after corfu
-  :init
-  ;; Add to the global default value of `completion-at-point-functions' which is
-  ;; used by `completion-at-point'.  The order of the functions matters, the
-  ;; first function returning a result wins.  Note that the list of buffer-local
-  ;; completion functions takes precedence over the global list.
-
-  ;; The functions that are added later will be the first in the list
-  (add-hook 'completion-at-point-functions #'cape-dabbrev) ;; Complete word from current buffers
-  (add-hook 'completion-at-point-functions #'cape-dict) ;; Dictionary completion
-  (add-hook 'completion-at-point-functions #'cape-file) ;; Path completion
-  (add-hook 'completion-at-point-functions #'cape-elisp-block) ;; Complete elisp in Org or Markdown mode
-  (add-hook 'completion-at-point-functions #'cape-keyword) ;; Keyword completion
-
-  ;;(add-hook 'completion-at-point-functions #'cape-abbrev) ;; Complete abbreviation
-  ;;(add-hook 'completion-at-point-functions #'cape-history) ;; Complete from Eshell, Comint or minibuffer history
-  ;;(add-hook 'completion-at-point-functions #'cape-line) ;; Complete entire line from current buffer
-  ;;(add-hook 'completion-at-point-functions #'cape-elisp-symbol) ;; Complete Elisp symbol
-  ;;(add-hook 'completion-at-point-functions #'cape-tex) ;; Complete Unicode char from TeX command, e.g. \hbar
-  ;;(add-hook 'completion-at-point-functions #'cape-sgml) ;; Complete Unicode char from SGML entity, e.g., &alpha
-  ;;(add-hook 'completion-at-point-functions #'cape-rfc1345) ;; Complete Unicode char using RFC 1345 mnemonics
-  )
 
 (use-package orderless
   :custom
