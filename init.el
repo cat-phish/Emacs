@@ -164,6 +164,8 @@
   (evil-define-key 'normal 'global (kbd "Q") (kbd "@q"))
 
   )
+
+
 (use-package evil-nerd-commenter
   :ensure t
   :after evil
@@ -307,7 +309,7 @@
     "o d" '(org-deadline :wk "Deadline")
     "o s" '(org-schedule :wk "Schedule")
     "o S" '(org-sort :wk "Sort region/list")
-    "o T" '(org-babel-tangle :wk "Tangle code")
+	"o T" '(org-set-tags-command :wk "Set Tags")
     "o r" '(org-refile :wk "Refile")
     )
 
@@ -340,7 +342,8 @@
     "h v" '(describe-variable :wk "Describe variable")
     "h o" '(describe-symbol :wk "Describe symbol (DWIM)")
     "h p" '(describe-package :wk "Describe package")
-    "h t" '(load-theme :wk "Load theme")
+    "h t" '(org-babel-tangle :wk "Tangle code")
+    "h T" '(load-theme :wk "Load theme")
     "h r" '((lambda () (interactive) (load-file user-init-file)) :wk "Reload config"))
 
   (start/leader-keys
@@ -533,103 +536,12 @@
   :config
   (dashboard-setup-startup-hook))
 
-(use-package projectile
-  :config
-  (projectile-mode)
-  :custom
-  ;; (projectile-auto-discover nil) ;; Disable auto search for better startup times ;; Search with a keybind
-  (projectile-run-use-comint-mode t) ;; Interactive run dialog when running projects inside emacs (like giving input)
-  (projectile-switch-project-action #'projectile-dired) ;; Open dired when switching to a project
-  (projectile-project-search-path '("~/projects/" "~/work/" ("~/github" . 1)))) ;; . 1 means only search the first subdirectory level for projects
-
-(use-package eglot
-  :ensure nil ;; Don't install eglot because it's now built-in
-  :hook ((c-mode c++-mode ;; Autostart lsp servers for a given mode
-                 lua-mode) ;; Lua-mode needs to be installed
-         . eglot-ensure)
-  :custom
-  ;; Good default
-  (eglot-events-buffer-size 0) ;; No event buffers (LSP server logs)
-  (eglot-autoshutdown t);; Shutdown unused servers.
-  (eglot-report-progress nil) ;; Disable LSP server logs (Don't show lsp messages at the bottom, java)
-  ;; Manual lsp servers
-  ;;:config
-  ;;(add-to-list 'eglot-server-programs
-  ;;             `(lua-mode . ("PATH_TO_THE_LSP_FOLDER/bin/lua-language-server" "-lsp"))) ;; Adds our lua lsp server to eglot's server list
-  )
-
-(use-package sideline-flymake
-  :hook (flymake-mode . sideline-mode)
-  :custom
-  (sideline-flymake-display-mode 'line) ;; Show errors on the current line
-  (sideline-backends-right '(sideline-flymake)))
-
-(use-package yasnippet-snippets
-  :hook (prog-mode . yas-minor-mode))
-
-(setq treesit-language-source-alist
-      '((bash "https://github.com/tree-sitter/tree-sitter-bash")
-        (cmake "https://github.com/uyha/tree-sitter-cmake")
-        (c "https://github.com/tree-sitter/tree-sitter-c")
-        (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
-        (css "https://github.com/tree-sitter/tree-sitter-css")
-        (elisp "https://github.com/Wilfred/tree-sitter-elisp")
-        (go "https://github.com/tree-sitter/tree-sitter-go")
-        (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
-        (html "https://github.com/tree-sitter/tree-sitter-html")
-        (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
-        (json "https://github.com/tree-sitter/tree-sitter-json")
-        (make "https://github.com/alemuller/tree-sitter-make")
-        (markdown "https://github.com/ikatyang/tree-sitter-markdown")
-        (python "https://github.com/tree-sitter/tree-sitter-python")
-        (rust "https://github.com/tree-sitter/tree-sitter-rust")
-        (toml "https://github.com/tree-sitter/tree-sitter-toml")
-        (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
-        (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
-        (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
-
-(defun start/install-treesit-grammars ()
-  "Install missing treesitter grammars"
-  (interactive)
-  (dolist (grammar treesit-language-source-alist)
-    (let ((lang (car grammar)))
-      (unless (treesit-language-available-p lang)
-        (treesit-install-language-grammar lang)))))
-
-;; Call this function to install missing grammars
-(start/install-treesit-grammars)
-
-;; Optionally, add any additional mode remappings not covered by defaults
-(setq major-mode-remap-alist
-      '((yaml-mode . yaml-ts-mode)
-        (sh-mode . bash-ts-mode)
-        (c-mode . c-ts-mode)
-        (c++-mode . c++-ts-mode)
-        (css-mode . css-ts-mode)
-        (python-mode . python-ts-mode)
-        (mhtml-mode . html-ts-mode)
-        (javascript-mode . js-ts-mode)
-        (json-mode . json-ts-mode)
-        (typescript-mode . typescript-ts-mode)
-        (conf-toml-mode . toml-ts-mode)
-        ))
-
-;; Or if there is no built in mode
-(use-package cmake-ts-mode :ensure nil :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
-(use-package go-ts-mode :ensure nil :mode "\\.go\\'")
-(use-package go-mod-ts-mode :ensure nil :mode "\\.mod\\'")
-(use-package rust-ts-mode :ensure nil :mode "\\.rs\\'")
-(use-package tsx-ts-mode :ensure nil :mode "\\.tsx\\'")
-
-(use-package eat
-  :hook ('eshell-load-hook #'eat-eshell-mode))
-
 (use-package org
   :ensure nil
   :hook ((org-mode . org-indent-mode)
          (org-mode . abbrev-mode))
   :custom
-  (org-edit-src-content-indentation 4) ;; Set src block automatic indent to 4 instead of 2.
+  (org-edit-src-content-indentation 2) ;; Set src block automatic indent to 4 instead of 2.
   (org-return-follows-link t)   ;; Sets RETURN key in org-mode to follow links
 
   ;; FOLDING
@@ -727,46 +639,45 @@
   (org-agenda-custom-commands
    '(("d" "📅 Daily overview"
       ((todo "NEXT"
-             ((org-agenda-overriding-header "🚀 NEXT TASKS")
-              (org-agenda-prefix-format "  %-20b %s")  ; Show category
+			 ((org-agenda-overriding-header "🚀 NEXT TASKS")
+              (org-agenda-prefix-format "  %-20b %s")
               (org-super-agenda-groups
                '((:name "High priority"
-                        :priority "A")
-                 (:name "Normal"
-                        :anything t)))))
+						:priority "A")
+				 (:name "Normal"
+						:anything t)))))
        (agenda ""
-               ((org-agenda-span 1)   ; Span of 3 days
-                (org-agenda-start-day "0d")
-                (org-agenda-overriding-header "🔥 TODAY")
-             	(org-agenda-prefix-format "  %-20b %s")  ; Show category
-                (org-super-agenda-groups
-                 '((:name "❗Overdue"
+               ((org-agenda-span 1)
+				(org-agenda-start-day "0d")
+				(org-deadline-warning-days 0)  ; Key fix: don't show future deadlines
+				(org-agenda-overriding-header "🔥 TODAY")
+				(org-agenda-prefix-format "  %-20b %s")
+				(org-super-agenda-groups
+				 '((:name "❗Overdue"
                           :deadline past
                           :scheduled past
                           :order 1)
-                   (:name "Today"
+                   (:name "⏰ Today"
                           :time-grid t
                           :scheduled today
                           :deadline today
                           :order 2)
-                   (:discard (:anything t))))))
+                   (:discard (:anything t))))))  ; This should hide everything else
        (agenda ""
                ((org-agenda-span 7)
-                (org-agenda-start-day "+1d")
-                (org-agenda-start-on-weekday nil)  ; don't snap to week start
-                (org-agenda-time-grid nil)
-                (org-agenda-overriding-header "📅 UPCOMING (NEXT 7 DAYS)")
-                (org-agenda-prefix-format "  %-20b %s")
-                (org-super-agenda-groups nil)))  ; disable super-agenda for this group
+				(org-agenda-start-day "+1d")
+				(org-agenda-start-on-weekday nil)
+				(org-agenda-time-grid nil)
+				(org-agenda-overriding-header "📅 UPCOMING (NEXT 7 DAYS)")
+				(org-agenda-prefix-format "  %-20b %s")
+				(org-super-agenda-groups nil)))
        (todo "TODO"
-             ((org-agenda-overriding-header "📦 TODO BACKLOG")
-              ;; This skips any entry that has a scheduled or deadline date
+			 ((org-agenda-overriding-header "📦 TODO BACKLOG")
               (org-agenda-todo-ignore-scheduled 'all)
               (org-agenda-todo-ignore-deadlines 'all)
-              (org-agenda-prefix-format "  %-20b %s")  ; Show category
+              (org-agenda-prefix-format "  %-20b %s")
               (org-super-agenda-groups
                '((:anything t)))))))))
-
   :config
   ;; AUTO-SAVE ORG MODE BUFFERS
   ;; (ref:auto-save)
@@ -1099,9 +1010,12 @@
 
   )
 
+;; (ref:ret-map)
 (with-eval-after-load 'org
   (define-key org-mode-map (kbd "RET") #'org-return))
 
+;; LOAD AGENDA ON LAUNCH
+;; (ref:agenda-on-launch)
 (with-eval-after-load 'org
   (add-hook 'emacs-startup-hook
             (lambda ()
@@ -1220,14 +1134,14 @@
   (evil-define-key 'normal org-mode-map (kbd "RET") #'my/org-return-dwim)
 
   ;; INSERT PARENT HEADING
-  ;; Add Alt-Ret (Meta-Return) mappings
+  ;; Add Alt-Ret (Meta-Return) mappings (ref:parent-heading-map)
   (evil-define-key 'normal org-mode-map (kbd "M-RET") #'my/org-insert-parent-heading-below)
   (evil-define-key 'insert org-mode-map (kbd "M-RET") #'my/org-insert-parent-heading-below)
   ;; Some terminals/launchers treat M-RET as M-J, so adding this as a fallback:
   (evil-define-key 'normal org-mode-map (kbd "M-<return>") #'my/org-insert-parent-heading-below)
   (evil-define-key 'insert org-mode-map (kbd "M-<return>") #'my/org-insert-parent-heading-below)
 
-  ;; SMART INSERT BELOW
+  ;; SMART INSERT BELOW (ref:item-below-map)
   (evil-define-key 'normal org-mode-map (kbd "C-<return>") #'my/org-smart-insert-item-below)
   (evil-define-key 'normal org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
   (evil-define-key 'normal org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
@@ -1235,7 +1149,7 @@
   (evil-define-key 'insert org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
   (evil-define-key 'insert org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
 
-  ;; SMART INSERT SUBITEM
+  ;; SMART INSERT SUBITEM (ref:subitem-below-map)
   (evil-define-key 'normal org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subitem)
   (evil-define-key 'normal org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subitem)
   (evil-define-key 'insert org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subitem)
@@ -1264,6 +1178,276 @@
 (use-package toc-org
   :commands toc-org-enable
   :hook (org-mode . toc-org-mode))
+
+;; (use-package org-superstar
+;; :after org
+;; :hook (org-mode . org-superstar-mode))
+
+(use-package org-modern
+  :after org
+  :custom
+  (org-modern-todo-faces
+   '(("TODO"     . (:foreground "#282c34" :background "#98be65" :weight bold))
+     ("NEXT"     . (:foreground "#282c34" :background "#6f8fff" :weight bold))
+     ("ASSIGNMENT"     . (:foreground "#282c34" :background "#e5404e" :weight bold))
+     ("BILL"  . (:foreground "#282c34" :background "#fc830a" :weight bold))
+     ("CHORE"  . (:foreground "#282c34" :background "#e2b93d" :weight bold))
+     ("PLANNING" . (:foreground "#282c34" :background "#c792ea" :weight bold))
+     ("READY"    . (:foreground "#282c34" :background "#82b7ff" :weight bold))
+     ("ACTIVE"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
+     ("REVIEW"   . (:foreground "#282c34" :background "#e0a96d" :weight bold))
+     ("HOLD"     . (:foreground "#282c34" :background "#e6d96c" :weight bold))
+     ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
+     ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
+
+  :hook (org-mode . org-modern-mode)
+  )
+
+(with-eval-after-load 'org-modern
+  (custom-set-variables
+   '(org-modern-checkbox
+     '((?X . "☑")  ; checked
+       (?- . "❍")  ; intermediate
+       (?\s . "☐")))))  ; unchecked
+
+(use-package org-table-sticky-header
+  :after org
+  :hook (org-mode . org-table-sticky-header-mode))
+
+(use-package org-super-agenda
+  :after org
+  :hook (org-agenda-mode . org-super-agenda-mode)
+
+  :custom
+  (org-super-agenda-groups
+   '(
+     (:name "🔥 Today"
+			:time-grid t
+			:scheduled today
+			:order 1)
+
+     (:name "⚠ Overdue"
+			:deadline past
+			:order 2)
+
+     (:name "📌 Important"
+			:priority "A"
+			:order 3)
+
+     (:name "📅 Upcoming"
+			:deadline future
+			:order 4)
+
+     (:name "🧾 Other"
+			:anything t
+			:order 99))))
+
+(use-package org-tempo
+  :ensure nil
+  :after org)
+
+(use-package org-roam
+  :custom
+  (org-roam-directory (file-truename "~/org/roam"))
+  (org-roam-completion-everywhere t)
+  (org-roam-node-display-template
+   (concat "${title:*} "
+           (propertize "${tags:20}" 'face 'org-tag)))
+  :bind (("C-c n f" . org-roam-node-find)
+         ("C-c n i" . org-roam-node-insert)
+         ("C-c n b" . org-roam-buffer-toggle))
+  :config
+  (org-roam-db-autosync-mode)
+  (setq org-roam-capture-templates
+        '(("d" "default" plain
+           "%?"
+           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+                              "#+title: ${title}\n")
+           :unnarrowed t))))
+
+(use-package org-download
+  :after org
+  :hook ((dired-mode . org-download-enable)
+		 (org-mode . org-download-enable))
+  :config
+  (setq org-download-method 'directory)             ;; Save images to a directory
+  (setq org-download-image-dir "images")            ;; The directory name (e.g. ./images)
+  (setq org-download-heading-lvl nil)               ;; Don't use headings for sub-folders
+  (setq org-download-timestamp "%Y%m%d-%H%M%S_")    ;; Timestamp file names
+  (setq org-download-screenshot-method "xclip")     ;; "scrot", "gnome-screenshot", or "xclip" (Linux)
+  ;; On Mac, it uses "pngpaste" automatically if installed
+  )
+
+(use-package projectile
+  :config
+  (projectile-mode)
+  :custom
+  ;; (projectile-auto-discover nil) ;; Disable auto search for better startup times ;; Search with a keybind
+  (projectile-run-use-comint-mode t) ;; Interactive run dialog when running projects inside emacs (like giving input)
+  (projectile-switch-project-action #'projectile-dired) ;; Open dired when switching to a project
+  (projectile-project-search-path '("~/projects/" "~/work/" ("~/github" . 1)))) ;; . 1 means only search the first subdirectory level for projects
+
+(use-package eglot
+  :ensure nil ;; Don't install eglot because it's now built-in
+  :hook ((c-mode c++-mode ;; Autostart lsp servers for a given mode
+                 lua-mode) ;; Lua-mode needs to be installed
+         . eglot-ensure)
+  :custom
+  ;; Good default
+  (eglot-events-buffer-size 0) ;; No event buffers (LSP server logs)
+  (eglot-autoshutdown t);; Shutdown unused servers.
+  (eglot-report-progress nil) ;; Disable LSP server logs (Don't show lsp messages at the bottom, java)
+  ;; Manual lsp servers
+  ;;:config
+  ;;(add-to-list 'eglot-server-programs
+  ;;             `(lua-mode . ("PATH_TO_THE_LSP_FOLDER/bin/lua-language-server" "-lsp"))) ;; Adds our lua lsp server to eglot's server list
+  )
+
+(use-package sideline-flymake
+  :hook (flymake-mode . sideline-mode)
+  :custom
+  (sideline-flymake-display-mode 'line) ;; Show errors on the current line
+  (sideline-backends-right '(sideline-flymake)))
+
+(use-package yasnippet-snippets
+  :hook (prog-mode . yas-minor-mode))
+
+(setq treesit-language-source-alist
+      '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+        (cmake "https://github.com/uyha/tree-sitter-cmake")
+        (c "https://github.com/tree-sitter/tree-sitter-c")
+        (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
+        (css "https://github.com/tree-sitter/tree-sitter-css")
+        (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+        (go "https://github.com/tree-sitter/tree-sitter-go")
+        (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
+        (html "https://github.com/tree-sitter/tree-sitter-html")
+        (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
+        (json "https://github.com/tree-sitter/tree-sitter-json")
+        (make "https://github.com/alemuller/tree-sitter-make")
+        (markdown "https://github.com/ikatyang/tree-sitter-markdown")
+        (python "https://github.com/tree-sitter/tree-sitter-python")
+        (rust "https://github.com/tree-sitter/tree-sitter-rust")
+        (toml "https://github.com/tree-sitter/tree-sitter-toml")
+        (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+        (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+        (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
+
+(defun start/install-treesit-grammars ()
+  "Install missing treesitter grammars"
+  (interactive)
+  (dolist (grammar treesit-language-source-alist)
+    (let ((lang (car grammar)))
+      (unless (treesit-language-available-p lang)
+        (treesit-install-language-grammar lang)))))
+
+;; Call this function to install missing grammars
+(start/install-treesit-grammars)
+
+;; Optionally, add any additional mode remappings not covered by defaults
+(setq major-mode-remap-alist
+      '((yaml-mode . yaml-ts-mode)
+        (sh-mode . bash-ts-mode)
+        (c-mode . c-ts-mode)
+        (c++-mode . c++-ts-mode)
+        (css-mode . css-ts-mode)
+        (python-mode . python-ts-mode)
+        (mhtml-mode . html-ts-mode)
+        (javascript-mode . js-ts-mode)
+        (json-mode . json-ts-mode)
+        (typescript-mode . typescript-ts-mode)
+        (conf-toml-mode . toml-ts-mode)
+        ))
+
+;; Or if there is no built in mode
+(use-package cmake-ts-mode :ensure nil :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
+(use-package go-ts-mode :ensure nil :mode "\\.go\\'")
+(use-package go-mod-ts-mode :ensure nil :mode "\\.mod\\'")
+(use-package rust-ts-mode :ensure nil :mode "\\.rs\\'")
+(use-package tsx-ts-mode :ensure nil :mode "\\.tsx\\'")
+
+(use-package eat
+  :hook ('eshell-load-hook #'eat-eshell-mode))
+
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
+
+;; (require 'start-multiFileExample)
+
+;; (start/hello)
+
+(use-package magit
+  :defer
+  :custom (magit-diff-refine-hunk (quote all)) ;; Shows inline diff
+  :config (define-key transient-map (kbd "<escape>") 'transient-quit-one) ;; Make escape quit magit prompts
+  )
+
+(use-package diff-hl
+  :hook ((dired-mode         . diff-hl-dired-mode-unless-remote)
+         (magit-post-refresh . diff-hl-magit-post-refresh))
+  :init (global-diff-hl-mode))
+
+(use-package corfu
+  ;; Optional customizations
+  :custom
+  (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
+  (corfu-auto t)                 ;; Enable auto completion
+  (corfu-auto-trigger ".") ;; Custom trigger characters
+  (corfu-auto-prefix 2)          ;; Minimum length of prefix for auto completion.
+  (corfu-popupinfo-mode t)       ;; Enable popup information
+  (corfu-popupinfo-delay 0.5)    ;; Lower popup info delay to 0.5 seconds from 2 seconds
+  (corfu-separator ?\s)          ;; Orderless field separator, Use M-SPC to enter separator
+  (corfu-quit-at-boundary t)   ;; Never quit at completion boundary
+  (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
+  ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
+  ;; (corfu-scroll-margin 5)        ;; Use scroll margin
+  (completion-ignore-case t)
+  (corfu-preselect 'prompt)      ;; Focus stays on your typing, not the first result
+  (corfu-preview-current t)      ;; Preview changes in buffer as you cycle
+  (corfu-on-exact-match nil)     ;; Don't finish just because you typed the word
+
+  ;; Emacs 30 and newer: Disable Ispell completion function.
+  ;; Try `cape-dict' as an alternative.
+  (text-mode-ispell-word-completion nil)
+
+  ;; Enable indentation+completion using the TAB key.
+  ;; `completion-at-point' is often bound to M-TAB.
+  (tab-always-indent 'complete)
+
+  ;; Recommended: Enable Corfu globally.  This is recommended since Dabbrev can
+  ;; be used globally (M-/).  See also the customization variable
+  ;; `global-corfu-modes' to exclude certain modes.
+  :init
+  (global-corfu-mode)
+
+  )
+
+(use-package nerd-icons-corfu
+  :after corfu
+  :init (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
+
+(use-package cape
+  :after corfu
+  :init
+  ;; Add to the global default value of `completion-at-point-functions' which is
+  ;; used by `completion-at-point'.  The order of the functions matters, the
+  ;; first function returning a result wins.  Note that the list of buffer-local
+  ;; completion functions takes precedence over the global list.
+
+  ;; The functions that are added later will be the first in the list
+  (add-hook 'completion-at-point-functions #'cape-dabbrev) ;; Complete word from current buffers
+  (add-hook 'completion-at-point-functions #'cape-dict) ;; Dictionary completion
+  (add-hook 'completion-at-point-functions #'cape-file) ;; Path completion
+  (add-hook 'completion-at-point-functions #'cape-elisp-block) ;; Complete elisp in Org or Markdown mode
+  (add-hook 'completion-at-point-functions #'cape-keyword) ;; Keyword completion
+
+  ;;(add-hook 'completion-at-point-functions #'cape-abbrev) ;; Complete abbreviation
+  ;;(add-hook 'completion-at-point-functions #'cape-history) ;; Complete from Eshell, Comint or minibuffer history
+  ;;(add-hook 'completion-at-point-functions #'cape-line) ;; Complete entire line from current buffer
+  ;;(add-hook 'completion-at-point-functions #'cape-elisp-symbol) ;; Complete Elisp symbol
+  ;;(add-hook 'completion-at-point-functions #'cape-tex) ;; Complete Unicode char from TeX command, e.g. \hbar
+  ;;(add-hook 'completion-at-point-functions #'cape-sgml) ;; Complete Unicode char from SGML entity, e.g., &alpha
+  ;;(add-hook 'completion-at-point-functions #'cape-rfc1345) ;; Complete Unicode char using RFC 1345 mnemonics
+  )
 
 (use-package orderless
   :custom
@@ -1373,10 +1557,8 @@
 (use-package ws-butler
   :init (ws-butler-global-mode))
 
-(use-package avy
-  :ensure t
-  :config
-  (evil-define-key 'normal 'global (kbd "s") 'avy-goto-char-timer))
+(require 'flash-emacs)
+(evil-define-key 'normal 'global (kbd "s") 'flash-emacs-jump)
 
 ;;(use-package command-log-mode)
 

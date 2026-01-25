@@ -18,6 +18,7 @@
 - [[#keybindings-load-first][Keybindings (Load First)]]
     - [[#evil-mode][Evil Mode]]
     - [[#general-keybindings][General Keybindings]]
+    - [[#creating-keybindings-the-built-in-way][Creating keybindings the built in way]]
 - [[#appearance][Appearance]]
     - [[#set-theme][Set Theme]]
     - [[#transparency][Transparency]]
@@ -25,16 +26,9 @@
     - [[#doom-modeline][Doom Modeline]]
     - [[#nerd-icons][Nerd Icons]]
     - [[#dashboard][Dashboard]]
-- [[#development][Development]]
-    - [[#projectile][Projectile]]
-    - [[#eglot][Eglot]]
-    - [[#sideline-flymake][Sideline-flymake]]
-    - [[#yasnippet][Yasnippet]]
-    - [[#tree-sitter][Tree-Sitter]]
-    - [[#language-modes][Language modes]]
-    - [[#terminal][Terminal]]
 - [[#org-mode][Org Mode]]
-    - [[#org-mode-1][Org Mode]]
+    - [[#org-mode-overview][Org Mode Overview]]
+    - [[#org-mode-config][Org Mode Config]]
     - [[#evil-org-mode][Evil-Org-Mode]]
     - [[#table-of-contents][Table of Contents]]
     - [[#org-superstar][Org Superstar]]
@@ -45,6 +39,14 @@
     - [[#org-roam][Org-Roam]]
     - [[#org-roam-ui][Org-Roam-UI]]
     - [[#org-download][Org-Download]]
+- [[#development][Development]]
+    - [[#projectile][Projectile]]
+    - [[#eglot][Eglot]]
+    - [[#sideline-flymake][Sideline-flymake]]
+    - [[#yasnippet][Yasnippet]]
+    - [[#tree-sitter][Tree-Sitter]]
+    - [[#language-modes][Language modes]]
+    - [[#terminal][Terminal]]
 - [[#multi-file-example][Multi File Example]]
     - [[#adding-the-lisp-directory-to-load-path][Adding the lisp directory to load-path]]
     - [[#sourcing-the-files][Sourcing the files]]
@@ -65,7 +67,8 @@
     - [[#which-key][Which-Key]]
     - [[#ws-butler][Ws-butler]]
 - [[#my-custom-packages][My Custom Packages]]
-    - [[#avy][Avy]]
+    - [[#flash][Flash]]
+    - [[#avy-disabled][Avy (Disabled)]]
     - [[#command-log-mode-deprecated][Command Log Mode (Deprecated?)]]
     - [[#evil-terminal-cursor-changer][Evil Terminal Cursor Changer]]
     - [[#ivy][Ivy]]
@@ -426,7 +429,6 @@ If you plan to use a different package manager, remember to remove this section 
 
 * Keybindings (Load First)
 Packages that we want to load first so we have them as soon as possible if something breaks.
-
 ** Evil Mode
 An extensible vi/vim layer for Emacs.
 For users who find Emacs's native keybindings less intuitive.
@@ -501,6 +503,8 @@ Notes:
   (evil-define-key 'normal 'global (kbd "Q") (kbd "@q"))
 
   )
+
+
 (use-package evil-nerd-commenter
   :ensure t
   :after evil
@@ -657,7 +661,7 @@ Note: The Leader key is what you will press when you want to access your keybind
     "o d" '(org-deadline :wk "Deadline")
     "o s" '(org-schedule :wk "Schedule")
     "o S" '(org-sort :wk "Sort region/list")
-    "o T" '(org-babel-tangle :wk "Tangle code")
+	"o T" '(org-set-tags-command :wk "Set Tags")
     "o r" '(org-refile :wk "Refile")
     )
 
@@ -690,7 +694,8 @@ Note: The Leader key is what you will press when you want to access your keybind
     "h v" '(describe-variable :wk "Describe variable")
     "h o" '(describe-symbol :wk "Describe symbol (DWIM)")
     "h p" '(describe-package :wk "Describe package")
-    "h t" '(load-theme :wk "Load theme")
+    "h t" '(org-babel-tangle :wk "Tangle code")
+    "h T" '(load-theme :wk "Load theme")
     "h r" '((lambda () (interactive) (load-file user-init-file)) :wk "Reload config"))
 
   (start/leader-keys
@@ -785,7 +790,7 @@ Note: The Leader key is what you will press when you want to access your keybind
 ;;   )
 #+end_src
 
-*** Creating keybindings the built in way
+** Creating keybindings the built in way
 If you want to use the built in methods I recommend using these ones:
 This code block is not tangled, it is just an example.
 #+begin_src emacs-lisp :tangle no
@@ -799,7 +804,6 @@ This code block is not tangled, it is just an example.
 To read more about using the built in methods, check out this awesome article from [[https://www.masteringemacs.org/article/mastering-key-bindings-emacs][masteringemacs]].
 
 * Appearance
-
 ** Set Theme
 Set gruvbox theme, if you want some themes try out doom-themes.
 Use consult-theme to easily try out themes (*Epilepsy* Warning).
@@ -926,189 +930,8 @@ Also Doom modeline requires nerd icons.
   (dashboard-setup-startup-hook))
 #+end_src
 
-* Development
-** Projectile
-Project interaction library for Emacs.
-
-Emacs has a built in project manager called project.el, but we don't use it.
-You can try it out with the keybinds under C-x p because project.el does not require any special setup to use.
-
-We use projectile because it:
-- supports more features and project types.
-- has better integration with projects.
-- has better documentation.
-- is developed faster.
-More [[https://docs.projectile.mx/projectile/projectile_vs_project.html][reasons]] to use projectile.
-
-You can also make the [[https://github.com/karthink/consult-dir][consult-dir]] package list all the directories you [[https://github.com/MiniApollo/config/blob/main/emacs/init.org#consult-dir][specified]] and search from them like in tmux-sessionizer.
-#+begin_src emacs-lisp
-(use-package projectile
-  :config
-  (projectile-mode)
-  :custom
-  ;; (projectile-auto-discover nil) ;; Disable auto search for better startup times ;; Search with a keybind
-  (projectile-run-use-comint-mode t) ;; Interactive run dialog when running projects inside emacs (like giving input)
-  (projectile-switch-project-action #'projectile-dired) ;; Open dired when switching to a project
-  (projectile-project-search-path '("~/projects/" "~/work/" ("~/github" . 1)))) ;; . 1 means only search the first subdirectory level for projects
-#+end_src
-
-** Eglot
-Built in Emacs client for the Language Server Protocol.
-We use Eglot because it is fast and minimal.
-For more: C-h i: g: (eglot)Top
-
-Eglot does not automatically download LSP servers. It requires separate download.
-The easiest way to install LSP servers is with a package manager.
-
-If you can't use a package manager you can do the following:
-- Download the server (e.g. from github)
-- Add the binary/executable to your path.
-- Or customize the eglot-server-programs list.
-To control how a LSP server is started customize the eglot-server-programs list.
-
-There are many alternative LSP clients, one of them is LSP-mode.
-Which has more features and supports automatic language server installation.
-But it's bigger, so it has more moving parts.
-
-We don't use it because Eglot is more than enough for most people.
-If you want to use LSP mode check out their [[https://emacs-lsp.github.io/lsp-mode/][documentation]] or the [[https://github.com/MiniApollo/kickstart.emacs/wiki][project wiki]] page for more information.
-#+begin_src emacs-lisp
-(use-package eglot
-  :ensure nil ;; Don't install eglot because it's now built-in
-  :hook ((c-mode c++-mode ;; Autostart lsp servers for a given mode
-                 lua-mode) ;; Lua-mode needs to be installed
-         . eglot-ensure)
-  :custom
-  ;; Good default
-  (eglot-events-buffer-size 0) ;; No event buffers (LSP server logs)
-  (eglot-autoshutdown t);; Shutdown unused servers.
-  (eglot-report-progress nil) ;; Disable LSP server logs (Don't show lsp messages at the bottom, java)
-  ;; Manual lsp servers
-  ;;:config
-  ;;(add-to-list 'eglot-server-programs
-  ;;             `(lua-mode . ("PATH_TO_THE_LSP_FOLDER/bin/lua-language-server" "-lsp"))) ;; Adds our lua lsp server to eglot's server list
-  )
-#+end_src
-
-** Sideline-flymake
-Show flymake errors with sideline.
-#+begin_src emacs-lisp
-(use-package sideline-flymake
-  :hook (flymake-mode . sideline-mode)
-  :custom
-  (sideline-flymake-display-mode 'line) ;; Show errors on the current line
-  (sideline-backends-right '(sideline-flymake)))
-#+end_src
-
-** Yasnippet
-A template system for Emacs. And yasnippet-snippets is a snippet collection package.
-To use it write out the full keyword (or use autocompletion) and press Tab.
-#+begin_src emacs-lisp
-(use-package yasnippet-snippets
-  :hook (prog-mode . yas-minor-mode))
-#+end_src
-
-** Tree-Sitter
-A parser generator tool and an incremental parsing library.
-Check out TJ's [[https://www.youtube.com/watch?v=09-9LltqWLY][video]] to learn why you should use it.
-
-With Emacs 29 Tree-Sitter is now built-in. You may need to compile Emacs from source to have it enabled.
-You also need to have a compiler installed so Emacs can compile the parsers into a shared library.
-For more info about how to use Tree-Sitter check out this [[https://www.masteringemacs.org/article/how-to-get-started-tree-sitter][masteringemacs]] article.
-
-Using Tree-Sitter is somewhat hacky because it requires you to:
-- manually manage a source list of the parsers you want to use.
-- remap the major modes you want to use.
-You can also use treesit-auto, but it is updated quite slowly so we don't use it.
-
-To explore the current buffer's syntax tree, use the treesit-explore-mode command.
-
-*To use it, remove :tangle no from the beginning of the source code block.*
-#+begin_src emacs-lisp
-(setq treesit-language-source-alist
-      '((bash "https://github.com/tree-sitter/tree-sitter-bash")
-        (cmake "https://github.com/uyha/tree-sitter-cmake")
-        (c "https://github.com/tree-sitter/tree-sitter-c")
-        (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
-        (css "https://github.com/tree-sitter/tree-sitter-css")
-        (elisp "https://github.com/Wilfred/tree-sitter-elisp")
-        (go "https://github.com/tree-sitter/tree-sitter-go")
-        (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
-        (html "https://github.com/tree-sitter/tree-sitter-html")
-        (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
-        (json "https://github.com/tree-sitter/tree-sitter-json")
-        (make "https://github.com/alemuller/tree-sitter-make")
-        (markdown "https://github.com/ikatyang/tree-sitter-markdown")
-        (python "https://github.com/tree-sitter/tree-sitter-python")
-        (rust "https://github.com/tree-sitter/tree-sitter-rust")
-        (toml "https://github.com/tree-sitter/tree-sitter-toml")
-        (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
-        (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
-        (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
-
-(defun start/install-treesit-grammars ()
-  "Install missing treesitter grammars"
-  (interactive)
-  (dolist (grammar treesit-language-source-alist)
-    (let ((lang (car grammar)))
-      (unless (treesit-language-available-p lang)
-        (treesit-install-language-grammar lang)))))
-
-;; Call this function to install missing grammars
-(start/install-treesit-grammars)
-
-;; Optionally, add any additional mode remappings not covered by defaults
-(setq major-mode-remap-alist
-      '((yaml-mode . yaml-ts-mode)
-        (sh-mode . bash-ts-mode)
-        (c-mode . c-ts-mode)
-        (c++-mode . c++-ts-mode)
-        (css-mode . css-ts-mode)
-        (python-mode . python-ts-mode)
-        (mhtml-mode . html-ts-mode)
-        (javascript-mode . js-ts-mode)
-        (json-mode . json-ts-mode)
-        (typescript-mode . typescript-ts-mode)
-        (conf-toml-mode . toml-ts-mode)
-        ))
-
-;; Or if there is no built in mode
-(use-package cmake-ts-mode :ensure nil :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
-(use-package go-ts-mode :ensure nil :mode "\\.go\\'")
-(use-package go-mod-ts-mode :ensure nil :mode "\\.mod\\'")
-(use-package rust-ts-mode :ensure nil :mode "\\.rs\\'")
-(use-package tsx-ts-mode :ensure nil :mode "\\.tsx\\'")
-#+end_src
-
-** Language modes
-Emacs contains many “editing modes” that alter its basic behavior in
-useful ways. These are divided into “major modes” and “minor modes”.
-For more: C-h i: g: (emacs)Modes
-
-Some programming languages require the installation of specific modes to fully integrate and function within Emacs.
-These packages are often necessary for features like syntax highlighting, code formatting, linting, and language-specific features.
-
-*** Lua mode
-Example, how to setup a language mode.
-Use C-SPC tab to uncomment the lines.
-# #+begin_src emacs-lisp
-#     (use-package lua-mode
-#       :mode "\\.lua\\'") ;; Only start in a lua file
-# #+end_src
-
-** Terminal
-*** Eat
-Eat(Emulate A Terminal) is a terminal emulator within Emacs.
-It's more portable and less overhead for users over like vterm or eshell.
-We setup eat with eshell, if you want to use bash, zsh etc., check out their git [[https://codeberg.org/akib/emacs-eat][repository]] how to do it.
-
-If you want a faster and more responsive terminal emulator try out vterm.
-#+begin_src emacs-lisp
-(use-package eat
-  :hook ('eshell-load-hook #'eat-eshell-mode))
-#+end_src
 * Org Mode
-** Org Mode
+** Org Mode Overview
 Here's the meat and potatos of this config. The workflow is heavily inspired
 by Doom Emacs. However, it is also heavily opiniated and there are a number
 of custom functions to simplify and speedup the workflow. Including context
@@ -1120,7 +943,7 @@ These optimizations include:
 - [[(todo-keywords)][TODO keywords]] and colors have been expanded and are easily customizeable.
 - [[(agenda-overview)][Agenda overview]] has been made concise and readable.
     - All agenda items show their parent headers inline. Keep your TODOs short and sweet,
-      while still getting their context at a glance.
+    while still getting their context at a glance.
     - High priority and NEXT items show at the top.
     - Daily overview shows Overdue items first, then items scheduled/deadlined for today.
     - Upcoming shows items scheduled/deadlined for the next 7 days.
@@ -1130,21 +953,22 @@ These optimizations include:
 - [[(todo-cycle)][TODO/DONE]] fold cycling added to keybinds.
 - [[(launch-done-collapse)][Auto-Collapse DONE]] items show as collapsed on launch to keep them out of the way.
 - [[(collapse-keyword-headings)][Auto-Collapse Headings]] on launch based on keywords.
-- [[(mark-done-collapse)][Collapse DONE]] items when they are marked as done.
-- [[(return-dwim)][Context Aware RET]] key handles check boxes, links, tables, and headings.
-- [[(insert-parent-heading)][Insert Parent Heading]] with M-RET.
+- [[(mark-done-collapse)][Auto-Collapse DONE]] items when they are marked as done.
+- [[(return-dwim)][Context Aware RET]] key handles check boxes, links, tables, and headings. [[(ret-map)][[keymapping]​]]
+- [[(insert-parent-heading)][Insert Parent Heading]] with M-RET. [[(parent-heading-map)][[keymapping]​]]
 - [[(insert-item-below)][Smart Insert Item Below]] with C-RET, handles check boxes, links, tables, headings,
-  and TODOs.
+and TODOs. [[(item-below-map)][[keymapping]​]]
 - [[(insert-subitem-below)][Smart Insert Subitem Below]] with C-S-RET, handles check boxes, links, tables, headings,
-  and TODOs.
-
-      #+begin_src emacs-lisp -n
+and TODOs. [[(subitem-below-map)][[keymapping]​]]
+- [[(agenda-on-launch)][Show Agenda]] on launch, quit with q.
+** Org Mode Config
+                #+begin_src emacs-lisp -n
 (use-package org
   :ensure nil
   :hook ((org-mode . org-indent-mode)
          (org-mode . abbrev-mode))
   :custom
-  (org-edit-src-content-indentation 4) ;; Set src block automatic indent to 4 instead of 2.
+  (org-edit-src-content-indentation 2) ;; Set src block automatic indent to 4 instead of 2.
   (org-return-follows-link t)   ;; Sets RETURN key in org-mode to follow links
 
   ;; FOLDING
@@ -1242,46 +1066,45 @@ These optimizations include:
   (org-agenda-custom-commands
    '(("d" "📅 Daily overview"
       ((todo "NEXT"
-             ((org-agenda-overriding-header "🚀 NEXT TASKS")
-              (org-agenda-prefix-format "  %-20b %s")  ; Show category
+			 ((org-agenda-overriding-header "🚀 NEXT TASKS")
+              (org-agenda-prefix-format "  %-20b %s")
               (org-super-agenda-groups
                '((:name "High priority"
-                        :priority "A")
-                 (:name "Normal"
-                        :anything t)))))
+						:priority "A")
+				 (:name "Normal"
+						:anything t)))))
        (agenda ""
-               ((org-agenda-span 1)   ; Span of 3 days
-                (org-agenda-start-day "0d")
-                (org-agenda-overriding-header "🔥 TODAY")
-             	(org-agenda-prefix-format "  %-20b %s")  ; Show category
-                (org-super-agenda-groups
-                 '((:name "❗Overdue"
+               ((org-agenda-span 1)
+				(org-agenda-start-day "0d")
+				(org-deadline-warning-days 0)  ; Key fix: don't show future deadlines
+				(org-agenda-overriding-header "🔥 TODAY")
+				(org-agenda-prefix-format "  %-20b %s")
+				(org-super-agenda-groups
+				 '((:name "❗Overdue"
                           :deadline past
                           :scheduled past
                           :order 1)
-                   (:name "Today"
+                   (:name "⏰ Today"
                           :time-grid t
                           :scheduled today
                           :deadline today
                           :order 2)
-                   (:discard (:anything t))))))
+                   (:discard (:anything t))))))  ; This should hide everything else
        (agenda ""
                ((org-agenda-span 7)
-                (org-agenda-start-day "+1d")
-                (org-agenda-start-on-weekday nil)  ; don't snap to week start
-                (org-agenda-time-grid nil)
-                (org-agenda-overriding-header "📅 UPCOMING (NEXT 7 DAYS)")
-                (org-agenda-prefix-format "  %-20b %s")
-                (org-super-agenda-groups nil)))  ; disable super-agenda for this group
+				(org-agenda-start-day "+1d")
+				(org-agenda-start-on-weekday nil)
+				(org-agenda-time-grid nil)
+				(org-agenda-overriding-header "📅 UPCOMING (NEXT 7 DAYS)")
+				(org-agenda-prefix-format "  %-20b %s")
+				(org-super-agenda-groups nil)))
        (todo "TODO"
-             ((org-agenda-overriding-header "📦 TODO BACKLOG")
-              ;; This skips any entry that has a scheduled or deadline date
+			 ((org-agenda-overriding-header "📦 TODO BACKLOG")
               (org-agenda-todo-ignore-scheduled 'all)
               (org-agenda-todo-ignore-deadlines 'all)
-              (org-agenda-prefix-format "  %-20b %s")  ; Show category
+              (org-agenda-prefix-format "  %-20b %s")
               (org-super-agenda-groups
                '((:anything t)))))))))
-
   :config
   ;; AUTO-SAVE ORG MODE BUFFERS
   ;; (ref:auto-save)
@@ -1614,9 +1437,12 @@ These optimizations include:
 
   )
 
+;; (ref:ret-map)
 (with-eval-after-load 'org
   (define-key org-mode-map (kbd "RET") #'org-return))
 
+;; LOAD AGENDA ON LAUNCH
+;; (ref:agenda-on-launch)
 (with-eval-after-load 'org
   (add-hook 'emacs-startup-hook
             (lambda ()
@@ -1624,7 +1450,6 @@ These optimizations include:
                            (lambda ()
                              (org-agenda nil "d"))))))
          #+end_src
-
 ** Evil-Org-Mode
 #+begin_src emacs-lisp
 (defun my/org-meta-left-smart ()
@@ -1738,14 +1563,14 @@ These optimizations include:
   (evil-define-key 'normal org-mode-map (kbd "RET") #'my/org-return-dwim)
 
   ;; INSERT PARENT HEADING
-  ;; Add Alt-Ret (Meta-Return) mappings
+  ;; Add Alt-Ret (Meta-Return) mappings (ref:parent-heading-map)
   (evil-define-key 'normal org-mode-map (kbd "M-RET") #'my/org-insert-parent-heading-below)
   (evil-define-key 'insert org-mode-map (kbd "M-RET") #'my/org-insert-parent-heading-below)
   ;; Some terminals/launchers treat M-RET as M-J, so adding this as a fallback:
   (evil-define-key 'normal org-mode-map (kbd "M-<return>") #'my/org-insert-parent-heading-below)
   (evil-define-key 'insert org-mode-map (kbd "M-<return>") #'my/org-insert-parent-heading-below)
 
-  ;; SMART INSERT BELOW
+  ;; SMART INSERT BELOW (ref:item-below-map)
   (evil-define-key 'normal org-mode-map (kbd "C-<return>") #'my/org-smart-insert-item-below)
   (evil-define-key 'normal org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
   (evil-define-key 'normal org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
@@ -1753,7 +1578,7 @@ These optimizations include:
   (evil-define-key 'insert org-mode-map (kbd "C-RET")      #'my/org-smart-insert-item-below)
   (evil-define-key 'insert org-mode-map (kbd "C-M-j")      #'my/org-smart-insert-item-below)
 
-  ;; SMART INSERT SUBITEM
+  ;; SMART INSERT SUBITEM (ref:subitem-below-map)
   (evil-define-key 'normal org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subitem)
   (evil-define-key 'normal org-mode-map (kbd "C-S-RET") #'my/org-smart-insert-subitem)
   (evil-define-key 'insert org-mode-map (kbd "C-S-<return>") #'my/org-smart-insert-subitem)
@@ -1786,13 +1611,13 @@ These optimizations include:
   :commands toc-org-enable
   :hook (org-mode . toc-org-mode))
 #+end_src
-
 ** Org Superstar
 Prettify headings and plain lists in Org mode. Modern version of org-bullets.
 #+begin_src emacs-lisp
 ;; (use-package org-superstar
 ;; :after org
 ;; :hook (org-mode . org-superstar-mode))
+#+end_src
 ** Org-Modern
 This package implements a modern style for your Org buffers using font locking and
 text properties. The package styles headlines, keywords, tables and source blocks.
@@ -1833,6 +1658,7 @@ Gives you frozen headers when scrolling large tables
 (use-package org-table-sticky-header
   :after org
   :hook (org-mode . org-table-sticky-header-mode))
+#+end_src
 ** Org-Super-Agenda
     #+begin_src emacs-lisp
 (use-package org-super-agenda
@@ -1871,6 +1697,7 @@ Org-tempo allows for '<s' followed by TAB to expand to a begin_src tag.
 (use-package org-tempo
   :ensure nil
   :after org)
+#+end_src
 ** Org-Roam
 #+begin_src emacs-lisp
 (use-package org-roam
@@ -1923,13 +1750,195 @@ Org-tempo allows for '<s' followed by TAB to expand to a begin_src tag.
   (setq org-download-screenshot-method "xclip")     ;; "scrot", "gnome-screenshot", or "xclip" (Linux)
   ;; On Mac, it uses "pngpaste" automatically if installed
   )
+#+end_src
+* Development
+** Projectile
+Project interaction library for Emacs.
+
+Emacs has a built in project manager called project.el, but we don't use it.
+You can try it out with the keybinds under C-x p because project.el does not require any special setup to use.
+
+We use projectile because it:
+- supports more features and project types.
+- has better integration with projects.
+- has better documentation.
+- is developed faster.
+More [[https://docs.projectile.mx/projectile/projectile_vs_project.html][reasons]] to use projectile.
+
+You can also make the [[https://github.com/karthink/consult-dir][consult-dir]] package list all the directories you [[https://github.com/MiniApollo/config/blob/main/emacs/init.org#consult-dir][specified]] and search from them like in tmux-sessionizer.
+#+begin_src emacs-lisp
+(use-package projectile
+  :config
+  (projectile-mode)
+  :custom
+  ;; (projectile-auto-discover nil) ;; Disable auto search for better startup times ;; Search with a keybind
+  (projectile-run-use-comint-mode t) ;; Interactive run dialog when running projects inside emacs (like giving input)
+  (projectile-switch-project-action #'projectile-dired) ;; Open dired when switching to a project
+  (projectile-project-search-path '("~/projects/" "~/work/" ("~/github" . 1)))) ;; . 1 means only search the first subdirectory level for projects
+#+end_src
+
+** Eglot
+Built in Emacs client for the Language Server Protocol.
+We use Eglot because it is fast and minimal.
+For more: C-h i: g: (eglot)Top
+
+Eglot does not automatically download LSP servers. It requires separate download.
+The easiest way to install LSP servers is with a package manager.
+
+If you can't use a package manager you can do the following:
+- Download the server (e.g. from github)
+- Add the binary/executable to your path.
+- Or customize the eglot-server-programs list.
+To control how a LSP server is started customize the eglot-server-programs list.
+
+There are many alternative LSP clients, one of them is LSP-mode.
+Which has more features and supports automatic language server installation.
+But it's bigger, so it has more moving parts.
+
+We don't use it because Eglot is more than enough for most people.
+If you want to use LSP mode check out their [[https://emacs-lsp.github.io/lsp-mode/][documentation]] or the [[https://github.com/MiniApollo/kickstart.emacs/wiki][project wiki]] page for more information.
+#+begin_src emacs-lisp
+(use-package eglot
+  :ensure nil ;; Don't install eglot because it's now built-in
+  :hook ((c-mode c++-mode ;; Autostart lsp servers for a given mode
+                 lua-mode) ;; Lua-mode needs to be installed
+         . eglot-ensure)
+  :custom
+  ;; Good default
+  (eglot-events-buffer-size 0) ;; No event buffers (LSP server logs)
+  (eglot-autoshutdown t);; Shutdown unused servers.
+  (eglot-report-progress nil) ;; Disable LSP server logs (Don't show lsp messages at the bottom, java)
+  ;; Manual lsp servers
+  ;;:config
+  ;;(add-to-list 'eglot-server-programs
+  ;;             `(lua-mode . ("PATH_TO_THE_LSP_FOLDER/bin/lua-language-server" "-lsp"))) ;; Adds our lua lsp server to eglot's server list
+  )
+#+end_src
+
+** Sideline-flymake
+Show flymake errors with sideline.
+#+begin_src emacs-lisp
+(use-package sideline-flymake
+  :hook (flymake-mode . sideline-mode)
+  :custom
+  (sideline-flymake-display-mode 'line) ;; Show errors on the current line
+  (sideline-backends-right '(sideline-flymake)))
+#+end_src
+
+** Yasnippet
+A template system for Emacs. And yasnippet-snippets is a snippet collection package.
+To use it write out the full keyword (or use autocompletion) and press Tab.
+#+begin_src emacs-lisp
+(use-package yasnippet-snippets
+  :hook (prog-mode . yas-minor-mode))
+#+end_src
+
+** Tree-Sitter
+A parser generator tool and an incremental parsing library.
+Check out TJ's [[https://www.youtube.com/watch?v=09-9LltqWLY][video]] to learn why you should use it.
+
+With Emacs 29 Tree-Sitter is now built-in. You may need to compile Emacs from source to have it enabled.
+You also need to have a compiler installed so Emacs can compile the parsers into a shared library.
+For more info about how to use Tree-Sitter check out this [[https://www.masteringemacs.org/article/how-to-get-started-tree-sitter][masteringemacs]] article.
+
+Using Tree-Sitter is somewhat hacky because it requires you to:
+- manually manage a source list of the parsers you want to use.
+- remap the major modes you want to use.
+You can also use treesit-auto, but it is updated quite slowly so we don't use it.
+
+To explore the current buffer's syntax tree, use the treesit-explore-mode command.
+
+*To use it, remove :tangle no from the beginning of the source code block.*
+#+begin_src emacs-lisp
+(setq treesit-language-source-alist
+      '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+        (cmake "https://github.com/uyha/tree-sitter-cmake")
+        (c "https://github.com/tree-sitter/tree-sitter-c")
+        (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
+        (css "https://github.com/tree-sitter/tree-sitter-css")
+        (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+        (go "https://github.com/tree-sitter/tree-sitter-go")
+        (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
+        (html "https://github.com/tree-sitter/tree-sitter-html")
+        (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
+        (json "https://github.com/tree-sitter/tree-sitter-json")
+        (make "https://github.com/alemuller/tree-sitter-make")
+        (markdown "https://github.com/ikatyang/tree-sitter-markdown")
+        (python "https://github.com/tree-sitter/tree-sitter-python")
+        (rust "https://github.com/tree-sitter/tree-sitter-rust")
+        (toml "https://github.com/tree-sitter/tree-sitter-toml")
+        (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+        (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+        (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
+
+(defun start/install-treesit-grammars ()
+  "Install missing treesitter grammars"
+  (interactive)
+  (dolist (grammar treesit-language-source-alist)
+    (let ((lang (car grammar)))
+      (unless (treesit-language-available-p lang)
+        (treesit-install-language-grammar lang)))))
+
+;; Call this function to install missing grammars
+(start/install-treesit-grammars)
+
+;; Optionally, add any additional mode remappings not covered by defaults
+(setq major-mode-remap-alist
+      '((yaml-mode . yaml-ts-mode)
+        (sh-mode . bash-ts-mode)
+        (c-mode . c-ts-mode)
+        (c++-mode . c++-ts-mode)
+        (css-mode . css-ts-mode)
+        (python-mode . python-ts-mode)
+        (mhtml-mode . html-ts-mode)
+        (javascript-mode . js-ts-mode)
+        (json-mode . json-ts-mode)
+        (typescript-mode . typescript-ts-mode)
+        (conf-toml-mode . toml-ts-mode)
+        ))
+
+;; Or if there is no built in mode
+(use-package cmake-ts-mode :ensure nil :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
+(use-package go-ts-mode :ensure nil :mode "\\.go\\'")
+(use-package go-mod-ts-mode :ensure nil :mode "\\.mod\\'")
+(use-package rust-ts-mode :ensure nil :mode "\\.rs\\'")
+(use-package tsx-ts-mode :ensure nil :mode "\\.tsx\\'")
+#+end_src
+
+** Language modes
+Emacs contains many “editing modes” that alter its basic behavior in
+useful ways. These are divided into “major modes” and “minor modes”.
+For more: C-h i: g: (emacs)Modes
+
+Some programming languages require the installation of specific modes to fully integrate and function within Emacs.
+These packages are often necessary for features like syntax highlighting, code formatting, linting, and language-specific features.
+
+*** Lua mode
+Example, how to setup a language mode.
+Use C-SPC tab to uncomment the lines.
+# #+begin_src emacs-lisp
+#     (use-package lua-mode
+#       :mode "\\.lua\\'") ;; Only start in a lua file
+# #+end_src
+
+** Terminal
+*** Eat
+Eat(Emulate A Terminal) is a terminal emulator within Emacs.
+It's more portable and less overhead for users over like vterm or eshell.
+We setup eat with eshell, if you want to use bash, zsh etc., check out their git [[https://codeberg.org/akib/emacs-eat][repository]] how to do it.
+
+If you want a faster and more responsive terminal emulator try out vterm.
+#+begin_src emacs-lisp
+(use-package eat
+  :hook ('eshell-load-hook #'eat-eshell-mode))
+#+end_src
 * Multi File Example
 ** Adding the lisp directory to load-path
 Adds the lisp directory to Emacs's load path to search for elisp files.
 This is necessary because Emacs does not search the entire user-emacs-directory.
 The directory name can be anything, just add it to the load-path.
 #+begin_src emacs-lisp
-;; (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 #+end_src
 
 ** Sourcing the files
@@ -1939,6 +1948,7 @@ Notes:
 - When naming elisp files, functions, it is recommended to use a group name (e.g. init-, start- or any custom name), so it does not get mixed up with other names, functions.
 #+begin_src emacs-lisp
 ;; (require 'start-multiFileExample)
+#+end_src
 ** Using the file
 And now we can use everything from that file.
 #+begin_src emacs-lisp
@@ -1954,6 +1964,7 @@ Complete text-based user interface to Git.
   :custom (magit-diff-refine-hunk (quote all)) ;; Shows inline diff
   :config (define-key transient-map (kbd "<escape>") 'transient-quit-one) ;; Make escape quit magit prompts
   )
+#+end_src
 ** Diff-hl
 Highlights uncommitted changes on the left side of the window (area also known as the "gutter"), allows you to jump between and revert them selectively.
 #+begin_src emacs-lisp
@@ -2009,6 +2020,7 @@ Notes:
 (use-package nerd-icons-corfu
   :after corfu
   :init (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
+ #+end_src
 ** Cape
 Provides Completion At Point Extensions which can be used in combination with Corfu, Company or the default completion UI.
 Notes:
@@ -2193,9 +2205,22 @@ Removes whitespace from the ends of lines.
 #+end_src
 
 * My Custom Packages
-** Avy
-Avy allows you to jump to visible text using a char-based decision tree.
+** Flash
+A flash.nvim clone written in elisp. Allows you to jump around the visible
+portion of the buffer by typing in characters matching the spot you want to jump to.
+
+Located in the lisp folder in the config folder. Does not auto-update (not installed
+with the package manager).
+
+[[https://github.com/JiaweiChenC/flash-emacs][Github Repo]]
 #+begin_src emacs-lisp
+(require 'flash-emacs)
+(evil-define-key 'normal 'global (kbd "s") 'flash-emacs-jump)
+#+end_src
+** Avy (Disabled)
+(currently disabled in favor of Flash.el)
+Avy allows you to jump to visible text using a char-based decision tree.
+#+begin_src emacs-lisp :tangle no
 (use-package avy
   :ensure t
   :config
