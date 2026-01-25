@@ -1533,29 +1533,23 @@ and TODOs. [[(subitem-below-map)][[keymapping]​]]
   (require 'evil-org-agenda)
   (evil-org-agenda-set-keys)
   (evil-org-set-key-theme '(textobjects insert navigation additional shift todo heading))
-  ;; Set additional keybindings
-
-  ;; Map 'dd' specifically for Org-mode
-  ;; (evil-define-key 'normal org-mode-map (kbd "d d") #'my/evil-org-delete-heading-dwim)
-  ;; This ensures that when you highlight text, 'd' just deletes the selection.
-  ;; (evil-define-key 'visual org-mode-map (kbd "d") #'evil-delete)
 
   ;; Org element motions (Doom-style)
   (evil-define-key 'normal org-mode-map
-    (kbd "gj") #'org-forward-element
-    (kbd "gk") #'org-backward-element)
+	(kbd "gj") #'org-forward-element
+	(kbd "gk") #'org-backward-element)
   (evil-define-key 'normal org-mode-map
-    (kbd "]]") #'org-next-visible-heading
-    (kbd "[[") #'org-previous-visible-heading
-    (kbd "]h") #'org-forward-heading-same-level
-    (kbd "[h") #'org-backward-heading-same-level)
+	(kbd "]]") #'org-next-visible-heading
+	(kbd "[[") #'org-previous-visible-heading
+	(kbd "]h") #'org-forward-heading-same-level
+	(kbd "[h") #'org-backward-heading-same-level)
 
   ;; Smart Meta Movements (Normal & Insert states combined)
   (evil-define-key '(normal insert) org-mode-map
-    (kbd "M-h") #'my/org-meta-left-smart
-    (kbd "M-j") #'my/org-meta-down-smart
-    (kbd "M-k") #'my/org-meta-up-smart
-    (kbd "M-l") #'my/org-meta-right-smart)
+	(kbd "M-h") #'my/org-meta-left-smart
+	(kbd "M-j") #'my/org-meta-down-smart
+	(kbd "M-k") #'my/org-meta-up-smart
+	(kbd "M-l") #'my/org-meta-right-smart)
   )
 
 (with-eval-after-load 'evil-org
@@ -1592,6 +1586,8 @@ and TODOs. [[(subitem-below-map)][[keymapping]​]]
       (mouse-set-point event) ; Move the cursor to where you double-clicked
       (my/org-return-dwim)))
   )
+
+;; DELETE CONTENTS OF FOLDED HEADINGS WITH DELETE LINE
 (with-eval-after-load 'evil-org
   ;; Use 'evil-define-minor-mode-key' or standard 'evil-define-key'
   ;; but avoid shadowing the base 'd' operator.
@@ -1603,6 +1599,136 @@ and TODOs. [[(subitem-below-map)][[keymapping]​]]
   ;; 2. Ensure 'd' is still recognized as the operator for everything else
   ;; If 'dw' still fails, add this to force the operator to stay active:
   (evil-define-key 'normal org-mode-map (kbd "d") 'evil-delete))
+
+;; Fix Evil bindings in org-agenda (especially with org-super-agenda)
+(with-eval-after-load 'org-agenda
+  (require 'evil-collection-org-agenda nil t)
+
+  ;; Force motion state
+  (evil-set-initial-state 'org-agenda-mode 'motion)
+
+  ;; Remove all org-agenda's default bindings for j/k
+  (define-key org-agenda-mode-map (kbd "j") nil)
+  (define-key org-agenda-mode-map (kbd "k") nil)
+
+  ;; Now set Evil bindings
+  (evil-define-key 'motion org-agenda-mode-map
+    (kbd "j") 'evil-next-line
+    (kbd "k") 'evil-previous-line
+    (kbd "h") 'evil-backward-char
+    (kbd "l") 'evil-forward-char
+    (kbd "gg") 'evil-goto-first-line
+	(kbd "G") 'evil-goto-line
+    (kbd "0") 'evil-beginning-of-line
+    (kbd "$") 'evil-end-of-line
+    (kbd "H") 'start/jump-to-line-start
+    (kbd "L") 'evil-end-of-line
+    (kbd "^") 'evil-first-non-blank
+    (kbd "s") 'flash-emacs-jump
+
+    ;; Quick actions
+    (kbd "q") 'org-agenda-quit
+    (kbd "ESC") 'org-agenda-quit
+    (kbd "RET") 'org-agenda-switch-to
+    (kbd "TAB") 'org-agenda-goto
+    (kbd "J") 'org-agenda-goto-date
+
+    ;; ;; Org-agenda commands (with 'o' prefix)
+    ;; (kbd "ot") 'org-agenda-todo
+    ;; (kbd "os") 'org-agenda-schedule
+    ;; (kbd "od") 'org-agenda-deadline
+    ;; (kbd "or") 'org-agenda-redo
+    ;; (kbd "oa") 'org-agenda-archive
+    ;; (kbd "oA") 'org-agenda-archive-default
+    ;; (kbd "oT") 'org-agenda-set-tags
+    ;; (kbd "op") 'org-agenda-priority
+    ;; (kbd "oi") 'org-agenda-clock-in
+    ;; (kbd "oO") 'org-agenda-clock-out
+    ;; (kbd "oC") 'org-agenda-clock-cancel
+    ;; (kbd "oR") 'org-agenda-refile
+    ;; (kbd "ow") 'org-agenda-week-view
+    ;; (kbd "oy") 'org-agenda-year-view
+    ;; (kbd "om") 'org-agenda-month-view
+    ;; (kbd "ov") 'org-agenda-view-mode-dispatch
+    ;; (kbd "of") 'org-agenda-filter
+    ;; (kbd "o/") 'org-agenda-filter
+    ;; (kbd "oF") 'org-agenda-follow-mode
+    ;; (kbd "ol") 'org-agenda-log-mode
+    ;; (kbd "oc") 'org-agenda-goto-calendar
+    ;; (kbd "oD") 'org-agenda-toggle-diary
+    ;; (kbd "og") 'org-agenda-toggle-time-grid
+    ;; (kbd "oe") 'org-agenda-set-effort
+    ;; (kbd "o:") 'org-agenda-set-tags
+    ;; (kbd "on") 'org-agenda-add-note
+    ;; (kbd "ok") 'org-agenda-kill
+    ;; (kbd "ou") 'org-agenda-undo
+    ;; (kbd "ox") 'org-agenda-exit
+    ;; (kbd "oq") 'org-agenda-quit
+    ;; (kbd "o.") 'org-agenda-goto-today
+    ;; (kbd "oj") 'org-agenda-goto-date
+	))
+;; Set up leader key bindings for org-agenda
+(with-eval-after-load 'org-agenda
+  (evil-define-key 'motion org-agenda-mode-map
+    (kbd "SPC") nil)  ; Clear SPC first if needed
+
+  ;; Define clean which-key labels with emojis
+  (which-key-add-key-based-replacements
+    "SPC a" "agenda"
+    "SPC aC" "clock"
+    "SPC av" "view"
+    "SPC af" "filter")
+
+  (evil-define-key 'motion org-agenda-mode-map
+    ;; TODO & Tags
+    (kbd "SPC at") '("Change Todo" . org-agenda-todo)
+    (kbd "SPC aT") '("Set Tags" . org-agenda-set-tags)
+    (kbd "SPC ap") '("Set Priority" . org-agenda-priority)
+
+    ;; Schedule & Deadline
+    (kbd "SPC as") '("Schedule" . org-agenda-schedule)
+    (kbd "SPC ad") '("Deadline" . org-agenda-deadline)
+    (kbd "SPC aj") '("Jump to Date" . org-agenda-goto-date)
+    (kbd "SPC a.") '("Goto Today" . org-agenda-goto-today)
+
+    ;; Archive & Refile
+    (kbd "SPC aa") '("Archive" . org-agenda-archive)
+    (kbd "SPC aA") '("Archive Default" . org-agenda-archive-default)
+    (kbd "SPC ar") '("Refile" . org-agenda-refile)
+    (kbd "SPC ak") '("Kill/Delete" . org-agenda-kill)
+
+    ;; Clock
+    (kbd "SPC aCi") '("Clock In" . org-agenda-clock-in)
+    (kbd "SPC aCo") '("Clock Out" . org-agenda-clock-out)
+    (kbd "SPC aCc") '("Cancel Clock" . org-agenda-clock-cancel)
+    (kbd "SPC aCg") '("Goto Clocked" . org-agenda-clock-goto)
+
+    ;; View & Display
+    (kbd "SPC avd") '("Day View" . org-agenda-day-view)
+    (kbd "SPC avw") '("Week View" . org-agenda-week-view)
+    (kbd "SPC avm") '("Month View" . org-agenda-month-view)
+    (kbd "SPC avy") '("Year View" . org-agenda-year-view)
+    (kbd "SPC avv") '("View Dispatch" . org-agenda-view-mode-dispatch)
+    (kbd "SPC avl") '("Toggle Log" . org-agenda-log-mode)
+    (kbd "SPC avf") '("Toggle Follow" . org-agenda-follow-mode)
+    (kbd "SPC avg") '("Toggle Time grid" . org-agenda-toggle-time-grid)
+    (kbd "SPC avD") '("Toggle Diary" . org-agenda-toggle-diary)
+
+    ;; Filter
+    (kbd "SPC aff") '("Filter" . org-agenda-filter)
+    (kbd "SPC afc") '("By Category" . org-agenda-filter-by-category)
+    (kbd "SPC aft") '("By Tag" . org-agenda-filter-by-tag)
+    (kbd "SPC afr") '("By Regexp" . org-agenda-filter-by-regexp)
+    (kbd "SPC afx") '("Clear Filters" . org-agenda-filter-remove-all)
+
+    ;; Refresh & Misc
+    (kbd "SPC aR") '("Refresh" . org-agenda-redo)
+    (kbd "SPC au") '("Undo" . org-agenda-undo)
+    (kbd "SPC an") '("Add Note" . org-agenda-add-note)
+    (kbd "SPC ae") '("Set Effort" . org-agenda-set-effort)
+    (kbd "SPC ag") '("Goto Calendar" . org-agenda-goto-calendar)
+    (kbd "SPC aq") '("Quit" . org-agenda-quit)
+    (kbd "SPC ax") '("Exit" . org-agenda-exit)))
 #+end_src
 
 ** Table of Contents
