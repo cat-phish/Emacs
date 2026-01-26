@@ -1481,23 +1481,6 @@ and TODOs. [[(subitem-below-map)][[keymapping]​]]
       (forward-line -2)
       (move-to-column col))))
 
-(defun my/evil-org-delete-heading-dwim2 (count)
-  "Delete subtree if heading is folded; otherwise delete line normally."
-  (interactive "p")
-  (cond
-   ;; If on a folded heading, delete the entire subtree
-   ((and (org-at-heading-p)
-         (or (and (fboundp 'org-fold-folded-p)
-                  (org-fold-folded-p))
-             (outline-invisible-p (line-end-position))))
-    (org-cut-subtree))
-   ;; Otherwise, use evil's native line deletion
-   (t
-    (evil-delete (line-beginning-position)
-                 (line-beginning-position (1+ count))
-                 'line
-                 ?\")))) ; Register as character, not a call
-
 (defun my/evil-org-delete-heading-dwim (count)
   "Delete subtree if heading is folded (linewise); otherwise delete line normally."
   (interactive "p")
@@ -1632,40 +1615,6 @@ and TODOs. [[(subitem-below-map)][[keymapping]​]]
     (kbd "RET") 'org-agenda-switch-to
     (kbd "TAB") 'org-agenda-goto
     (kbd "J") 'org-agenda-goto-date
-
-    ;; ;; Org-agenda commands (with 'o' prefix)
-    ;; (kbd "ot") 'org-agenda-todo
-    ;; (kbd "os") 'org-agenda-schedule
-    ;; (kbd "od") 'org-agenda-deadline
-    ;; (kbd "or") 'org-agenda-redo
-    ;; (kbd "oa") 'org-agenda-archive
-    ;; (kbd "oA") 'org-agenda-archive-default
-    ;; (kbd "oT") 'org-agenda-set-tags
-    ;; (kbd "op") 'org-agenda-priority
-    ;; (kbd "oi") 'org-agenda-clock-in
-    ;; (kbd "oO") 'org-agenda-clock-out
-    ;; (kbd "oC") 'org-agenda-clock-cancel
-    ;; (kbd "oR") 'org-agenda-refile
-    ;; (kbd "ow") 'org-agenda-week-view
-    ;; (kbd "oy") 'org-agenda-year-view
-    ;; (kbd "om") 'org-agenda-month-view
-    ;; (kbd "ov") 'org-agenda-view-mode-dispatch
-    ;; (kbd "of") 'org-agenda-filter
-    ;; (kbd "o/") 'org-agenda-filter
-    ;; (kbd "oF") 'org-agenda-follow-mode
-    ;; (kbd "ol") 'org-agenda-log-mode
-    ;; (kbd "oc") 'org-agenda-goto-calendar
-    ;; (kbd "oD") 'org-agenda-toggle-diary
-    ;; (kbd "og") 'org-agenda-toggle-time-grid
-    ;; (kbd "oe") 'org-agenda-set-effort
-    ;; (kbd "o:") 'org-agenda-set-tags
-    ;; (kbd "on") 'org-agenda-add-note
-    ;; (kbd "ok") 'org-agenda-kill
-    ;; (kbd "ou") 'org-agenda-undo
-    ;; (kbd "ox") 'org-agenda-exit
-    ;; (kbd "oq") 'org-agenda-quit
-    ;; (kbd "o.") 'org-agenda-goto-today
-    ;; (kbd "oj") 'org-agenda-goto-date
 	))
 ;; Set up leader key bindings for org-agenda
 (with-eval-after-load 'org-agenda
