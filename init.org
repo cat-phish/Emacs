@@ -26,6 +26,11 @@
     - [[#doom-modeline][Doom Modeline]]
     - [[#nerd-icons][Nerd Icons]]
     - [[#dashboard][Dashboard]]
+- [[#helper-functions][Helper Functions]]
+    - [[#lineheading-manipulation][Line/Heading Manipulation]]
+    - [[#smart-delete-lineheading-with-contents][Smart Delete Line/Heading with Contents]]
+    - [[#headinglist-insertion][Heading/List Insertion]]
+    - [[#smart-ret-key][Smart RET Key]]
 - [[#org-mode][Org Mode]]
     - [[#org-mode-overview][Org Mode Overview]]
     - [[#org-mode-config][Org Mode Config]]
@@ -39,17 +44,12 @@
     - [[#org-roam][Org-Roam]]
     - [[#org-roam-ui][Org-Roam-UI]]
     - [[#org-download][Org-Download]]
-- [[#qol-functions][QoL Functions]]
-    - [[#lineheading-manipulation][Line/Heading Manipulation]]
-    - [[#smart-delete-lineheading-with-contents][Smart Delete Line/Heading with Contents]]
-    - [[#headinglist-insertion][Heading/List Insertion]]
-    - [[#smart-ret-key][Smart RET Key]]
 - [[#development][Development]]
     - [[#projectile][Projectile]]
-    - [[#eglot][Eglot]]
+    - [[#eglot-lsp][Eglot (LSP)]]
     - [[#sideline-flymake][Sideline-flymake]]
     - [[#yasnippet][Yasnippet]]
-    - [[#tree-sitter][Tree-Sitter]]
+    - [[#tree-sitter-tect-objects][Tree-Sitter (Tect Objects)]]
     - [[#language-modes][Language modes]]
     - [[#terminal][Terminal]]
 - [[#multi-file-example][Multi File Example]]
@@ -64,24 +64,24 @@
     - [[#cape][Cape]]
     - [[#orderless][Orderless]]
     - [[#vertico-and-marginalia][Vertico and Marginalia]]
-- [[#other-packages][Other packages]]
-    - [[#consult][Consult]]
-    - [[#helpful][Helpful]]
-    - [[#diminish][Diminish]]
-    - [[#rainbow-delimiters][Rainbow Delimiters]]
-    - [[#which-key][Which-Key]]
-    - [[#ws-butler][Ws-butler]]
-- [[#my-custom-packages][My Custom Packages]]
+- [[#navigation][Navigation]]
     - [[#flash][Flash]]
     - [[#avy-disabled][Avy (Disabled)]]
-    - [[#command-log-mode-deprecated][Command Log Mode (Deprecated?)]]
-    - [[#evil-terminal-cursor-changer][Evil Terminal Cursor Changer]]
     - [[#ivy][Ivy]]
+- [[#utilities][Utilities]]
     - [[#grease][Grease]]
+    - [[#consult][Consult]]
+    - [[#evil-terminal-cursor-changer][Evil Terminal Cursor Changer]]
+    - [[#rainbow-mode-show-colors-fixme][Rainbow-Mode (Show Colors) FIXME:]]
     - [[#pdf-tools][PDF Tools]]
-    - [[#rainbow-mode][Rainbow-Mode]]
     - [[#super-save-disabled][Super Save (Disabled)]]
     - [[#undo-fu-session][Undo-Fu-Session]]
+    - [[#command-log-mode-deprecated][Command Log Mode (Deprecated?)]]
+    - [[#helpful][Helpful]]
+    - [[#diminish-hide-modes-in-modeline][Diminish (Hide Modes in Modeline)]]
+    - [[#rainbow-delimiters-parenthesis-colors][Rainbow Delimiters (Parenthesis Colors)]]
+    - [[#which-key][Which-Key]]
+    - [[#ws-butler-remove-whitespace][Ws-butler (Remove Whitespace)]]
 - [[#runtime-performance][Runtime Performance]]
 
 * Introduction
@@ -891,17 +891,18 @@ Also Doom modeline requires nerd icons.
 (use-package nerd-icons-ibuffer
   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 #+end_src
-
 ** Dashboard
 #+begin_src emacs-lisp
-(use-package all-the-icons
+(use-package nerd-icons
   :if (display-graphic-p)
   :ensure t)
+
 (use-package dashboard
-  :after all-the-icons ;; ensure icons functions are available
+  :after nerd-icons
   :init
   (setq dashboard-set-heading-icons t)
   (setq dashboard-set-file-icons t)
+  (setq dashboard-icon-type 'nerd-icons)  ; Tell dashboard to use nerd-icons
 
   :custom
   (dashboard-startup-banner 'official)
@@ -913,20 +914,20 @@ Also Doom modeline requires nerd icons.
      (recents . 5)
      (projects . 5)))
 
-  ;; Custom buttons (Doom-style)
+  ;; Custom buttons (using nerd-icons)
   (dashboard-navigator-buttons
    `(
-     ((,(all-the-icons-octicon "calendar" :height 1.0)
+     ((,(nerd-icons-mdicon "nf-md-calendar" :height 1.0)
        "Agenda"
        "Open org agenda"
        (lambda () (org-agenda nil "d"))))
 
-     ((,(all-the-icons-octicon "book" :height 1.0)
+     ((,(nerd-icons-mdicon "nf-md-book_open_variant" :height 1.0)
        "Org files"
        "Open org directory"
        (lambda () (dired "~/org"))))
 
-     ((,(all-the-icons-octicon "database" :height 1.0)
+     ((,(nerd-icons-mdicon "nf-md-graph" :height 1.0)
        "Org-roam"
        "Open org-roam buffer"
        (lambda () (org-roam-node-find))))))
@@ -935,6 +936,192 @@ Also Doom modeline requires nerd icons.
   (dashboard-setup-startup-hook))
 #+end_src
 
+* Helper Functions
+** Line/Heading Manipulation
+#+begin_src emacs-lisp
+(defun my/org-meta-left-smart ()
+  (interactive)
+  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaleft) (evil-shift-left (line-beginning-position) (line-end-position))))
+
+(defun my/org-meta-right-smart ()
+  (interactive)
+  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaright) (evil-shift-right (line-beginning-position) (line-end-position))))
+
+(defun my/org-meta-down-smart ()
+  "Move headline/item down if on one, otherwise drag the current line down."
+  (interactive)
+  (if (or (org-at-heading-p) (org-at-item-p))
+      (org-metadown)
+    (let ((col (current-column)))
+      (forward-line 1)
+      (transpose-lines 1)
+      (forward-line -1)
+      (move-to-column col))))
+
+(defun my/org-meta-up-smart ()
+  "Move headline/item up if on one, otherwise drag the current line up."
+  (interactive)
+  (if (or (org-at-heading-p) (org-at-item-p))
+      (org-metaup)
+    (let ((col (current-column)))
+      (transpose-lines 1)
+      (forward-line -2)
+      (move-to-column col))))
+
+#+end_src
+** Smart Delete Line/Heading with Contents
+This function acts like the normal delete line, unless it is a folded
+heading, in which case it will delete the heading and it's contents.
+#+begin_src emacs-lisp
+(defun my/evil-org-delete-heading-dwim (count)
+  "Delete subtree if heading is folded (linewise); otherwise delete line normally."
+  (interactive "p")
+  (cond
+   ;; CASE 1: Folded Heading -> Delete Subtree Linewise
+   ((and (org-at-heading-p)
+         (or (and (fboundp 'org-fold-folded-p)
+                  (org-fold-folded-p))
+             (outline-invisible-p (line-end-position))))
+    (let ((beg (line-beginning-position))
+          (end (save-excursion
+                 ;; 't t' forces it to move to the start of the NEXT heading
+                 (org-end-of-subtree t t)
+                 (point))))
+      ;; If at End of Buffer, ensure we claim the final newline so no gap remains
+      (when (eobp) (setq end (point-max)))
+
+      (evil-delete beg end 'line)))
+   ;; CASE 2: Everything else -> Standard Evil Line Delete
+   (t
+    (evil-delete (line-beginning-position)
+                 (line-beginning-position (1+ count))
+                 'line
+                 ?\"))))
+#+end_src
+** Heading/List Insertion
+*** Insert Item Below
+#+begin_src emacs-lisp
+;; (ref:insert-item-below)
+(defun my/org-smart-insert-item-below ()
+  "Insert a new list item, checkbox, table row, or headline below the current line."
+  (interactive)
+  ;; (org-back-to-heading)
+  (cond
+   ;; Tables
+   ((org-at-table-p)
+    (org-table-insert-row 'below))
+   ;; Checkboxes
+   ((org-at-item-checkbox-p)
+    (org-end-of-line)
+    (org-insert-item t) ;; The 't' argument forces a checkbox
+	(evil-insert-state))
+   ;; Lists
+   ((org-in-item-p)
+    (org-end-of-line)
+    (org-insert-item)
+	(evil-insert-state))
+   ;; Headings/TODOs
+   ((org-at-heading-p)
+    (org-insert-heading-respect-content)
+    (when (org-entry-is-todo-p)
+      (org-todo 'nextset)) ;; matches TODO state of above line
+	(evil-insert-state))
+   ;; Default: Just a normal newline
+   (t
+    (end-of-line)
+    (newline-and-indent)
+	(evil-insert-state)))
+  (org-update-checkbox-count t)
+  )
+#+end_src
+*** Insert Subitem Below
+#+begin_src emacs-lisp
+;; INSERT SUBITEM BELOW
+;; (ref:insert-subitem-below)
+(defun my/org-smart-insert-subitem ()
+  "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
+  (interactive)
+  (cond
+   ;; Checkbox -> Insert a nested checkbox
+   ((org-at-item-checkbox-p)
+    (org-end-of-line)
+    (org-insert-item t)
+    (org-indent-item)
+	(evil-insert-state))
+   ;; List -> Insert a nested list item
+   ((org-in-item-p)
+    (org-end-of-line)
+    (org-insert-item)
+    (org-indent-item)
+	(evil-insert-state))
+   ;; On a Heading -> Insert a demoted heading at the end of content
+   ((org-at-heading-p)
+    ;; Use save-excursion to ensure we don't split the line
+    (save-excursion
+      (org-back-to-heading)
+      (move-end-of-line 1)
+      (org-insert-heading-respect-content)
+      (org-demote))
+    ;; Move point to the new heading
+    (org-end-of-subtree t t)
+    (unless (bolp) (insert "\n"))
+    (forward-line -1)
+    (goto-char (line-end-position))
+    (evil-insert-state))
+   ;; Default -> Normal behavior
+
+   (t
+    (end-of-line)
+    (newline-and-indent)
+	(evil-insert-state)))
+  (org-update-checkbox-count t))
+#+end_src
+*** Insert Parent Heading Below
+#+begin_src emacs-lisp
+;; (ref:insert-parent-heading)
+(defun my/org-insert-parent-heading-below ()
+  "Insert a new heading at the appropriate level.
+    If on a heading line, go up one level and insert a sibling.
+    If in content (checkbox, text, etc.), insert a sibling of current heading."
+  (interactive)
+  (if (org-at-heading-p)
+	  ;; We're ON a heading line - go up one level
+	  (progn
+        (org-back-to-heading)
+        (when (> (org-current-level) 1)  ; Only go up if not already at level 1
+		  (org-up-heading-safe))
+        (org-insert-heading-respect-content)
+        (evil-insert-state))
+    ;; We're in content - insert sibling of current heading
+    (progn
+	  (org-back-to-heading)
+	  (org-insert-heading-respect-content)
+	  (evil-insert-state))))
+#+end_src
+** Smart RET Key
+#+begin_src emacs-lisp
+;; (ref:ret-dwim)
+(defun my/org-return-dwim ()
+  "Context-aware RET for Org (normal mode only)."
+  (interactive)
+  (cond
+   ;; Toggle checkbox
+   ((org-at-item-checkbox-p)
+    (org-toggle-checkbox))
+   ;; Follow links
+   ((and org-return-follows-link
+         (org-in-regexp org-link-any-re))
+    (org-open-at-point))
+   ;; Tables
+   ((org-at-table-p)
+    (org-table-next-row))
+   ;; Headings
+   ((org-at-heading-p)
+    (org-cycle))
+   ;; Fallback
+   (t
+    (evil-next-line))))
+#+end_src
 * Org Mode
 ** Org Mode Overview
 Here's the meat and potatos of this config. The workflow is heavily inspired
@@ -1130,7 +1317,7 @@ and TODOs. [[(subitem-below-map)][[keymapping]​]]
   ;; AUTO-FORMAT SRC BLOCKS
   ;; (ref:format-src)
   ;; Function to indent every source block in the file
-  (defun my/org-indent-all-src-blocks ()
+  (defun my/org-indent-all-src-blocks ()                     
     (when (derived-mode-p 'org-mode)
       (save-excursion
         (goto-char (point-min))
@@ -1444,7 +1631,7 @@ and TODOs. [[(subitem-below-map)][[keymapping]​]]
 
     ;; Quick actions
     (kbd "q") 'org-agenda-quit
-    (kbd "ESC") 'org-agenda-quit
+    (kbd "<escape>") 'org-agenda-quit
     (kbd "RET") 'org-agenda-switch-to
     (kbd "TAB") 'org-agenda-goto
     (kbd "J") 'org-agenda-goto-date
@@ -1558,7 +1745,6 @@ individually via the org-modern customization group.
        (?- . "❍")  ; intermediate
        (?\s . "☐")))))  ; unchecked
 #+end_src
-
 ** Org-Table-Sticky-Header
 Gives you frozen headers when scrolling large tables
 #+begin_src emacs-lisp
@@ -1596,7 +1782,6 @@ Gives you frozen headers when scrolling large tables
 			:anything t
 			:order 99))))
     #+end_src
-
 ** Source Code Block Tag Expansion
 Org-tempo is not a separate package but a module within org that can be enabled.
 Org-tempo allows for '<s' followed by TAB to expand to a begin_src tag.
@@ -1627,7 +1812,6 @@ Org-tempo allows for '<s' followed by TAB to expand to a begin_src tag.
            :unnarrowed t))))
 
 #+end_src
-
 ** Org-Roam-UI
 #+begin_src emacs-lisp
 (use-package org-roam-ui
@@ -1642,7 +1826,6 @@ Org-tempo allows for '<s' followed by TAB to expand to a begin_src tag.
 (with-eval-after-load 'org-roam-ui
 )
 #+end_src>
-
 ** Org-Download
 #+begin_src emacs-lisp
 (use-package org-download
@@ -1657,192 +1840,6 @@ Org-tempo allows for '<s' followed by TAB to expand to a begin_src tag.
   (setq org-download-screenshot-method "xclip")     ;; "scrot", "gnome-screenshot", or "xclip" (Linux)
   ;; On Mac, it uses "pngpaste" automatically if installed
   )
-#+end_src
-* QoL Functions
-** Line/Heading Manipulation
-#+begin_src emacs-lisp
-(defun my/org-meta-left-smart ()
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaleft) (evil-shift-left (line-beginning-position) (line-end-position))))
-
-(defun my/org-meta-right-smart ()
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaright) (evil-shift-right (line-beginning-position) (line-end-position))))
-
-(defun my/org-meta-down-smart ()
-  "Move headline/item down if on one, otherwise drag the current line down."
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p))
-      (org-metadown)
-    (let ((col (current-column)))
-      (forward-line 1)
-      (transpose-lines 1)
-      (forward-line -1)
-      (move-to-column col))))
-
-(defun my/org-meta-up-smart ()
-  "Move headline/item up if on one, otherwise drag the current line up."
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p))
-      (org-metaup)
-    (let ((col (current-column)))
-      (transpose-lines 1)
-      (forward-line -2)
-      (move-to-column col))))
-
-#+end_src
-** Smart Delete Line/Heading with Contents
-This function acts like the normal delete line, unless it is a folded
-heading, in which case it will delete the heading and it's contents.
-#+begin_src emacs-lisp
-(defun my/evil-org-delete-heading-dwim (count)
-  "Delete subtree if heading is folded (linewise); otherwise delete line normally."
-  (interactive "p")
-  (cond
-   ;; CASE 1: Folded Heading -> Delete Subtree Linewise
-   ((and (org-at-heading-p)
-         (or (and (fboundp 'org-fold-folded-p)
-                  (org-fold-folded-p))
-             (outline-invisible-p (line-end-position))))
-    (let ((beg (line-beginning-position))
-          (end (save-excursion
-                 ;; 't t' forces it to move to the start of the NEXT heading
-                 (org-end-of-subtree t t)
-                 (point))))
-      ;; If at End of Buffer, ensure we claim the final newline so no gap remains
-      (when (eobp) (setq end (point-max)))
-
-      (evil-delete beg end 'line)))
-   ;; CASE 2: Everything else -> Standard Evil Line Delete
-   (t
-    (evil-delete (line-beginning-position)
-                 (line-beginning-position (1+ count))
-                 'line
-                 ?\"))))
-#+end_src
-** Heading/List Insertion
-*** Insert Item Below
-#+begin_src emacs-lisp
-;; (ref:insert-item-below)
-(defun my/org-smart-insert-item-below ()
-  "Insert a new list item, checkbox, table row, or headline below the current line."
-  (interactive)
-  ;; (org-back-to-heading)
-  (cond
-   ;; Tables
-   ((org-at-table-p)
-    (org-table-insert-row 'below))
-   ;; Checkboxes
-   ((org-at-item-checkbox-p)
-    (org-end-of-line)
-    (org-insert-item t) ;; The 't' argument forces a checkbox
-	(evil-insert-state))
-   ;; Lists
-   ((org-in-item-p)
-    (org-end-of-line)
-    (org-insert-item)
-	(evil-insert-state))
-   ;; Headings/TODOs
-   ((org-at-heading-p)
-    (org-insert-heading-respect-content)
-    (when (org-entry-is-todo-p)
-      (org-todo 'nextset)) ;; matches TODO state of above line
-	(evil-insert-state))
-   ;; Default: Just a normal newline
-   (t
-    (end-of-line)
-    (newline-and-indent)
-	(evil-insert-state)))
-  (org-update-checkbox-count t)
-  )
-#+end_src
-*** Insert Subitem Below
-#+begin_src emacs-lisp
-;; INSERT SUBITEM BELOW
-;; (ref:insert-subitem-below)
-(defun my/org-smart-insert-subitem ()
-  "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
-  (interactive)
-  (cond
-   ;; Checkbox -> Insert a nested checkbox
-   ((org-at-item-checkbox-p)
-    (org-end-of-line)
-    (org-insert-item t)
-    (org-indent-item)
-	(evil-insert-state))
-   ;; List -> Insert a nested list item
-   ((org-in-item-p)
-    (org-end-of-line)
-    (org-insert-item)
-    (org-indent-item)
-	(evil-insert-state))
-   ;; On a Heading -> Insert a demoted heading at the end of content
-   ((org-at-heading-p)
-    ;; Use save-excursion to ensure we don't split the line
-    (save-excursion
-      (org-back-to-heading)
-      (move-end-of-line 1)
-      (org-insert-heading-respect-content)
-      (org-demote))
-    ;; Move point to the new heading
-    (org-end-of-subtree t t)
-    (unless (bolp) (insert "\n"))
-    (forward-line -1)
-    (goto-char (line-end-position))
-    (evil-insert-state))
-   ;; Default -> Normal behavior
-
-   (t
-    (end-of-line)
-    (newline-and-indent)
-	(evil-insert-state)))
-  (org-update-checkbox-count t))
-#+end_src
-*** Insert Parent Heading Below
-#+begin_src emacs-lisp
-;; (ref:insert-parent-heading)
-(defun my/org-insert-parent-heading-below ()
-  "Insert a new heading at the appropriate level.
-    If on a heading line, go up one level and insert a sibling.
-    If in content (checkbox, text, etc.), insert a sibling of current heading."
-  (interactive)
-  (if (org-at-heading-p)
-	  ;; We're ON a heading line - go up one level
-	  (progn
-        (org-back-to-heading)
-        (when (> (org-current-level) 1)  ; Only go up if not already at level 1
-		  (org-up-heading-safe))
-        (org-insert-heading-respect-content)
-        (evil-insert-state))
-    ;; We're in content - insert sibling of current heading
-    (progn
-	  (org-back-to-heading)
-	  (org-insert-heading-respect-content)
-	  (evil-insert-state))))
-#+end_src
-** Smart RET Key
-#+begin_src emacs-lisp
-;; (ref:ret-dwim)
-(defun my/org-return-dwim ()
-  "Context-aware RET for Org (normal mode only)."
-  (interactive)
-  (cond
-   ;; Toggle checkbox
-   ((org-at-item-checkbox-p)
-    (org-toggle-checkbox))
-   ;; Follow links
-   ((and org-return-follows-link
-         (org-in-regexp org-link-any-re))
-    (org-open-at-point))
-   ;; Tables
-   ((org-at-table-p)
-    (org-table-next-row))
-   ;; Headings
-   ((org-at-heading-p)
-    (org-cycle))
-   ;; Fallback
-   (t
-    (evil-next-line))))
 #+end_src
 * Development
 ** Projectile
@@ -1867,10 +1864,9 @@ You can also make the [[https://github.com/karthink/consult-dir][consult-dir]] p
   ;; (projectile-auto-discover nil) ;; Disable auto search for better startup times ;; Search with a keybind
   (projectile-run-use-comint-mode t) ;; Interactive run dialog when running projects inside emacs (like giving input)
   (projectile-switch-project-action #'projectile-dired) ;; Open dired when switching to a project
-  (projectile-project-search-path '("~/projects/" "~/work/" ("~/github" . 1)))) ;; . 1 means only search the first subdirectory level for projects
+  (projectile-project-search-path '("~/projects/" "~/source/" ("~/github" . 1)))) ;; . 1 means only search the first subdirectory level for projects
 #+end_src
-
-** Eglot
+** Eglot (LSP)
 Built in Emacs client for the Language Server Protocol.
 We use Eglot because it is fast and minimal.
 For more: C-h i: g: (eglot)Top
@@ -1907,7 +1903,6 @@ If you want to use LSP mode check out their [[https://emacs-lsp.github.io/lsp-mo
   ;;             `(lua-mode . ("PATH_TO_THE_LSP_FOLDER/bin/lua-language-server" "-lsp"))) ;; Adds our lua lsp server to eglot's server list
   )
 #+end_src
-
 ** Sideline-flymake
 Show flymake errors with sideline.
 #+begin_src emacs-lisp
@@ -1917,7 +1912,6 @@ Show flymake errors with sideline.
   (sideline-flymake-display-mode 'line) ;; Show errors on the current line
   (sideline-backends-right '(sideline-flymake)))
 #+end_src
-
 ** Yasnippet
 A template system for Emacs. And yasnippet-snippets is a snippet collection package.
 To use it write out the full keyword (or use autocompletion) and press Tab.
@@ -1925,8 +1919,7 @@ To use it write out the full keyword (or use autocompletion) and press Tab.
 (use-package yasnippet-snippets
   :hook (prog-mode . yas-minor-mode))
 #+end_src
-
-** Tree-Sitter
+** Tree-Sitter (Tect Objects)
 A parser generator tool and an incremental parsing library.
 Check out TJ's [[https://www.youtube.com/watch?v=09-9LltqWLY][video]] to learn why you should use it.
 
@@ -1997,7 +1990,6 @@ To explore the current buffer's syntax tree, use the treesit-explore-mode comman
 (use-package rust-ts-mode :ensure nil :mode "\\.rs\\'")
 (use-package tsx-ts-mode :ensure nil :mode "\\.tsx\\'")
 #+end_src
-
 ** Language modes
 Emacs contains many “editing modes” that alter its basic behavior in
 useful ways. These are divided into “major modes” and “minor modes”.
@@ -2005,7 +1997,6 @@ For more: C-h i: g: (emacs)Modes
 
 Some programming languages require the installation of specific modes to fully integrate and function within Emacs.
 These packages are often necessary for features like syntax highlighting, code formatting, linting, and language-specific features.
-
 *** Lua mode
 Example, how to setup a language mode.
 Use C-SPC tab to uncomment the lines.
@@ -2184,8 +2175,87 @@ One alternative is ivy and counsel, check out the [[https://github.com/MiniApoll
   ('marginalia-mode-hook . 'nerd-icons-completion-marginalia-setup))
 #+end_src
 
-* Other packages
-All the package setups that don't need much tweaking.
+* Navigation
+** Flash
+A flash.nvim clone written in elisp. Allows you to jump around the visible
+portion of the buffer by typing in characters matching the spot you want to jump to.
+
+Located in the lisp folder in the config folder. Does not auto-update (not installed
+with the package manager).
+
+[[https://github.com/JiaweiChenC/flash-emacs][Github Repo]]
+#+begin_src emacs-lisp
+(require 'flash-emacs)
+(setq flash-emacs-labels "asdghklqwertyuiopzxcvbnmfjASDGHKLQWERTYUIOPZXCVBNMFJ")
+(evil-define-key 'normal 'global (kbd "s") 'flash-emacs-jump)
+(with-eval-after-load 'flash-emacs
+  (set-face-attribute 'flash-emacs-match nil
+                      :background "#1dacd6"
+                      :foreground "black")
+  (set-face-attribute 'flash-emacs-label nil
+                      :background "red"
+                      :foreground "white"))
+#+end_src
+** Avy (Disabled)
+(currently disabled in favor of Flash.el)
+Avy allows you to jump to visible text using a char-based decision tree.
+#+begin_src emacs-lisp :tangle no
+(use-package avy
+  :ensure t
+  :config
+  (evil-define-key 'normal 'global (kbd "s") 'avy-goto-char-timer))
+#+end_src
+** Ivy
+#+begin_src emacs-lisp
+(use-package ivy
+  :diminish
+  :bind (("C-s" . swiper)
+         :map ivy-minibuffer-map
+         ("TAB" . ivy-alt-done)
+         ("C-l" . ivy-alt-done)
+         ("C-j" . ivy-next-line)
+         ("C-k" . ivy-previous-line)
+         :map ivy-switch-buffer-map
+         ("C-k" . ivy-previous-line)
+         ("C-l" . ivy-done)
+         ("C-d" . ivy-switch-buffer-kill)
+         :map ivy-reverse-i-search-map
+         ("C-k" . ivy-previous-line)
+         ("C-d" . ivy-reverse-i-search-kill))
+  :config
+  (ivy-mode 1))
+#+end_src
+* Utilities
+** Grease
+#+begin_src emacs-lisp
+(use-package grease
+  :load-path "~/.config/emacs-org/lisp/grease.el"
+  :commands (grease-open grease-toggle grease-here)
+  :init
+  ;; Icons (requires nerd-icons package)
+  (setq grease-use-icons t)              ; Set to nil to disable icons
+
+  ;; Sorting options
+  (setq grease-sort-method 'type)        ; Default sort method
+  ;; Available methods:
+  ;;   'type      - Directories first, then files (default)
+  ;;   'name      - Alphabetical by name
+  ;;   'size      - By file size (smallest first)
+  ;;   'size-desc - By file size (largest first)
+  ;;   'date      - By modification date (oldest first)
+  ;;   'date-desc - By modification date (newest first)
+  ;;   'extension - By file extension
+
+  (setq grease-sort-directories-first t) ; Always show dirs first (for non-type sorts)
+
+  ;; Hidden files
+  (setq grease-show-hidden t)          ; Set to t to show dotfiles by default
+
+  ;; Preview window
+  (setq grease-preview-window-width 0.4) ; Preview takes 40% of frame width
+  (setq grease-preview-writable nil)     ; Set to t to make file previews editable
+  )
+#+end_src
 ** Consult
 Provides search and navigation commands based on the Emacs completion function.
 Check out their [[https://github.com/minad/consult][git repository]] for more awesome functions.
@@ -2242,6 +2312,94 @@ Check out their [[https://github.com/minad/consult][git repository]] for more aw
   )
 #+end_src
 
+** Evil Terminal Cursor Changer
+Evil Terminal Cursor Changer changes the cursor shape in terminal Emacs.
+#+begin_src emacs-lisp
+(use-package evil-terminal-cursor-changer
+  :if (not (display-graphic-p))
+  :init
+  (require 'seq) ;; Ensure seq library is loaded
+  (evil-terminal-cursor-changer-activate) ; or (etcc-on)
+  :custom
+  (evil-motion-state-cursor 'box)  ; █
+  (evil-visual-state-cursor 'box)  ; █
+  (evil-normal-state-cursor 'box)  ; █
+  (evil-insert-state-cursor 'bar)  ; ⎸
+  (evil-emacs-state-cursor  'hbar)) ; _
+#+end_src
+** Rainbow-Mode (Show Colors) FIXME:
+#+begin_src emacs-lisp
+(use-package rainbow-mode
+:ensure t
+:hook (org-mode
+        emacs-lisp-mode
+        css-mode
+        conf-mode)
+#+end_src>
+** PDF Tools
+#+begin_src emacs-lisp
+(use-package pdf-tools
+    :ensure t
+    :mode ("\\.pdf\\'" . pdf-view-mode)
+    :config
+    ;; Initialize pdf-tools
+    (pdf-tools-install)
+
+    ;; Use 'Midnight Mode' by default (Dark mode for PDFs)
+    ;; You can toggle this with 'C-c C-r'
+    (setq-default pdf-view-midnight-colors '("#abb2bf" . "#282c34")) ; One Dark colors
+
+    ;; Better rendering
+    (setq pdf-view-use-scaling t
+            pdf-view-use-imagemagick nil)
+
+    ;; Setup Evil bindings for PDF view
+    (with-eval-after-load 'evil
+        (evil-set-initial-state 'pdf-view-mode 'motion)))
+#+end_src>
+** Super Save (Disabled)
+This was intended to be used for auto save. But I disabled in favor of
+using the built in auto-save hook for Org buffers only (in the Org Mode
+:config section above)
+#+begin_src emacs-lisp
+(use-package super-save
+:disabled t
+:ensure t
+:custom
+(super-save-auto-save-idle t) ;; Ensure idle saving is explicitly ON
+;; Save after 5 seconds of idle time
+(super-save-idle-duration 5)
+;; Don't save remote files (TRAMP) to avoid lag
+(super-save-remote-files nil)
+:config
+(super-save-mode +1)
+(setq super-save-silent nil))
+#+end_src>
+** Undo-Fu-Session
+This stores undo history between sessions per-machine in .local/state
+#+begin_src emacs-lisp
+(use-package undo-fu-session
+  :ensure t
+  :custom
+  (undo-fu-session-ignore-encrypted-files t)
+  :config
+  ;; Set the path to ~/. local/state/emacs/undo-fu-session/
+  (setq undo-fu-session-directory (expand-file-name "~/.local/state/emacs/undo-fu-session/"))
+
+  ;; Create the directory if it's missing
+  (unless (file-exists-p undo-fu-session-directory)
+	(make-directory undo-fu-session-directory t))
+
+  (global-undo-fu-session-mode))
+#+end_src
+** Command Log Mode (Deprecated?)
+Not entirely sure what this does but I think it logs command messages.
+More info from this stream:
+https://youtu.be/74zOY-vgkyw?t=1541
+;; TODO: come back to this
+#+begin_src emacs-lisp
+;;(use-package command-log-mode)
+#+end_src
 ** Helpful
 An alternative to the built-in Emacs help that provides much more contextual information.
 #+begin_src emacs-lisp
@@ -2257,14 +2415,13 @@ An alternative to the built-in Emacs help that provides much more contextual inf
   )
 #+end_src
 
-** Diminish
+** Diminish (Hide Modes in Modeline)
 This package implements hiding or abbreviation of the modeline displays (lighters) of minor-modes.
 With this package installed, you can add ‘:diminish’ to any use-package block to hide that particular mode in the modeline.
 #+begin_src emacs-lisp
 (use-package diminish)
 #+end_src
-
-** Rainbow Delimiters
+** Rainbow Delimiters (Parenthesis Colors)
 Adds colors to brackets.
 #+begin_src emacs-lisp
 (use-package rainbow-delimiters
@@ -2289,174 +2446,13 @@ Which-key is a helper utility for keychords (which key to press).
   (which-key-max-description-length 25)
   (which-key-allow-imprecise-window-fit nil)) ;; Fixes which-key window slipping out in Emacs Daemon
 #+end_src
-
-** Ws-butler
+** Ws-butler (Remove Whitespace)
 Removes whitespace from the ends of lines.
 #+begin_src emacs-lisp
 (use-package ws-butler
   :init (ws-butler-global-mode))
 #+end_src
 
-* My Custom Packages
-** Flash
-A flash.nvim clone written in elisp. Allows you to jump around the visible
-portion of the buffer by typing in characters matching the spot you want to jump to.
-
-Located in the lisp folder in the config folder. Does not auto-update (not installed
-with the package manager).
-
-[[https://github.com/JiaweiChenC/flash-emacs][Github Repo]]
-#+begin_src emacs-lisp
-(require 'flash-emacs)
-(evil-define-key 'normal 'global (kbd "s") 'flash-emacs-jump)
-#+end_src
-** Avy (Disabled)
-(currently disabled in favor of Flash.el)
-Avy allows you to jump to visible text using a char-based decision tree.
-#+begin_src emacs-lisp :tangle no
-(use-package avy
-  :ensure t
-  :config
-  (evil-define-key 'normal 'global (kbd "s") 'avy-goto-char-timer))
-#+end_src
-** Command Log Mode (Deprecated?)
-Not entirely sure what this does but I think it logs command messages.
-More info from this stream:
-https://youtu.be/74zOY-vgkyw?t=1541
-;; TODO: come back to this
-#+begin_src emacs-lisp
-;;(use-package command-log-mode)
-#+end_src
-** Evil Terminal Cursor Changer
-Evil Terminal Cursor Changer changes the cursor shape in terminal Emacs.
-#+begin_src emacs-lisp
-(use-package evil-terminal-cursor-changer
-  :if (not (display-graphic-p))
-  :init
-  (require 'seq) ;; Ensure seq library is loaded
-  (evil-terminal-cursor-changer-activate) ; or (etcc-on)
-  :custom
-  (evil-motion-state-cursor 'box)  ; █
-  (evil-visual-state-cursor 'box)  ; █
-  (evil-normal-state-cursor 'box)  ; █
-  (evil-insert-state-cursor 'bar)  ; ⎸
-  (evil-emacs-state-cursor  'hbar)) ; _
-#+end_src
-** Ivy
-#+begin_src emacs-lisp
-(use-package ivy
-  :diminish
-  :bind (("C-s" . swiper)
-         :map ivy-minibuffer-map
-         ("TAB" . ivy-alt-done)
-         ("C-l" . ivy-alt-done)
-         ("C-j" . ivy-next-line)
-         ("C-k" . ivy-previous-line)
-         :map ivy-switch-buffer-map
-         ("C-k" . ivy-previous-line)
-         ("C-l" . ivy-done)
-         ("C-d" . ivy-switch-buffer-kill)
-         :map ivy-reverse-i-search-map
-         ("C-k" . ivy-previous-line)
-         ("C-d" . ivy-reverse-i-search-kill))
-  :config
-  (ivy-mode 1))
-#+end_src
-** Grease
-#+begin_src emacs-lisp
-(use-package grease
-  :load-path "~/.config/emacs-org/lisp/grease.el"
-  :commands (grease-open grease-toggle grease-here)
-  :init
-  ;; Icons (requires nerd-icons package)
-  (setq grease-use-icons t)              ; Set to nil to disable icons
-
-  ;; Sorting options
-  (setq grease-sort-method 'type)        ; Default sort method
-  ;; Available methods:
-  ;;   'type      - Directories first, then files (default)
-  ;;   'name      - Alphabetical by name
-  ;;   'size      - By file size (smallest first)
-  ;;   'size-desc - By file size (largest first)
-  ;;   'date      - By modification date (oldest first)
-  ;;   'date-desc - By modification date (newest first)
-  ;;   'extension - By file extension
-
-  (setq grease-sort-directories-first t) ; Always show dirs first (for non-type sorts)
-
-  ;; Hidden files
-  (setq grease-show-hidden nil)          ; Set to t to show dotfiles by default
-
-  ;; Preview window
-  (setq grease-preview-window-width 0.4) ; Preview takes 40% of frame width
-  (setq grease-preview-writable nil)     ; Set to t to make file previews editable
-  )
-#+end_src
-** PDF Tools
-#+begin_src emacs-lisp
-    (use-package pdf-tools
-        :ensure t
-        :mode ("\\.pdf\\'" . pdf-view-mode)
-        :config
-        ;; Initialize pdf-tools
-        (pdf-tools-install)
-
-        ;; Use 'Midnight Mode' by default (Dark mode for PDFs)
-        ;; You can toggle this with 'C-c C-r'
-        (setq-default pdf-view-midnight-colors '("#abb2bf" . "#282c34")) ; One Dark colors
-
-        ;; Better rendering
-        (setq pdf-view-use-scaling t
-                pdf-view-use-imagemagick nil)
-
-        ;; Setup Evil bindings for PDF view
-        (with-eval-after-load 'evil
-            (evil-set-initial-state 'pdf-view-mode 'motion)))
-#+end_src>
-** Rainbow-Mode
-#+begin_src emacs-lisp
-(use-package rainbow-mode
-  :ensure t
-  :hook (org-mode
-         emacs-lisp-mode
-         css-mode
-         conf-mode)
-#+end_src>
-** Super Save (Disabled)
-This was intended to be used for auto save. But I disabled in favor of
-using the built in auto-save hook for Org buffers only (in the Org Mode
-:config section above)
-#+begin_src emacs-lisp
-(use-package super-save
-  :disabled t
-  :ensure t
-  :custom
-  (super-save-auto-save-idle t) ;; Ensure idle saving is explicitly ON
-  ;; Save after 5 seconds of idle time
-  (super-save-idle-duration 5)
-  ;; Don't save remote files (TRAMP) to avoid lag
-  (super-save-remote-files nil)
-  :config
-  (super-save-mode +1)
-  (setq super-save-silent nil))
-#+end_src>
-** Undo-Fu-Session
-This stores undo history between sessions per-machine in .local/state
-#+begin_src emacs-lisp
-(use-package undo-fu-session
-  :ensure t
-  :custom
-  (undo-fu-session-ignore-encrypted-files t)
-  :config
-  ;; Set the path to ~/. local/state/emacs/undo-fu-session/
-  (setq undo-fu-session-directory (expand-file-name "~/.local/state/emacs/undo-fu-session/"))
-
-  ;; Create the directory if it's missing
-  (unless (file-exists-p undo-fu-session-directory)
-    (make-directory undo-fu-session-directory t))
-
-  (global-undo-fu-session-mode))
-#+end_src
 * Runtime Performance
   Dial the GC threshold back down so that garbage collection happens more frequently but in less time.
   We also increase Read Process Output Max so Emacs can read more data.

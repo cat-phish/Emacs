@@ -496,14 +496,16 @@
 (use-package nerd-icons-ibuffer
   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 
-(use-package all-the-icons
+(use-package nerd-icons
   :if (display-graphic-p)
   :ensure t)
+
 (use-package dashboard
-  :after all-the-icons ;; ensure icons functions are available
+  :after nerd-icons
   :init
   (setq dashboard-set-heading-icons t)
   (setq dashboard-set-file-icons t)
+  (setq dashboard-icon-type 'nerd-icons)  ; Tell dashboard to use nerd-icons
 
   :custom
   (dashboard-startup-banner 'official)
@@ -515,26 +517,195 @@
      (recents . 5)
      (projects . 5)))
 
-  ;; Custom buttons (Doom-style)
+  ;; Custom buttons (using nerd-icons)
   (dashboard-navigator-buttons
    `(
-     ((,(all-the-icons-octicon "calendar" :height 1.0)
+     ((,(nerd-icons-mdicon "nf-md-calendar" :height 1.0)
        "Agenda"
        "Open org agenda"
        (lambda () (org-agenda nil "d"))))
 
-     ((,(all-the-icons-octicon "book" :height 1.0)
+     ((,(nerd-icons-mdicon "nf-md-book_open_variant" :height 1.0)
        "Org files"
        "Open org directory"
        (lambda () (dired "~/org"))))
 
-     ((,(all-the-icons-octicon "database" :height 1.0)
+     ((,(nerd-icons-mdicon "nf-md-graph" :height 1.0)
        "Org-roam"
        "Open org-roam buffer"
        (lambda () (org-roam-node-find))))))
 
   :config
   (dashboard-setup-startup-hook))
+
+(defun my/org-meta-left-smart ()
+  (interactive)
+  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaleft) (evil-shift-left (line-beginning-position) (line-end-position))))
+
+(defun my/org-meta-right-smart ()
+  (interactive)
+  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaright) (evil-shift-right (line-beginning-position) (line-end-position))))
+
+(defun my/org-meta-down-smart ()
+  "Move headline/item down if on one, otherwise drag the current line down."
+  (interactive)
+  (if (or (org-at-heading-p) (org-at-item-p))
+      (org-metadown)
+    (let ((col (current-column)))
+      (forward-line 1)
+      (transpose-lines 1)
+      (forward-line -1)
+      (move-to-column col))))
+
+(defun my/org-meta-up-smart ()
+  "Move headline/item up if on one, otherwise drag the current line up."
+  (interactive)
+  (if (or (org-at-heading-p) (org-at-item-p))
+      (org-metaup)
+    (let ((col (current-column)))
+      (transpose-lines 1)
+      (forward-line -2)
+      (move-to-column col))))
+
+(defun my/evil-org-delete-heading-dwim (count)
+  "Delete subtree if heading is folded (linewise); otherwise delete line normally."
+  (interactive "p")
+  (cond
+   ;; CASE 1: Folded Heading -> Delete Subtree Linewise
+   ((and (org-at-heading-p)
+         (or (and (fboundp 'org-fold-folded-p)
+                  (org-fold-folded-p))
+             (outline-invisible-p (line-end-position))))
+    (let ((beg (line-beginning-position))
+          (end (save-excursion
+                 ;; 't t' forces it to move to the start of the NEXT heading
+                 (org-end-of-subtree t t)
+                 (point))))
+      ;; If at End of Buffer, ensure we claim the final newline so no gap remains
+      (when (eobp) (setq end (point-max)))
+
+      (evil-delete beg end 'line)))
+   ;; CASE 2: Everything else -> Standard Evil Line Delete
+   (t
+    (evil-delete (line-beginning-position)
+                 (line-beginning-position (1+ count))
+                 'line
+                 ?\"))))
+
+;; (ref:insert-item-below)
+(defun my/org-smart-insert-item-below ()
+  "Insert a new list item, checkbox, table row, or headline below the current line."
+  (interactive)
+  ;; (org-back-to-heading)
+  (cond
+   ;; Tables
+   ((org-at-table-p)
+    (org-table-insert-row 'below))
+   ;; Checkboxes
+   ((org-at-item-checkbox-p)
+    (org-end-of-line)
+    (org-insert-item t) ;; The 't' argument forces a checkbox
+	(evil-insert-state))
+   ;; Lists
+   ((org-in-item-p)
+    (org-end-of-line)
+    (org-insert-item)
+	(evil-insert-state))
+   ;; Headings/TODOs
+   ((org-at-heading-p)
+    (org-insert-heading-respect-content)
+    (when (org-entry-is-todo-p)
+      (org-todo 'nextset)) ;; matches TODO state of above line
+	(evil-insert-state))
+   ;; Default: Just a normal newline
+   (t
+    (end-of-line)
+    (newline-and-indent)
+	(evil-insert-state)))
+  (org-update-checkbox-count t)
+  )
+
+;; INSERT SUBITEM BELOW
+;; (ref:insert-subitem-below)
+(defun my/org-smart-insert-subitem ()
+  "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
+  (interactive)
+  (cond
+   ;; Checkbox -> Insert a nested checkbox
+   ((org-at-item-checkbox-p)
+    (org-end-of-line)
+    (org-insert-item t)
+    (org-indent-item)
+	(evil-insert-state))
+   ;; List -> Insert a nested list item
+   ((org-in-item-p)
+    (org-end-of-line)
+    (org-insert-item)
+    (org-indent-item)
+	(evil-insert-state))
+   ;; On a Heading -> Insert a demoted heading at the end of content
+   ((org-at-heading-p)
+    ;; Use save-excursion to ensure we don't split the line
+    (save-excursion
+      (org-back-to-heading)
+      (move-end-of-line 1)
+      (org-insert-heading-respect-content)
+      (org-demote))
+    ;; Move point to the new heading
+    (org-end-of-subtree t t)
+    (unless (bolp) (insert "\n"))
+    (forward-line -1)
+    (goto-char (line-end-position))
+    (evil-insert-state))
+   ;; Default -> Normal behavior
+
+   (t
+    (end-of-line)
+    (newline-and-indent)
+	(evil-insert-state)))
+  (org-update-checkbox-count t))
+
+;; (ref:insert-parent-heading)
+(defun my/org-insert-parent-heading-below ()
+  "Insert a new heading at the appropriate level.
+    If on a heading line, go up one level and insert a sibling.
+    If in content (checkbox, text, etc.), insert a sibling of current heading."
+  (interactive)
+  (if (org-at-heading-p)
+	  ;; We're ON a heading line - go up one level
+	  (progn
+        (org-back-to-heading)
+        (when (> (org-current-level) 1)  ; Only go up if not already at level 1
+		  (org-up-heading-safe))
+        (org-insert-heading-respect-content)
+        (evil-insert-state))
+    ;; We're in content - insert sibling of current heading
+    (progn
+	  (org-back-to-heading)
+	  (org-insert-heading-respect-content)
+	  (evil-insert-state))))
+
+;; (ref:ret-dwim)
+(defun my/org-return-dwim ()
+  "Context-aware RET for Org (normal mode only)."
+  (interactive)
+  (cond
+   ;; Toggle checkbox
+   ((org-at-item-checkbox-p)
+    (org-toggle-checkbox))
+   ;; Follow links
+   ((and org-return-follows-link
+         (org-in-regexp org-link-any-re))
+    (org-open-at-point))
+   ;; Tables
+   ((org-at-table-p)
+    (org-table-next-row))
+   ;; Headings
+   ((org-at-heading-p)
+    (org-cycle))
+   ;; Fallback
+   (t
+    (evil-next-line))))
 
 (use-package org
   :ensure nil
@@ -698,7 +869,7 @@
   ;; AUTO-FORMAT SRC BLOCKS
   ;; (ref:format-src)
   ;; Function to indent every source block in the file
-  (defun my/org-indent-all-src-blocks ()
+  (defun my/org-indent-all-src-blocks ()                     
     (when (derived-mode-p 'org-mode)
       (save-excursion
         (goto-char (point-min))
@@ -1010,7 +1181,7 @@
 
     ;; Quick actions
     (kbd "q") 'org-agenda-quit
-    (kbd "ESC") 'org-agenda-quit
+    (kbd "<escape>") 'org-agenda-quit
     (kbd "RET") 'org-agenda-switch-to
     (kbd "TAB") 'org-agenda-goto
     (kbd "J") 'org-agenda-goto-date
@@ -1181,175 +1352,6 @@
   ;; On Mac, it uses "pngpaste" automatically if installed
   )
 
-(defun my/org-meta-left-smart ()
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaleft) (evil-shift-left (line-beginning-position) (line-end-position))))
-
-(defun my/org-meta-right-smart ()
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaright) (evil-shift-right (line-beginning-position) (line-end-position))))
-
-(defun my/org-meta-down-smart ()
-  "Move headline/item down if on one, otherwise drag the current line down."
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p))
-      (org-metadown)
-    (let ((col (current-column)))
-      (forward-line 1)
-      (transpose-lines 1)
-      (forward-line -1)
-      (move-to-column col))))
-
-(defun my/org-meta-up-smart ()
-  "Move headline/item up if on one, otherwise drag the current line up."
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p))
-      (org-metaup)
-    (let ((col (current-column)))
-      (transpose-lines 1)
-      (forward-line -2)
-      (move-to-column col))))
-
-(defun my/evil-org-delete-heading-dwim (count)
-  "Delete subtree if heading is folded (linewise); otherwise delete line normally."
-  (interactive "p")
-  (cond
-   ;; CASE 1: Folded Heading -> Delete Subtree Linewise
-   ((and (org-at-heading-p)
-         (or (and (fboundp 'org-fold-folded-p)
-                  (org-fold-folded-p))
-             (outline-invisible-p (line-end-position))))
-    (let ((beg (line-beginning-position))
-          (end (save-excursion
-                 ;; 't t' forces it to move to the start of the NEXT heading
-                 (org-end-of-subtree t t)
-                 (point))))
-      ;; If at End of Buffer, ensure we claim the final newline so no gap remains
-      (when (eobp) (setq end (point-max)))
-
-      (evil-delete beg end 'line)))
-   ;; CASE 2: Everything else -> Standard Evil Line Delete
-   (t
-    (evil-delete (line-beginning-position)
-                 (line-beginning-position (1+ count))
-                 'line
-                 ?\"))))
-
-;; (ref:insert-item-below)
-(defun my/org-smart-insert-item-below ()
-  "Insert a new list item, checkbox, table row, or headline below the current line."
-  (interactive)
-  ;; (org-back-to-heading)
-  (cond
-   ;; Tables
-   ((org-at-table-p)
-    (org-table-insert-row 'below))
-   ;; Checkboxes
-   ((org-at-item-checkbox-p)
-    (org-end-of-line)
-    (org-insert-item t) ;; The 't' argument forces a checkbox
-	(evil-insert-state))
-   ;; Lists
-   ((org-in-item-p)
-    (org-end-of-line)
-    (org-insert-item)
-	(evil-insert-state))
-   ;; Headings/TODOs
-   ((org-at-heading-p)
-    (org-insert-heading-respect-content)
-    (when (org-entry-is-todo-p)
-      (org-todo 'nextset)) ;; matches TODO state of above line
-	(evil-insert-state))
-   ;; Default: Just a normal newline
-   (t
-    (end-of-line)
-    (newline-and-indent)
-	(evil-insert-state)))
-  (org-update-checkbox-count t)
-  )
-
-;; INSERT SUBITEM BELOW
-;; (ref:insert-subitem-below)
-(defun my/org-smart-insert-subitem ()
-  "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
-  (interactive)
-  (cond
-   ;; Checkbox -> Insert a nested checkbox
-   ((org-at-item-checkbox-p)
-    (org-end-of-line)
-    (org-insert-item t)
-    (org-indent-item)
-	(evil-insert-state))
-   ;; List -> Insert a nested list item
-   ((org-in-item-p)
-    (org-end-of-line)
-    (org-insert-item)
-    (org-indent-item)
-	(evil-insert-state))
-   ;; On a Heading -> Insert a demoted heading at the end of content
-   ((org-at-heading-p)
-    ;; Use save-excursion to ensure we don't split the line
-    (save-excursion
-      (org-back-to-heading)
-      (move-end-of-line 1)
-      (org-insert-heading-respect-content)
-      (org-demote))
-    ;; Move point to the new heading
-    (org-end-of-subtree t t)
-    (unless (bolp) (insert "\n"))
-    (forward-line -1)
-    (goto-char (line-end-position))
-    (evil-insert-state))
-   ;; Default -> Normal behavior
-
-   (t
-    (end-of-line)
-    (newline-and-indent)
-	(evil-insert-state)))
-  (org-update-checkbox-count t))
-
-;; (ref:insert-parent-heading)
-(defun my/org-insert-parent-heading-below ()
-  "Insert a new heading at the appropriate level.
-    If on a heading line, go up one level and insert a sibling.
-    If in content (checkbox, text, etc.), insert a sibling of current heading."
-  (interactive)
-  (if (org-at-heading-p)
-	  ;; We're ON a heading line - go up one level
-	  (progn
-        (org-back-to-heading)
-        (when (> (org-current-level) 1)  ; Only go up if not already at level 1
-		  (org-up-heading-safe))
-        (org-insert-heading-respect-content)
-        (evil-insert-state))
-    ;; We're in content - insert sibling of current heading
-    (progn
-	  (org-back-to-heading)
-	  (org-insert-heading-respect-content)
-	  (evil-insert-state))))
-
-;; (ref:ret-dwim)
-(defun my/org-return-dwim ()
-  "Context-aware RET for Org (normal mode only)."
-  (interactive)
-  (cond
-   ;; Toggle checkbox
-   ((org-at-item-checkbox-p)
-    (org-toggle-checkbox))
-   ;; Follow links
-   ((and org-return-follows-link
-         (org-in-regexp org-link-any-re))
-    (org-open-at-point))
-   ;; Tables
-   ((org-at-table-p)
-    (org-table-next-row))
-   ;; Headings
-   ((org-at-heading-p)
-    (org-cycle))
-   ;; Fallback
-   (t
-    (evil-next-line))))
-
 (use-package projectile
   :config
   (projectile-mode)
@@ -1357,7 +1359,7 @@
   ;; (projectile-auto-discover nil) ;; Disable auto search for better startup times ;; Search with a keybind
   (projectile-run-use-comint-mode t) ;; Interactive run dialog when running projects inside emacs (like giving input)
   (projectile-switch-project-action #'projectile-dired) ;; Open dired when switching to a project
-  (projectile-project-search-path '("~/projects/" "~/work/" ("~/github" . 1)))) ;; . 1 means only search the first subdirectory level for projects
+  (projectile-project-search-path '("~/projects/" "~/source/" ("~/github" . 1)))) ;; . 1 means only search the first subdirectory level for projects
 
 (use-package eglot
   :ensure nil ;; Don't install eglot because it's now built-in
@@ -1544,6 +1546,63 @@
   :hook
   ('marginalia-mode-hook . 'nerd-icons-completion-marginalia-setup))
 
+(require 'flash-emacs)
+(setq flash-emacs-labels "asdghklqwertyuiopzxcvbnmfjASDGHKLQWERTYUIOPZXCVBNMFJ")
+(evil-define-key 'normal 'global (kbd "s") 'flash-emacs-jump)
+(with-eval-after-load 'flash-emacs
+  (set-face-attribute 'flash-emacs-match nil
+                      :background "#1dacd6"
+                      :foreground "black")
+  (set-face-attribute 'flash-emacs-label nil
+                      :background "red"
+                      :foreground "white"))
+
+(use-package ivy
+  :diminish
+  :bind (("C-s" . swiper)
+         :map ivy-minibuffer-map
+         ("TAB" . ivy-alt-done)
+         ("C-l" . ivy-alt-done)
+         ("C-j" . ivy-next-line)
+         ("C-k" . ivy-previous-line)
+         :map ivy-switch-buffer-map
+         ("C-k" . ivy-previous-line)
+         ("C-l" . ivy-done)
+         ("C-d" . ivy-switch-buffer-kill)
+         :map ivy-reverse-i-search-map
+         ("C-k" . ivy-previous-line)
+         ("C-d" . ivy-reverse-i-search-kill))
+  :config
+  (ivy-mode 1))
+
+(use-package grease
+  :load-path "~/.config/emacs-org/lisp/grease.el"
+  :commands (grease-open grease-toggle grease-here)
+  :init
+  ;; Icons (requires nerd-icons package)
+  (setq grease-use-icons t)              ; Set to nil to disable icons
+
+  ;; Sorting options
+  (setq grease-sort-method 'type)        ; Default sort method
+  ;; Available methods:
+  ;;   'type      - Directories first, then files (default)
+  ;;   'name      - Alphabetical by name
+  ;;   'size      - By file size (smallest first)
+  ;;   'size-desc - By file size (largest first)
+  ;;   'date      - By modification date (oldest first)
+  ;;   'date-desc - By modification date (newest first)
+  ;;   'extension - By file extension
+
+  (setq grease-sort-directories-first t) ; Always show dirs first (for non-type sorts)
+
+  ;; Hidden files
+  (setq grease-show-hidden t)          ; Set to t to show dotfiles by default
+
+  ;; Preview window
+  (setq grease-preview-window-width 0.4) ; Preview takes 40% of frame width
+  (setq grease-preview-writable nil)     ; Set to t to make file previews editable
+  )
+
 (use-package consult
   ;; Enable automatic preview at point in the *Completions* buffer. This is
   ;; relevant when you use the default completion UI.
@@ -1595,6 +1654,34 @@
   ;; (setq consult-project-function nil)
   )
 
+(use-package evil-terminal-cursor-changer
+  :if (not (display-graphic-p))
+  :init
+  (require 'seq) ;; Ensure seq library is loaded
+  (evil-terminal-cursor-changer-activate) ; or (etcc-on)
+  :custom
+  (evil-motion-state-cursor 'box)  ; █
+  (evil-visual-state-cursor 'box)  ; █
+  (evil-normal-state-cursor 'box)  ; █
+  (evil-insert-state-cursor 'bar)  ; ⎸
+  (evil-emacs-state-cursor  'hbar)) ; _
+
+(use-package undo-fu-session
+  :ensure t
+  :custom
+  (undo-fu-session-ignore-encrypted-files t)
+  :config
+  ;; Set the path to ~/. local/state/emacs/undo-fu-session/
+  (setq undo-fu-session-directory (expand-file-name "~/.local/state/emacs/undo-fu-session/"))
+
+  ;; Create the directory if it's missing
+  (unless (file-exists-p undo-fu-session-directory)
+	(make-directory undo-fu-session-directory t))
+
+  (global-undo-fu-session-mode))
+
+;;(use-package command-log-mode)
+
 (use-package helpful
   :bind
   ;; Note that the built-in `describe-function' includes both functions
@@ -1628,83 +1715,6 @@
 
 (use-package ws-butler
   :init (ws-butler-global-mode))
-
-(require 'flash-emacs)
-(evil-define-key 'normal 'global (kbd "s") 'flash-emacs-jump)
-
-;;(use-package command-log-mode)
-
-(use-package evil-terminal-cursor-changer
-  :if (not (display-graphic-p))
-  :init
-  (require 'seq) ;; Ensure seq library is loaded
-  (evil-terminal-cursor-changer-activate) ; or (etcc-on)
-  :custom
-  (evil-motion-state-cursor 'box)  ; █
-  (evil-visual-state-cursor 'box)  ; █
-  (evil-normal-state-cursor 'box)  ; █
-  (evil-insert-state-cursor 'bar)  ; ⎸
-  (evil-emacs-state-cursor  'hbar)) ; _
-
-(use-package ivy
-  :diminish
-  :bind (("C-s" . swiper)
-         :map ivy-minibuffer-map
-         ("TAB" . ivy-alt-done)
-         ("C-l" . ivy-alt-done)
-         ("C-j" . ivy-next-line)
-         ("C-k" . ivy-previous-line)
-         :map ivy-switch-buffer-map
-         ("C-k" . ivy-previous-line)
-         ("C-l" . ivy-done)
-         ("C-d" . ivy-switch-buffer-kill)
-         :map ivy-reverse-i-search-map
-         ("C-k" . ivy-previous-line)
-         ("C-d" . ivy-reverse-i-search-kill))
-  :config
-  (ivy-mode 1))
-
-(use-package grease
-  :load-path "~/.config/emacs-org/lisp/grease.el"
-  :commands (grease-open grease-toggle grease-here)
-  :init
-  ;; Icons (requires nerd-icons package)
-  (setq grease-use-icons t)              ; Set to nil to disable icons
-
-  ;; Sorting options
-  (setq grease-sort-method 'type)        ; Default sort method
-  ;; Available methods:
-  ;;   'type      - Directories first, then files (default)
-  ;;   'name      - Alphabetical by name
-  ;;   'size      - By file size (smallest first)
-  ;;   'size-desc - By file size (largest first)
-  ;;   'date      - By modification date (oldest first)
-  ;;   'date-desc - By modification date (newest first)
-  ;;   'extension - By file extension
-
-  (setq grease-sort-directories-first t) ; Always show dirs first (for non-type sorts)
-
-  ;; Hidden files
-  (setq grease-show-hidden nil)          ; Set to t to show dotfiles by default
-
-  ;; Preview window
-  (setq grease-preview-window-width 0.4) ; Preview takes 40% of frame width
-  (setq grease-preview-writable nil)     ; Set to t to make file previews editable
-  )
-
-(use-package undo-fu-session
-  :ensure t
-  :custom
-  (undo-fu-session-ignore-encrypted-files t)
-  :config
-  ;; Set the path to ~/. local/state/emacs/undo-fu-session/
-  (setq undo-fu-session-directory (expand-file-name "~/.local/state/emacs/undo-fu-session/"))
-
-  ;; Create the directory if it's missing
-  (unless (file-exists-p undo-fu-session-directory)
-    (make-directory undo-fu-session-directory t))
-
-  (global-undo-fu-session-mode))
 
 ;; Make gc pauses faster by decreasing the threshold.
 (setq gc-cons-threshold (* 2 1000 1000))
