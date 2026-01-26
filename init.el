@@ -890,123 +890,6 @@
               (when (derived-mode-p 'org-mode)
                 (my/org-hide-matching-headings))))
 
-  ;; CONTEXT AWARE RET KEY
-  ;; (ref:ret-dwim)
-  (defun my/org-return-dwim ()
-    "Context-aware RET for Org (normal mode only)."
-    (interactive)
-    (cond
-     ;; Toggle checkbox
-     ((org-at-item-checkbox-p)
-      (org-toggle-checkbox))
-     ;; Follow links
-     ((and org-return-follows-link
-           (org-in-regexp org-link-any-re))
-      (org-open-at-point))
-     ;; Tables
-     ((org-at-table-p)
-      (org-table-next-row))
-     ;; Headings
-     ((org-at-heading-p)
-      (org-cycle))
-     ;; Fallback
-     (t
-      (evil-next-line))))
-
-  ;; INSERT PARENT HEADING BELOW
-  ;; (ref:insert-parent-heading)
-  (defun my/org-insert-parent-heading-below ()
-	"Insert a new heading at the appropriate level.
-    If on a heading line, go up one level and insert a sibling.
-    If in content (checkbox, text, etc.), insert a sibling of current heading."
-	(interactive)
-	(if (org-at-heading-p)
-		;; We're ON a heading line - go up one level
-		(progn
-          (org-back-to-heading)
-          (when (> (org-current-level) 1)  ; Only go up if not already at level 1
-			(org-up-heading-safe))
-          (org-insert-heading-respect-content)
-          (evil-insert-state))
-      ;; We're in content - insert sibling of current heading
-      (progn
-		(org-back-to-heading)
-		(org-insert-heading-respect-content)
-		(evil-insert-state))))
-
-  ;; INSERT ITEM BELOW
-  ;; (ref:insert-item-below)
-  (defun my/org-smart-insert-item-below ()
-    "Insert a new list item, checkbox, table row, or headline below the current line."
-    (interactive)
-    ;; (org-back-to-heading)
-    (cond
-     ;; Tables
-     ((org-at-table-p)
-      (org-table-insert-row 'below))
-     ;; Checkboxes
-     ((org-at-item-checkbox-p)
-      (org-end-of-line)
-      (org-insert-item t) ;; The 't' argument forces a checkbox
-	  (evil-insert-state))
-     ;; Lists
-     ((org-in-item-p)
-      (org-end-of-line)
-      (org-insert-item)
-	  (evil-insert-state))
-     ;; Headings/TODOs
-     ((org-at-heading-p)
-      (org-insert-heading-respect-content)
-      (when (org-entry-is-todo-p)
-        (org-todo 'nextset)) ;; matches TODO state of above line
-	  (evil-insert-state))
-     ;; Default: Just a normal newline
-     (t
-      (end-of-line)
-      (newline-and-indent)
-	  (evil-insert-state)))
-    (org-update-checkbox-count t)
-    )
-
-  ;; INSERT SUBITEM BELOW
-  ;; (ref:insert-subitem-below)
-  (defun my/org-smart-insert-subitem ()
-    "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
-    (interactive)
-    (cond
-     ;; Checkbox -> Insert a nested checkbox
-     ((org-at-item-checkbox-p)
-      (org-end-of-line)
-      (org-insert-item t)
-      (org-indent-item)
-	  (evil-insert-state))
-     ;; List -> Insert a nested list item
-     ((org-in-item-p)
-      (org-end-of-line)
-      (org-insert-item)
-      (org-indent-item)
-	  (evil-insert-state))
-     ;; On a Heading -> Insert a demoted heading at the end of content
-     ((org-at-heading-p)
-      ;; Use save-excursion to ensure we don't split the line
-      (save-excursion
-        (org-back-to-heading)
-        (move-end-of-line 1)
-        (org-insert-heading-respect-content)
-        (org-demote))
-      ;; Move point to the new heading
-      (org-end-of-subtree t t)
-      (unless (bolp) (insert "\n"))
-      (forward-line -1)
-      (goto-char (line-end-position))
-      (evil-insert-state))
-     ;; Default -> Normal behavior
-
-     (t
-      (end-of-line)
-      (newline-and-indent)
-	  (evil-insert-state)))
-    (org-update-checkbox-count t))
 
   )
 
@@ -1019,64 +902,9 @@
 (with-eval-after-load 'org
   (add-hook 'emacs-startup-hook
             (lambda ()
-              (run-at-time "0.5 sec" nil
-                           (lambda ()
+			  (run-at-time "0.5 sec" nil
+						   (lambda ()
                              (org-agenda nil "d"))))))
-
-(defun my/org-meta-left-smart ()
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaleft) (evil-shift-left (line-beginning-position) (line-end-position))))
-
-(defun my/org-meta-right-smart ()
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaright) (evil-shift-right (line-beginning-position) (line-end-position))))
-
-(defun my/org-meta-down-smart ()
-  "Move headline/item down if on one, otherwise drag the current line down."
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p))
-      (org-metadown)
-    (let ((col (current-column)))
-      (forward-line 1)
-      (transpose-lines 1)
-      (forward-line -1)
-      (move-to-column col))))
-
-(defun my/org-meta-up-smart ()
-  "Move headline/item up if on one, otherwise drag the current line up."
-  (interactive)
-  (if (or (org-at-heading-p) (org-at-item-p))
-      (org-metaup)
-    (let ((col (current-column)))
-      (transpose-lines 1)
-      (forward-line -2)
-      (move-to-column col))))
-
-(defun my/evil-org-delete-heading-dwim (count)
-  "Delete subtree if heading is folded (linewise); otherwise delete line normally."
-  (interactive "p")
-  (cond
-   ;; CASE 1: Folded Heading -> Delete Subtree Linewise
-   ((and (org-at-heading-p)
-         (or (and (fboundp 'org-fold-folded-p)
-                  (org-fold-folded-p))
-             (outline-invisible-p (line-end-position))))
-    (let ((beg (line-beginning-position))
-          (end (save-excursion
-                 ;; 't t' forces it to move to the start of the NEXT heading
-                 (org-end-of-subtree t t)
-                 (point))))
-      ;; If at End of Buffer, ensure we claim the final newline so no gap remains
-      (when (eobp) (setq end (point-max)))
-
-      (evil-delete beg end 'line)))
-
-   ;; CASE 2: Everything else -> Standard Evil Line Delete
-   (t
-    (evil-delete (line-beginning-position)
-                 (line-beginning-position (1+ count))
-                 'line
-                 ?\"))))
 
 (use-package evil-org
   :ensure t
@@ -1352,6 +1180,175 @@
   (setq org-download-screenshot-method "xclip")     ;; "scrot", "gnome-screenshot", or "xclip" (Linux)
   ;; On Mac, it uses "pngpaste" automatically if installed
   )
+
+(defun my/org-meta-left-smart ()
+  (interactive)
+  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaleft) (evil-shift-left (line-beginning-position) (line-end-position))))
+
+(defun my/org-meta-right-smart ()
+  (interactive)
+  (if (or (org-at-heading-p) (org-at-item-p)) (org-metaright) (evil-shift-right (line-beginning-position) (line-end-position))))
+
+(defun my/org-meta-down-smart ()
+  "Move headline/item down if on one, otherwise drag the current line down."
+  (interactive)
+  (if (or (org-at-heading-p) (org-at-item-p))
+      (org-metadown)
+    (let ((col (current-column)))
+      (forward-line 1)
+      (transpose-lines 1)
+      (forward-line -1)
+      (move-to-column col))))
+
+(defun my/org-meta-up-smart ()
+  "Move headline/item up if on one, otherwise drag the current line up."
+  (interactive)
+  (if (or (org-at-heading-p) (org-at-item-p))
+      (org-metaup)
+    (let ((col (current-column)))
+      (transpose-lines 1)
+      (forward-line -2)
+      (move-to-column col))))
+
+(defun my/evil-org-delete-heading-dwim (count)
+  "Delete subtree if heading is folded (linewise); otherwise delete line normally."
+  (interactive "p")
+  (cond
+   ;; CASE 1: Folded Heading -> Delete Subtree Linewise
+   ((and (org-at-heading-p)
+         (or (and (fboundp 'org-fold-folded-p)
+                  (org-fold-folded-p))
+             (outline-invisible-p (line-end-position))))
+    (let ((beg (line-beginning-position))
+          (end (save-excursion
+                 ;; 't t' forces it to move to the start of the NEXT heading
+                 (org-end-of-subtree t t)
+                 (point))))
+      ;; If at End of Buffer, ensure we claim the final newline so no gap remains
+      (when (eobp) (setq end (point-max)))
+
+      (evil-delete beg end 'line)))
+   ;; CASE 2: Everything else -> Standard Evil Line Delete
+   (t
+    (evil-delete (line-beginning-position)
+                 (line-beginning-position (1+ count))
+                 'line
+                 ?\"))))
+
+;; (ref:insert-item-below)
+(defun my/org-smart-insert-item-below ()
+  "Insert a new list item, checkbox, table row, or headline below the current line."
+  (interactive)
+  ;; (org-back-to-heading)
+  (cond
+   ;; Tables
+   ((org-at-table-p)
+    (org-table-insert-row 'below))
+   ;; Checkboxes
+   ((org-at-item-checkbox-p)
+    (org-end-of-line)
+    (org-insert-item t) ;; The 't' argument forces a checkbox
+	(evil-insert-state))
+   ;; Lists
+   ((org-in-item-p)
+    (org-end-of-line)
+    (org-insert-item)
+	(evil-insert-state))
+   ;; Headings/TODOs
+   ((org-at-heading-p)
+    (org-insert-heading-respect-content)
+    (when (org-entry-is-todo-p)
+      (org-todo 'nextset)) ;; matches TODO state of above line
+	(evil-insert-state))
+   ;; Default: Just a normal newline
+   (t
+    (end-of-line)
+    (newline-and-indent)
+	(evil-insert-state)))
+  (org-update-checkbox-count t)
+  )
+
+;; INSERT SUBITEM BELOW
+;; (ref:insert-subitem-below)
+(defun my/org-smart-insert-subitem ()
+  "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
+  (interactive)
+  (cond
+   ;; Checkbox -> Insert a nested checkbox
+   ((org-at-item-checkbox-p)
+    (org-end-of-line)
+    (org-insert-item t)
+    (org-indent-item)
+	(evil-insert-state))
+   ;; List -> Insert a nested list item
+   ((org-in-item-p)
+    (org-end-of-line)
+    (org-insert-item)
+    (org-indent-item)
+	(evil-insert-state))
+   ;; On a Heading -> Insert a demoted heading at the end of content
+   ((org-at-heading-p)
+    ;; Use save-excursion to ensure we don't split the line
+    (save-excursion
+      (org-back-to-heading)
+      (move-end-of-line 1)
+      (org-insert-heading-respect-content)
+      (org-demote))
+    ;; Move point to the new heading
+    (org-end-of-subtree t t)
+    (unless (bolp) (insert "\n"))
+    (forward-line -1)
+    (goto-char (line-end-position))
+    (evil-insert-state))
+   ;; Default -> Normal behavior
+
+   (t
+    (end-of-line)
+    (newline-and-indent)
+	(evil-insert-state)))
+  (org-update-checkbox-count t))
+
+;; (ref:insert-parent-heading)
+(defun my/org-insert-parent-heading-below ()
+  "Insert a new heading at the appropriate level.
+    If on a heading line, go up one level and insert a sibling.
+    If in content (checkbox, text, etc.), insert a sibling of current heading."
+  (interactive)
+  (if (org-at-heading-p)
+	  ;; We're ON a heading line - go up one level
+	  (progn
+        (org-back-to-heading)
+        (when (> (org-current-level) 1)  ; Only go up if not already at level 1
+		  (org-up-heading-safe))
+        (org-insert-heading-respect-content)
+        (evil-insert-state))
+    ;; We're in content - insert sibling of current heading
+    (progn
+	  (org-back-to-heading)
+	  (org-insert-heading-respect-content)
+	  (evil-insert-state))))
+
+;; (ref:ret-dwim)
+(defun my/org-return-dwim ()
+  "Context-aware RET for Org (normal mode only)."
+  (interactive)
+  (cond
+   ;; Toggle checkbox
+   ((org-at-item-checkbox-p)
+    (org-toggle-checkbox))
+   ;; Follow links
+   ((and org-return-follows-link
+         (org-in-regexp org-link-any-re))
+    (org-open-at-point))
+   ;; Tables
+   ((org-at-table-p)
+    (org-table-next-row))
+   ;; Headings
+   ((org-at-heading-p)
+    (org-cycle))
+   ;; Fallback
+   (t
+    (evil-next-line))))
 
 (use-package projectile
   :config
