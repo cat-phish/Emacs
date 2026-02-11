@@ -396,9 +396,8 @@
       (org-roam-ui-mode 1))
     (let ((browse-url-browser-function
            (lambda (url &optional _)
-             (shell-command (concat "firefox --new-window " url)))))
+             (shell-command (concat "firefox --kiosk --new-window " url)))))
       (org-roam-ui-open)))
-
   )
 
 ;; PDF View Keys
@@ -756,6 +755,7 @@
 											  ("hld" "HOLD")
 											  ("rdy" "READY")
 											  ("actv" "ACTIVE")
+											  ("mtng" "MEETING")
 											  ("dn" "DONE")
 											  ("cncld" "CANCELED")
 											  ("chk" "- [ ]")
@@ -789,7 +789,7 @@
   ;; TODO KEYWORDS
   ;; (ref:todo-keywords)
   (org-todo-keywords
-   '((sequence "TODO(t)" "ASSIGNMENT(a)" "BILL(b)" "CHORE(c)" "NEXT(n)" "PLANNING(P)" "REVIEW(V)" "HOLD(H)" "READY(R)" "ACTIVE(A)" "|" "DONE(d!)" "CANCELED(C!)")))
+   '((sequence "TODO(t)" "ASSIGNMENT(a)" "BILL(b)" "CHORE(c)" "MEETING(m)" "NEXT(n)" "PLANNING(P)" "REVIEW(V)" "HOLD(H)" "READY(R)" "ACTIVE(A)" "|" "DONE(d!)" "CANCELED(C!)")))
   ;; Note these also have to be set matching in Org-Modern
   (org-todo-keyword-faces
    '(("TODO"     . (:foreground "#282c34" :background "#98be65" :weight bold))
@@ -802,6 +802,7 @@
      ("ASSIGNMENT"  . (:foreground "#282c34" :background "#e5404e" :weight bold))
      ("BILL"  . (:foreground "#282c34" :background "#fc830a" :weight bold))
      ("CHORE"  . (:foreground "#282c34" :background "#e2b93d" :weight bold))
+     ("MEETING"  . (:foreground "#282c34" :background "#f52dfc" :weight bold))
      ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
      ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
 
@@ -1271,6 +1272,7 @@
      ("ACTIVE"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
      ("REVIEW"   . (:foreground "#282c34" :background "#e0a96d" :weight bold))
      ("HOLD"     . (:foreground "#282c34" :background "#e6d96c" :weight bold))
+     ("MEETING"  . (:foreground "#282c34" :background "#f52dfc" :weight bold))
      ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
      ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
 
