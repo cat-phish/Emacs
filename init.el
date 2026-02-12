@@ -1372,7 +1372,6 @@
 
 (use-package org-roam-ui
   :after org-roam
-  :custom
   :config
   (setq org-roam-ui-sync-theme t
         org-roam-ui-follow t

@@ -109,6 +109,12 @@
 										;====================================================================;
 #+end_src
 ** About This Config
+If you'r viewing the README on Github, source code blocks are omitted.
+If you would like to view the full Org file that gets tangled into the
+init.el you can view it here:
+
+[[file:init.org][View the init.org source]]
+
 This is my personal Org Mode first Emacs config. It is built on top of
 the excellent Kickstart.emacs project by MiniApollo. Although this
 config is set up for basic coding operations, I do not personally write
@@ -1847,7 +1853,6 @@ Org-tempo allows for '<s' followed by TAB to expand to a begin_src tag.
 #+begin_src emacs-lisp
 (use-package org-roam-ui
   :after org-roam
-  :custom
   :config
   (setq org-roam-ui-sync-theme t
         org-roam-ui-follow t

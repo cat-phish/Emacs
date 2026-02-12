@@ -5,6 +5,12 @@
 
 ## About This Config
 
+If you'r viewing the README on Github, source code blocks are omitted.
+If you would like to view the full Org file that gets tangled into the
+init.el you can view it here:
+
+[View the init.org source](init.md)
+
 This is my personal Org Mode first Emacs config. It is built on top of
 the excellent Kickstart.emacs project by MiniApollo. Although this
 config is set up for basic coding operations, I do not personally write
