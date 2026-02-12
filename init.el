@@ -1,22 +1,51 @@
 ;; The default is 800 kilobytes. Measured in bytes.
 (setq gc-cons-threshold (* 50 1000 1000))
 
+;; (defun start/org-babel-tangle-config ()
+;;   "Automatically tangle and refresh quickstart, strictly suppressing warnings."
+;;   (interactive)
+;;   (when (string-equal (file-name-directory (buffer-file-name))
+;; 					  (expand-file-name user-emacs-directory))
+;; 	(let ((org-confirm-babel-evaluate nil)
+;; 		  ;; Suppress all byte-compile and native-comp warnings temporarily
+;; 		  (byte-compile-warnings nil)
+;; 		  (warning-minimum-level :error)
+;; 		  ;; Prevent the buffer from popping up
+;; 		  (display-buffer-alist '(("\\*Compile-Log\\*" (display-buffer-no-window))
+;; 								  ("\\*Warnings\\*" (display-buffer-no-window)))))
+;; 	  (org-babel-tangle)
+;; 	  ;; Use 'quietly' if your Emacs version supports it, otherwise refresh
+;; 	  (package-quickstart-refresh)
+;; 	  (message "Config tangled and package-quickstart refreshed!"))))
+;; (setq native-comp-async-report-warnings-errors 'silent) ;; For Emacs 28+
+;; (setq byte-compile-warnings '(not free-vars unresolved)) ;; Suppress common nagging warnings
+;; (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'start/org-babel-tangle-config)))
+(setq org-export-with-broken-links t)
 (defun start/org-babel-tangle-config ()
-  "Automatically tangle and refresh quickstart, strictly suppressing warnings."
+  "Automatically tangle and export to README.md, strictly suppressing warnings."
   (interactive)
   (when (string-equal (file-name-directory (buffer-file-name))
-					  (expand-file-name user-emacs-directory))
-	(let ((org-confirm-babel-evaluate nil)
-		  ;; Suppress all byte-compile and native-comp warnings temporarily
-		  (byte-compile-warnings nil)
-		  (warning-minimum-level :error)
-		  ;; Prevent the buffer from popping up
-		  (display-buffer-alist '(("\\*Compile-Log\\*" (display-buffer-no-window))
-								  ("\\*Warnings\\*" (display-buffer-no-window)))))
-	  (org-babel-tangle)
-	  ;; Use 'quietly' if your Emacs version supports it, otherwise refresh
-	  (package-quickstart-refresh)
-	  (message "Config tangled and package-quickstart refreshed!"))))
+                      (expand-file-name user-emacs-directory))
+    (let ((org-confirm-babel-evaluate nil)
+          ;; Suppress all byte-compile and native-comp warnings temporarily
+          (byte-compile-warnings nil)
+          (warning-minimum-level :error)
+          ;; Prevent the buffer from popping up
+          (display-buffer-alist '(("\\*Compile-Log\\*" (display-buffer-no-window))
+                                  ("\\*Warnings\\*" (display-buffer-no-window)))))
+      ;; Tangle the config
+      (org-babel-tangle)
+
+      ;; Export to README.md (without source blocks)
+      (let ((org-export-with-toc nil)  ;; Optional: disable table of contents
+            (org-export-with-author nil)  ;; Optional: disable author
+            (org-export-with-date nil))   ;; Optional: disable date
+        (org-md-export-to-markdown))
+
+      ;; Refresh package quickstart
+      (package-quickstart-refresh)
+      (message "Config tangled, README.md exported, and package-quickstart refreshed!"))))
+
 (setq native-comp-async-report-warnings-errors 'silent) ;; For Emacs 28+
 (setq byte-compile-warnings '(not free-vars unresolved)) ;; Suppress common nagging warnings
 (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'start/org-babel-tangle-config)))

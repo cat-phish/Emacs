@@ -1,12 +1,14 @@
 #+Title: My Emacs Config
 #+Author: cat-phish
 #+Description: A starting point for Gnu Emacs with good defaults and packages that most people may want to use.
-#+PROPERTY: header-args:emacs-lisp :tangle ./init.el :mkdirp yes
-#+Startup: showeverything
-#+Options: toc:2
+#+PROPERTY: header-args:emacs-lisp :tangle ./init.el :mkdirp yes :exports none
+#+Startup: overview nologdone nologrepeat noagenda
+#+Options: toc:nil author:nil date:nil
+#+EXPORT_FILE_NAME: README.md
+#+EXPORT_EXCLUDE_TAGS: noexport
 
-* Table of Contents                                                     :toc:
-- [[#introduction][Introduction]]
+* Table of Contents                                                     :toc:noexport:
+- [[#introductio][Introductio]]
     - [[#about-this-config][About This Config]]
     - [[#first-timer-tips][First Timer Tips]]
 - [[#core-setup--performance][Core Setup & Performance]]
@@ -84,7 +86,7 @@
     - [[#ws-butler-remove-whitespace][Ws-butler (Remove Whitespace)]]
 - [[#runtime-performance][Runtime Performance]]
 
-* Introduction
+* Introductio
 #+begin_src emacs-lisp :tangle no
 										;====================================================================;
 										;=================== READ THIS BEFORE CONTINUING ====================;
@@ -243,27 +245,55 @@ This snippet adds a hook to org-mode buffers so that start/org-babel-tangle-conf
 This function checks to see if the file being saved is the init.org file you’re looking at right now, and if so,
 automatically exports the configuration here to the associated output files.
 #+begin_src emacs-lisp
+;; (defun start/org-babel-tangle-config ()
+;;   "Automatically tangle and refresh quickstart, strictly suppressing warnings."
+;;   (interactive)
+;;   (when (string-equal (file-name-directory (buffer-file-name))
+;; 					  (expand-file-name user-emacs-directory))
+;; 	(let ((org-confirm-babel-evaluate nil)
+;; 		  ;; Suppress all byte-compile and native-comp warnings temporarily
+;; 		  (byte-compile-warnings nil)
+;; 		  (warning-minimum-level :error)
+;; 		  ;; Prevent the buffer from popping up
+;; 		  (display-buffer-alist '(("\\*Compile-Log\\*" (display-buffer-no-window))
+;; 								  ("\\*Warnings\\*" (display-buffer-no-window)))))
+;; 	  (org-babel-tangle)
+;; 	  ;; Use 'quietly' if your Emacs version supports it, otherwise refresh
+;; 	  (package-quickstart-refresh)
+;; 	  (message "Config tangled and package-quickstart refreshed!"))))
+;; (setq native-comp-async-report-warnings-errors 'silent) ;; For Emacs 28+
+;; (setq byte-compile-warnings '(not free-vars unresolved)) ;; Suppress common nagging warnings
+;; (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'start/org-babel-tangle-config)))
+(setq org-export-with-broken-links t)
 (defun start/org-babel-tangle-config ()
-  "Automatically tangle and refresh quickstart, strictly suppressing warnings."
+  "Automatically tangle and export to README.md, strictly suppressing warnings."
   (interactive)
   (when (string-equal (file-name-directory (buffer-file-name))
-					  (expand-file-name user-emacs-directory))
-	(let ((org-confirm-babel-evaluate nil)
-		  ;; Suppress all byte-compile and native-comp warnings temporarily
-		  (byte-compile-warnings nil)
-		  (warning-minimum-level :error)
-		  ;; Prevent the buffer from popping up
-		  (display-buffer-alist '(("\\*Compile-Log\\*" (display-buffer-no-window))
-								  ("\\*Warnings\\*" (display-buffer-no-window)))))
-	  (org-babel-tangle)
-	  ;; Use 'quietly' if your Emacs version supports it, otherwise refresh
-	  (package-quickstart-refresh)
-	  (message "Config tangled and package-quickstart refreshed!"))))
+                      (expand-file-name user-emacs-directory))
+    (let ((org-confirm-babel-evaluate nil)
+          ;; Suppress all byte-compile and native-comp warnings temporarily
+          (byte-compile-warnings nil)
+          (warning-minimum-level :error)
+          ;; Prevent the buffer from popping up
+          (display-buffer-alist '(("\\*Compile-Log\\*" (display-buffer-no-window))
+                                  ("\\*Warnings\\*" (display-buffer-no-window)))))
+      ;; Tangle the config
+      (org-babel-tangle)
+
+      ;; Export to README.md (without source blocks)
+      (let ((org-export-with-toc nil)  ;; Optional: disable table of contents
+            (org-export-with-author nil)  ;; Optional: disable author
+            (org-export-with-date nil))   ;; Optional: disable date
+        (org-md-export-to-markdown))
+
+      ;; Refresh package quickstart
+      (package-quickstart-refresh)
+      (message "Config tangled, README.md exported, and package-quickstart refreshed!"))))
+
 (setq native-comp-async-report-warnings-errors 'silent) ;; For Emacs 28+
 (setq byte-compile-warnings '(not free-vars unresolved)) ;; Suppress common nagging warnings
 (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'start/org-babel-tangle-config)))
 #+end_src
-
 ** Show startup time
 #+begin_src emacs-lisp
 (defun start/display-startup-time ()
@@ -431,7 +461,6 @@ If you plan to use a different package manager, remember to remove this section 
          )
   )
 #+end_src
-
 * Keybindings (Load First)
 Packages that we want to load first so we have them as soon as possible if something breaks.
 ** Evil Mode
@@ -2026,7 +2055,6 @@ The directory name can be anything, just add it to the load-path.
 #+begin_src emacs-lisp
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 #+end_src
-
 ** Sourcing the files
 To use the elisp files we need to load it.
 Notes:
