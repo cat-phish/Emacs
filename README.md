@@ -11,6 +11,8 @@ init.el you can view it here:
 
 This config is maintained in [View init.org](./init.md) and tangles to `init.el` automatically.
 
+[View init.org](init.org)
+
 This is my personal Org Mode first Emacs config. It is built on top of
 the excellent Kickstart.emacs project by MiniApollo. Although this
 config is set up for basic coding operations, I do not personally write
