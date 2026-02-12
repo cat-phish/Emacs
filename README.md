@@ -1,6 +1,6 @@
 
 
-# Introductio
+# Introduction
 
 
 ## About This Config
@@ -427,20 +427,6 @@ Org-tempo allows for '<s' followed by TAB to expand to a begin<sub>src</sub> tag
 
 
 ## Org-Roam-UI
-
-\#+begin<sub>src</sub> emacs-lisp
-(use-package org-roam-ui
-  :after org-roam
-  :custom
-  :config
-  (setq org-roam-ui-sync-theme t
-        org-roam-ui-follow t
-        org-roam-ui-update-on-save t
-        org-roam-ui-open-on-start t)
- )
-(with-eval-after-load 'org-roam-ui
-)
-\#+end<sub>src</sub>>
 
 
 ## Org-Download
