@@ -9,7 +9,7 @@ If you'r viewing the README on Github, source code blocks are omitted.
 If you would like to view the full Org file that gets tangled into the
 init.el you can view it here:
 
-This config is maintained in [init.org](init.md) and tangles to `init.el` automatically.
+This config is maintained in and tangles to `init.el` automatically.
 
 This is my personal Org Mode first Emacs config. It is built on top of
 the excellent Kickstart.emacs project by MiniApollo. Although this
