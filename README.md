@@ -5,11 +5,9 @@
 
 ## About This Config
 
-If you'r viewing the README on Github, source code blocks are omitted.
+If you're viewing the README on Github, source code blocks are omitted.
 If you would like to view the full Org file that gets tangled into the
 init.el you can view it here:
-
-This config is maintained in [View init.org](./init.md) and tangles to `init.el` automatically.
 
 [View init.org](init.org)
 
