@@ -513,6 +513,7 @@
 (use-package doom-modeline
   :custom
   (doom-modeline-height 25) ;; Set modeline height
+  (column-number-mode t)     ;; Enable column number display
   :hook (after-init . doom-modeline-mode))
 
 (use-package nerd-icons
@@ -656,7 +657,7 @@
 ;; INSERT SUBITEM BELOW
 ;; (ref:insert-subitem-below)
 (defun my/org-smart-insert-subitem ()
-  "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
+  "Insert a nested item (sub-heading, sub-checkbox, or sub-list) below."
   (interactive)
   (cond
    ;; Checkbox -> Insert a nested checkbox

@@ -28,7 +28,7 @@
     - [[#doom-modeline][Doom Modeline]]
     - [[#nerd-icons][Nerd Icons]]
     - [[#dashboard][Dashboard]]
-- [[#helper-functions][Helper Functions]]
+- [[#dwim-helper-functions][DWIM Helper Functions]]
     - [[#lineheading-manipulation][Line/Heading Manipulation]]
     - [[#smart-delete-lineheading-with-contents][Smart Delete Line/Heading with Contents]]
     - [[#headinglist-insertion][Heading/List Insertion]]
@@ -118,19 +118,18 @@ init.el you can view it here:
 #+end_export
 
 This is my personal Org Mode first Emacs config. It is built on top of
-the excellent Kickstart.emacs project by MiniApollo.
-https://github.com/MiniApollo/kickstart.emacs
+the excellent [[https://github.com/MiniApollo/kickstart.emacs][Kickstart.emacs]] project by MiniApollo.
 
 Although this config is set up for basic coding operations, I do not
 personally write code in Emacs, as such, there are very few
 optimizations in this config for that.
 
-The goal for this config was to mirror my personal Neovim config as
+The goal for this config was to mirror my personal [[https://github.com/cat-phish/Neovim][Neovim config]] as
 closely as possible, while adding in some simple QOL functions and
 mappings to make my Org Mode experience a little more intuitive and
 seamless.
 
-This config is heavily inspired by Doom Emacs. However, for my use case,
+This config is heavily inspired by [[https://github.com/doomemacs/doomemacs][Doom Emacs]]. However, for my use case,
 I found that Doom was overly comlicated for my use case, and generally
 I tend to not prefer that level of abstraction in my configs. I did try
 to implement my favorite aspects from Doom, while keeping things as
@@ -327,7 +326,7 @@ Alternative package managers (straight.el, elpaca, etc.) are useful if you want:
 - Async support
 
 If you are interested in using other package managers, check out their git repositories.
-To learn more about why something like [[https://github.com/doomemacs/doomemacs/blob/master/docs/faq.org#why-does-doom-use-straightel-and-not-packageel][doomemacs uses]] straight.el not package.el.
+To learn more about why something like [[https://github.com/doomemacs/doomemacs/blob/master/docs/faq.org#why-does-doom-use-straightel-and-not-packageel][Doom Emacs]] uses straight.el not package.el.
 
 In my experience Package.el is not slow and gets the job done.
 
@@ -884,6 +883,9 @@ With Emacs version 29, true transparency has been added.
 #+end_src
 
 ** Setting Fonts
+Here we set the default font size. We also have a section here that adjusts
+custom font sizing based on Hostname, so that we can have a unified config
+per machine.
 #+begin_src emacs-lisp
 (set-face-attribute 'default nil
                     ;; :font "JetBrains Mono" ;; Set your favorite type of font or download JetBrains Mono
@@ -910,6 +912,7 @@ le A fancy, fast and customizable mode-line.
 (use-package doom-modeline
   :custom
   (doom-modeline-height 25) ;; Set modeline height
+  (column-number-mode t)     ;; Enable column number display
   :hook (after-init . doom-modeline-mode))
 #+end_src
 
@@ -930,6 +933,7 @@ Also Doom modeline requires nerd icons.
   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 #+end_src
 ** Dashboard
+A simple dashboard that is shown when opening emacs with no file argument.
 #+begin_src emacs-lisp
 (use-package nerd-icons
   :if (display-graphic-p)
@@ -974,8 +978,11 @@ Also Doom modeline requires nerd icons.
   (dashboard-setup-startup-hook))
 #+end_src
 
-* Helper Functions
+* DWIM Helper Functions
 ** Line/Heading Manipulation
+These functions allow us to manipulate lines and Org objects like headings
+with a single keybinding. You can move a single line up/down, or and entire
+heading with it's contents.
 #+begin_src emacs-lisp
 (defun my/org-meta-left-smart ()
   (interactive)
@@ -1038,6 +1045,8 @@ heading, in which case it will delete the heading and it's contents.
 #+end_src
 ** Heading/List Insertion
 *** Insert Item Below
+This function allows us to insert another (empty) version of the current item
+below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
 #+begin_src emacs-lisp
 ;; (ref:insert-item-below)
 (defun my/org-smart-insert-item-below ()
@@ -1073,11 +1082,13 @@ heading, in which case it will delete the heading and it's contents.
   )
 #+end_src
 *** Insert Subitem Below
+This function allows us to insert another (empty) sub-version of the current
+item below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
 #+begin_src emacs-lisp
 ;; INSERT SUBITEM BELOW
 ;; (ref:insert-subitem-below)
 (defun my/org-smart-insert-subitem ()
-  "Insert a nested item (subheading, sub-checkbox, or sub-list) below."
+  "Insert a nested item (sub-heading, sub-checkbox, or sub-list) below."
   (interactive)
   (cond
    ;; Checkbox -> Insert a nested checkbox
@@ -1115,6 +1126,8 @@ heading, in which case it will delete the heading and it's contents.
   (org-update-checkbox-count t))
 #+end_src
 *** Insert Parent Heading Below
+This function allows us to insert another (empty) parent-version of the current
+item below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
 #+begin_src emacs-lisp
 ;; (ref:insert-parent-heading)
 (defun my/org-insert-parent-heading-below ()
@@ -1137,6 +1150,8 @@ heading, in which case it will delete the heading and it's contents.
 	  (evil-insert-state))))
 #+end_src
 ** Smart RET Key
+This function enables smart behavior when pressing the RET key. Handles tables
+checkboxes, links, headings, and default line behavior.
 #+begin_src emacs-lisp
 ;; (ref:ret-dwim)
 (defun my/org-return-dwim ()

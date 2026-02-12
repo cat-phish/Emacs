@@ -12,19 +12,18 @@ init.el you can view it here:
 [View init.org](init.org)
 
 This is my personal Org Mode first Emacs config. It is built on top of
-the excellent Kickstart.emacs project by MiniApollo.
-<https://github.com/MiniApollo/kickstart.emacs>
+the excellent [Kickstart.emacs](https://github.com/MiniApollo/kickstart.emacs) project by MiniApollo.
 
 Although this config is set up for basic coding operations, I do not
 personally write code in Emacs, as such, there are very few
 optimizations in this config for that.
 
-The goal for this config was to mirror my personal Neovim config as
+The goal for this config was to mirror my personal [Neovim config](https://github.com/cat-phish/Neovim) as
 closely as possible, while adding in some simple QOL functions and
 mappings to make my Org Mode experience a little more intuitive and
 seamless.
 
-This config is heavily inspired by Doom Emacs. However, for my use case,
+This config is heavily inspired by [Doom Emacs](https://github.com/doomemacs/doomemacs). However, for my use case,
 I found that Doom was overly comlicated for my use case, and generally
 I tend to not prefer that level of abstraction in my configs. I did try
 to implement my favorite aspects from Doom, while keeping things as
@@ -188,7 +187,7 @@ Alternative package managers (straight.el, elpaca, etc.) are useful if you want:
 -   Async support
 
 If you are interested in using other package managers, check out their git repositories.
-To learn more about why something like [doomemacs uses](https://github.com/doomemacs/doomemacs/blob/master/docs/faq.org#why-does-doom-use-straightel-and-not-packageel) straight.el not package.el.
+To learn more about why something like [Doom Emacs](https://github.com/doomemacs/doomemacs/blob/master/docs/faq.org#why-does-doom-use-straightel-and-not-packageel) uses straight.el not package.el.
 
 In my experience Package.el is not slow and gets the job done.
 
@@ -306,6 +305,10 @@ With Emacs version 29, true transparency has been added.
 
 ## Setting Fonts
 
+Here we set the default font size. We also have a section here that adjusts
+custom font sizing based on Hostname, so that we can have a unified config
+per machine.
+
 
 ## Doom Modeline
 
@@ -323,11 +326,17 @@ Also Doom modeline requires nerd icons.
 
 ## Dashboard
 
+A simple dashboard that is shown when opening emacs with no file argument.
 
-# Helper Functions
+
+# DWIM Helper Functions
 
 
 ## Line/Heading Manipulation
+
+These functions allow us to manipulate lines and Org objects like headings
+with a single keybinding. You can move a single line up/down, or and entire
+heading with it's contents.
 
 
 ## Smart Delete Line/Heading with Contents
@@ -341,14 +350,26 @@ heading, in which case it will delete the heading and it's contents.
 
 ### Insert Item Below
 
+This function allows us to insert another (empty) version of the current item
+below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
+
 
 ### Insert Subitem Below
+
+This function allows us to insert another (empty) sub-version of the current
+item below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
 
 
 ### Insert Parent Heading Below
 
+This function allows us to insert another (empty) parent-version of the current
+item below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
+
 
 ## Smart RET Key
+
+This function enables smart behavior when pressing the RET key. Handles tables
+checkboxes, links, headings, and default line behavior.
 
 
 # Org Mode
