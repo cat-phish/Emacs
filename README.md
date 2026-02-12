@@ -12,10 +12,12 @@ init.el you can view it here:
 [View init.org](init.org)
 
 This is my personal Org Mode first Emacs config. It is built on top of
-the excellent Kickstart.emacs project by MiniApollo. Although this
-config is set up for basic coding operations, I do not personally write
-code in Emacs, as such, there are very few optimizations in this config
-for that.
+the excellent Kickstart.emacs project by MiniApollo.
+<https://github.com/MiniApollo/kickstart.emacs>
+
+Although this config is set up for basic coding operations, I do not
+personally write code in Emacs, as such, there are very few
+optimizations in this config for that.
 
 The goal for this config was to mirror my personal Neovim config as
 closely as possible, while adding in some simple QOL functions and
