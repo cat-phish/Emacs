@@ -305,6 +305,18 @@
     ;; "n g" '(org-roam-ui-mode :wk "Graph UI")
     "n u" '(my/org-roam-ui-mode-custom-browser :wk "Graph UI")
     )
+
+  (start/leader-keys
+	"y"   '(:ignore t :wk "+yank")
+	"y c" '(copy-region-as-kill :wk "Yank to clipboard")
+	"y b" '( (lambda ()
+               (interactive)
+               (kill-new (buffer-string))
+               (message "Entire buffer yanked to clipboard."))
+			 :wk "Yank entire buffer")
+	"y h" '(my/org-yank-entire-subtree :wk "Yank heading + subtree")
+	)
+
   (start/leader-keys
     :major-modes 'org-mode
     ;;"o" '(:ignore t :wk "Org Local Leader")
@@ -735,6 +747,17 @@
    ;; Fallback
    (t
     (evil-next-line))))
+
+(defun my/org-yank-entire-subtree ()
+  "Copy the current Org subtree (heading and all sub-contents) to the kill ring."
+  (interactive)
+  (save-excursion
+    (condition-case nil
+        (progn
+          (org-back-to-heading t)
+          (org-copy-subtree)
+          (message "Subtree copied to kill ring."))
+      (error (message "Point is not in an Org subtree.")))))
 
 (use-package org
   :ensure nil

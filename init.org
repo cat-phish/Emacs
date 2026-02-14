@@ -33,6 +33,7 @@
     - [[#smart-delete-lineheading-with-contents][Smart Delete Line/Heading with Contents]]
     - [[#headinglist-insertion][Heading/List Insertion]]
     - [[#smart-ret-key][Smart RET Key]]
+    - [[#yank-entire-subtree][Yank Entire Subtree]]
 - [[#org-mode][Org Mode]]
     - [[#org-mode-overview][Org Mode Overview]]
     - [[#org-mode-config][Org Mode Config]]
@@ -671,6 +672,18 @@ Note: The Leader key is what you will press when you want to access your keybind
     ;; "n g" '(org-roam-ui-mode :wk "Graph UI")
     "n u" '(my/org-roam-ui-mode-custom-browser :wk "Graph UI")
     )
+
+  (start/leader-keys
+	"y"   '(:ignore t :wk "+yank")
+	"y c" '(copy-region-as-kill :wk "Yank to clipboard")
+	"y b" '( (lambda ()
+               (interactive)
+               (kill-new (buffer-string))
+               (message "Entire buffer yanked to clipboard."))
+			 :wk "Yank entire buffer")
+	"y h" '(my/org-yank-entire-subtree :wk "Yank heading + subtree")
+	)
+
   (start/leader-keys
     :major-modes 'org-mode
     ;;"o" '(:ignore t :wk "Org Local Leader")
@@ -1174,6 +1187,19 @@ checkboxes, links, headings, and default line behavior.
    ;; Fallback
    (t
     (evil-next-line))))
+#+end_src
+** Yank Entire Subtree
+#+begin_src emacs-lisp
+(defun my/org-yank-entire-subtree ()
+  "Copy the current Org subtree (heading and all sub-contents) to the kill ring."
+  (interactive)
+  (save-excursion
+    (condition-case nil
+        (progn
+          (org-back-to-heading t)
+          (org-copy-subtree)
+          (message "Subtree copied to kill ring."))
+      (error (message "Point is not in an Org subtree.")))))
 #+end_src
 * Org Mode
 ** Org Mode Overview
