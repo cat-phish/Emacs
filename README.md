@@ -418,6 +418,8 @@ and TODOs.
 
 ## Org Mode Config
 
+This is the main config block for Org-Mode, so it's pretty dense.
+
 
 ## Evil-Org-Mode
 

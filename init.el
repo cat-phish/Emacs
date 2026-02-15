@@ -1504,38 +1504,28 @@
   :init (global-diff-hl-mode))
 
 (use-package corfu
-  ;; Optional customizations
   :custom
-  (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
+  (corfu-cycle t)                ;; Enable cycling for single candidates
   (corfu-auto t)                 ;; Enable auto completion
-  (corfu-auto-trigger ".") ;; Custom trigger characters
-  (corfu-auto-prefix 2)          ;; Minimum length of prefix for auto completion.
-  (corfu-popupinfo-mode t)       ;; Enable popup information
-  (corfu-popupinfo-delay 0.5)    ;; Lower popup info delay to 0.5 seconds from 2 seconds
-  (corfu-separator ?\s)          ;; Orderless field separator, Use M-SPC to enter separator
-  (corfu-quit-at-boundary t)   ;; Never quit at completion boundary
-  (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
-  ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
-  ;; (corfu-scroll-margin 5)        ;; Use scroll margin
-  (completion-ignore-case t)
-  (corfu-preselect 'prompt)      ;; Focus stays on your typing, not the first result
-  (corfu-preview-current t)      ;; Preview changes in buffer as you cycle
-  (corfu-on-exact-match nil)     ;; Don't finish just because you typed the word
-
-  ;; Emacs 30 and newer: Disable Ispell completion function.
-  ;; Try `cape-dict' as an alternative.
-  (text-mode-ispell-word-completion nil)
-
-  ;; Enable indentation+completion using the TAB key.
-  ;; `completion-at-point' is often bound to M-TAB.
-  (tab-always-indent 'complete)
-
-  ;; Recommended: Enable Corfu globally.  This is recommended since Dabbrev can
-  ;; be used globally (M-/).  See also the customization variable
-  ;; `global-corfu-modes' to exclude certain modes.
+  (corfu-auto-delay 0.2)
+  (corfu-auto-prefix 1)
+  (corfu-separator ?\s)          ;; Orderless field separator
+  (corfu-popupinfo-delay '(0.5 . 0.2))
+  (corfu-preview-current 'insert)
+  (corfu-quit-at-boundary t)
+  (corfu-quit-no-match t)
+  (corfu-preselect-first nil)
   :init
   (global-corfu-mode)
+  :config
+  (define-key corfu-map (kbd "RET") nil)
+  ;; Use TAB for cycling, default is C-n/C-p
+  (define-key corfu-map (kbd "<tab>") 'corfu-next)
+  (define-key corfu-map (kbd "<backtab>") 'corfu-previous)
+  (define-key corfu-map (kbd "TAB") 'corfu-next)
 
+  ;; Add a hook to show completion documentation in a popup
+  (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
   )
 
 (use-package nerd-icons-corfu
