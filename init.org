@@ -28,11 +28,17 @@
     - [[#doom-modeline][Doom Modeline]]
     - [[#nerd-icons][Nerd Icons]]
     - [[#dashboard][Dashboard]]
-- [[#dwim-helper-functions][DWIM Helper Functions]]
+- [[#dwim--helper-functions][DWIM & Helper Functions]]
     - [[#lineheading-manipulation][Line/Heading Manipulation]]
     - [[#smart-delete-lineheading-with-contents][Smart Delete Line/Heading with Contents]]
     - [[#headinglist-insertion][Heading/List Insertion]]
     - [[#smart-ret-key][Smart RET Key]]
+    - [[#auto-save-org-buffers-with-filter][Auto-Save Org Buffers (with filter)]]
+    - [[#auto-format-src-blocks][Auto-Format Src Blocks]]
+    - [[#refile-fixes][Refile Fixes]]
+    - [[#cyclingtoggling-todo-and-done-states][Cycling/Toggling TODO and Done States]]
+    - [[#collapse-done-entries-on-file-open][Collapse DONE Entries on File Open]]
+    - [[#hide-properties-drawers][Hide Properties Drawers]]
 - [[#org-mode][Org Mode]]
     - [[#org-mode-overview][Org Mode Overview]]
     - [[#org-mode-config][Org Mode Config]]
@@ -42,6 +48,7 @@
     - [[#org-modern][Org-Modern]]
     - [[#org-table-sticky-header][Org-Table-Sticky-Header]]
     - [[#org-super-agenda][Org-Super-Agenda]]
+    - [[#org-caldav][Org-CalDav]]
     - [[#source-code-block-tag-expansion][Source Code Block Tag Expansion]]
     - [[#org-roam][Org-Roam]]
     - [[#org-roam-ui][Org-Roam-UI]]
@@ -692,6 +699,7 @@ Note: The Leader key is what you will press when you want to access your keybind
     "o f d" '(my/org-cycle-done-entries :wk "Fold Done")
     "o f t" '(my/org-cycle-todo-entries :wk "Fold Todo")
     "o f a" '(my/org-cycle-all-todo-done-entries  :wk "Fold All Todo/Done")
+    "o f p" '(my/toggle-org-properties  :wk "Fold All Properties Drawers")
 
     ;; Clocking (Time tracking)
     "o C" '(:ignore t :wk "clock")
@@ -978,7 +986,7 @@ A simple dashboard that is shown when opening emacs with no file argument.
   (dashboard-setup-startup-hook))
 #+end_src
 
-* DWIM Helper Functions
+* DWIM & Helper Functions
 ** Line/Heading Manipulation
 These functions allow us to manipulate lines and Org objects like headings
 with a single keybinding. You can move a single line up/down, or and entire
@@ -1170,12 +1178,233 @@ checkboxes, links, headings, and default line behavior.
     (org-table-next-row))
    ;; Headings
    ((org-at-heading-p)
-    (org-cycle))
+    (org-cycle)
+    (org-cycle-hide-drawers 'subtree))
    ;; Fallback
    (t
     (evil-next-line))))
 #+end_src
+** Auto-Save Org Buffers (with filter)
+This function and timer will auto-save your Org buffers after 30 seconds of
+idle. We add a filter for this init.org file because it's set to tangle. You can
+add more matches to the filter as well.
+#+begin_src emacs-lisp
+;; (ref:auto-save)
+(defun my/org-save-all-except ()
+  "Save all Org buffers except for files matching specific strings."
+  (interactive)
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+	  (when (and (derived-mode-p 'org-mode)
+                 (buffer-file-name)
+                 (buffer-modified-p)
+				 (not
+				  ;; Exempt buffer names
+				  (string-match-p "init\\.org" (buffer-file-name))
+				  )
+				 )
+        (save-buffer)))))
+(run-with-idle-timer 30 t #'my/org-save-all-except)
+#+end_src
+** Auto-Format Src Blocks
+Indents every source block in the file on save.
+#+begin_src emacs-lisp
+;; (ref:format-src)
+(defun my/org-indent-all-src-blocks ()
+  (when (derived-mode-p 'org-mode)
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward org-babel-src-block-regexp nil t)
+        (let ((element (org-element-at-point)))
+          (when (eq (org-element-type element) 'src-block)
+            (org-babel-do-in-edit-buffer (indent-region (point-min) (point-max)))))))))
+(add-hook 'before-save-hook #'my/org-indent-all-src-blocks)
+
+#+end_src
+** Refile Fixes
+This will refile to a new heading, if it was already folded
+it will remain so, otherwise will remain unfolded. Fixes
+weird display issues after refiling as well.
+#+begin_src emacs-lisp
+;; (ref:refile-fix)
+(add-hook 'org-after-refile-insert-hook
+		  (lambda ()
+            (save-excursion
+			  (org-back-to-heading t)
+			  ;; Move to the parent heading to check its state
+			  (when (org-up-heading-safe)
+                ;; Check if the parent heading is currently folded
+                (let ((folded (save-excursion
+                                (end-of-line)
+                                (invisible-p (point)))))
+				  (when folded
+                    ;; If it was folded, re-hide the subtree we just moved
+                    ;; This fixes the 'ghost' display issue
+                    (org-back-to-heading t)
+                    (org-flag-subtree t)))))))
+#+end_src
+** Cycling/Toggling TODO and Done States
+These are used to toggle and cycle the collapse state of TODO and DONE entries.
+Toggle switches the state. Cycle will collapse all if any are expanded, if all
+are collapsed it will expand them.
+#+begin_src emacs-lisp
+;; (ref:todo-cycle)
+(defun my/org-toggle-todo-entries ()
+  "Cycle visibility for all active TODO entries (non-DONE states)."
+  (interactive)
+  (org-map-entries
+   (lambda ()
+     (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
+       (when is-todo
+         (if (outline-invisible-p (line-end-position))
+             (outline-show-subtree)
+           (outline-hide-subtree)))))
+   nil 'file)
+  (message "Toggled TODO entries"))
+(defun my/org-toggle-done-entries ()
+  "Cycle visibility for all DONE entries without hanging."
+  (interactive)
+  (org-map-entries
+   (lambda ()
+     (let ((is-done (member (org-get-todo-state) org-done-keywords)))
+       (when is-done
+         (if (outline-invisible-p (line-end-position))
+             (outline-show-subtree)
+           (outline-hide-subtree)))))
+   nil 'file)
+  (message "Toggled DONE entries"))
+(defun my/org-cycle-all-todo-done-entries ()
+  "Cycle visibility for all entries with TODO states (both TODO and DONE).
+                               If any are visible, hide all. If all are hidden, show all."
+  (interactive)
+  (let ((any-visible nil))
+    ;; First pass: check if any TODO-state entries are visible
+    (org-map-entries
+     (lambda ()
+       (let ((has-todo-state (org-get-todo-state)))
+         (when (and has-todo-state (not (outline-invisible-p (line-end-position))))
+           (setq any-visible t))))
+     nil 'file)
+    ;; Second pass: apply consistent action to all TODO-state entries
+    (org-map-entries
+     (lambda ()
+       (let ((has-todo-state (org-get-todo-state)))
+         (when has-todo-state
+           (if any-visible
+               (outline-hide-subtree)
+             (outline-show-subtree)))))
+     nil 'file)
+    (message (if any-visible "Hidden all TODO-state entries" "Shown all TODO-state entries"))))
+(defun my/org-cycle-todo-entries ()
+  "Cycle visibility for all TODO entries (non-DONE states).
+    If any are visible, hide all. If all are hidden, show all."
+  (interactive)
+  (let ((any-visible nil))
+    ;; First pass: check if any TODO entries are visible
+    (org-map-entries
+     (lambda ()
+       (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
+         (when (and is-todo (not (outline-invisible-p (line-end-position))))
+           (setq any-visible t))))
+     nil 'file)
+    ;; Second pass: apply consistent action to all TODO entries
+    (org-map-entries
+     (lambda ()
+       (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
+         (when is-todo
+           (if any-visible
+               (outline-hide-subtree)
+             (outline-show-subtree)))))
+     nil 'file)
+    (message (if any-visible "Hidden TODO entries" "Shown TODO entries"))))
+(defun my/org-cycle-done-entries ()
+  "Cycle visibility for all DONE entries.
+                               If any are visible, hide all. If all are hidden, show all."
+  (interactive)
+  (let ((any-visible nil))
+    ;; First pass: check if any DONE entries are visible
+    (org-map-entries
+     (lambda ()
+       (let ((is-done (member (org-get-todo-state) org-done-keywords)))
+         (when (and is-done (not (outline-invisible-p (line-end-position))))
+           (setq any-visible t))))
+     nil 'file)
+    ;; Second pass: apply consistent action to all DONE entries
+    (org-map-entries
+     (lambda ()
+       (let ((is-done (member (org-get-todo-state) org-done-keywords)))
+         (when is-done
+           (if any-visible
+               (outline-hide-subtree)
+             (outline-show-subtree)))))
+     nil 'file)
+    (message (if any-visible "Hidden DONE entries" "Shown DONE entries"))))
+#+end_src
+** Collapse DONE Entries on File Open
+#+begin_src emacs-lisp
+;; (ref:launch-done-collapse)
+(defun my/org-hide-done-entries-dynamic ()
+  "Hide all entries that are in any 'DONE' state defined in the current buffer."
+  (interactive)
+  (when (derived-mode-p 'org-mode)
+    (org-map-entries
+     (lambda ()
+       (let ((state (org-get-todo-state)))
+         (when (member state org-done-keywords)
+           (outline-hide-subtree))))
+     t 'file)))
+#+end_src
+** Hide Properties Drawers
+#+begin_src emacs-lisp
+;; Source - https://stackoverflow.com/a/17492723
+;; Posted by lawlist, modified by community. See post 'Timeline' for change history
+;; Retrieved 2026-02-15, License - CC BY-SA 3.0
+
+;; Override org-mode's drawer hiding function to actually hide drawers properly
+(with-eval-after-load 'org
+  (defun org-cycle-hide-drawers (state)
+    "Re-hide all drawers after a visibility state change."
+    (when (and (derived-mode-p 'org-mode)
+               (not (memq state '(overview folded contents))))
+      (save-excursion
+        (let* ((globalp (memq state '(contents all)))
+               (beg (if globalp
+                        (point-min)
+                      (point)))
+               (end (if globalp
+                        (point-max)
+                      (if (eq state 'children)
+                          (save-excursion
+                            (outline-next-heading)
+                            (point))
+                        (org-end-of-subtree t)))))
+          (goto-char beg)
+          (while (re-search-forward org-drawer-regexp end t)
+            (save-excursion
+              (beginning-of-line 1)
+              (when (looking-at org-drawer-regexp)
+                (let* ((start (1- (match-beginning 0)))
+                       (limit
+                        (save-excursion
+                          (outline-next-heading)
+                          (point)))
+                       (msg (format
+                             (concat
+                              "org-cycle-hide-drawers:  "
+                              "`:END:`"
+                              " line missing at position %s")
+                             (1+ start))))
+                  (if (re-search-forward "^[ \t]*:END:" limit t)
+                      (outline-flag-region start (point-at-eol) t)
+                    (user-error msg)))))))))))
+
+;; Hide all drawers when opening org files
+(add-hook 'org-mode-hook
+          (lambda ()
+            (org-cycle-hide-drawers 'all)))
+#+end_src
 * Org Mode
+
 ** Org Mode Overview
 Here's the meat and potatos of this config. The workflow is heavily inspired
 by Doom Emacs. However, it is also heavily opiniated and there are a number
@@ -1280,11 +1509,15 @@ This is the main config block for Org-Mode, so it's pretty dense.
   (org-agenda-start-with-log-mod t)
   (org-agenda-files
    '("~/org/main/Tasks.org")
-   ("~/org/main/Projects.org"))
+   ("~/org/main/Inbox.org")
+   ("~/org/main/Projects.org")
+   )
   (org-refile-targets
    '(("Archive.org" :maxlevel . 1)
      ("Tasks.org" :maxlevel . 1)
-     ("Projects.org" :maxlevel . 1)))
+     ("Inbox.org" :maxlevel . 1)
+     ("Projects.org" :maxlevel . 1)
+	 ))
   (advice-add 'org-refile :after 'org-save-all-org-buffers)
   (org-log-done 'time)
   (org-log-into-drawer t)
@@ -1354,162 +1587,6 @@ This is the main config block for Org-Mode, so it's pretty dense.
               (org-super-agenda-groups
                '((:anything t)))))))))
   :config
-  ;; AUTO-SAVE ORG MODE BUFFERS
-  ;; (ref:auto-save)
-  (defun my/org-save-all-except ()
-	"Save all Org buffers except for files matching specific strings."
-	(interactive)
-	(dolist (buf (buffer-list))
-      (with-current-buffer buf
-		(when (and (derived-mode-p 'org-mode)
-                   (buffer-file-name)
-                   (buffer-modified-p)
-				   ;; Exempt buffer names
-				   (not (string-match-p "init\\.org" (buffer-file-name)))
-				   )
-          (save-buffer)))))
-  (run-with-idle-timer 30 t #'my/org-save-all-except)
-
-  ;; AUTO-FORMAT SRC BLOCKS
-  ;; (ref:format-src)
-  ;; Function to indent every source block in the file
-  (defun my/org-indent-all-src-blocks ()                     
-    (when (derived-mode-p 'org-mode)
-      (save-excursion
-        (goto-char (point-min))
-        (while (re-search-forward org-babel-src-block-regexp nil t)
-          (let ((element (org-element-at-point)))
-            (when (eq (org-element-type element) 'src-block)
-              (org-babel-do-in-edit-buffer (indent-region (point-min) (point-max)))))))))
-  (add-hook 'before-save-hook #'my/org-indent-all-src-blocks)
-
-  ;; FIX STRANGE REFILE DISPLAY ISSUES
-  ;; (ref:refile-fix)
-  ;; This will refile to a new heading, if it was already folded
-  ;; it will remain so, otherwise will remain unfolded. Fixes
-  ;; weird display issues after refiling as well.
-  (add-hook 'org-after-refile-insert-hook
-			(lambda ()
-              (save-excursion
-				(org-back-to-heading t)
-				;; Move to the parent heading to check its state
-				(when (org-up-heading-safe)
-                  ;; Check if the parent heading is currently folded
-                  (let ((folded (save-excursion
-                                  (end-of-line)
-                                  (invisible-p (point)))))
-					(when folded
-                      ;; If it was folded, re-hide the subtree we just moved
-                      ;; This fixes the 'ghost' display issue
-                      (org-back-to-heading t)
-                      (org-flag-subtree t)))))))
-
-  ;; CYCLE FOLDING OF TODOS AND DONE
-  ;; (ref:todo-cycle)
-  (defun my/org-toggle-todo-entries ()
-    "Cycle visibility for all active TODO entries (non-DONE states)."
-    (interactive)
-    (org-map-entries
-     (lambda ()
-       (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
-         (when is-todo
-           (if (outline-invisible-p (line-end-position))
-               (outline-show-subtree)
-             (outline-hide-subtree)))))
-     nil 'file)
-    (message "Toggled TODO entries"))
-  (defun my/org-toggle-done-entries ()
-    "Cycle visibility for all DONE entries without hanging."
-    (interactive)
-    (org-map-entries
-     (lambda ()
-       (let ((is-done (member (org-get-todo-state) org-done-keywords)))
-         (when is-done
-           (if (outline-invisible-p (line-end-position))
-               (outline-show-subtree)
-             (outline-hide-subtree)))))
-     nil 'file)
-    (message "Toggled DONE entries"))
-  (defun my/org-cycle-all-todo-done-entries ()
-    "Cycle visibility for all entries with TODO states (both TODO and DONE).
-                               If any are visible, hide all. If all are hidden, show all."
-    (interactive)
-    (let ((any-visible nil))
-      ;; First pass: check if any TODO-state entries are visible
-      (org-map-entries
-       (lambda ()
-         (let ((has-todo-state (org-get-todo-state)))
-           (when (and has-todo-state (not (outline-invisible-p (line-end-position))))
-             (setq any-visible t))))
-       nil 'file)
-      ;; Second pass: apply consistent action to all TODO-state entries
-      (org-map-entries
-       (lambda ()
-         (let ((has-todo-state (org-get-todo-state)))
-           (when has-todo-state
-             (if any-visible
-                 (outline-hide-subtree)
-               (outline-show-subtree)))))
-       nil 'file)
-      (message (if any-visible "Hidden all TODO-state entries" "Shown all TODO-state entries"))))
-  (defun my/org-cycle-todo-entries ()
-    "Cycle visibility for all TODO entries (non-DONE states).
-    If any are visible, hide all. If all are hidden, show all."
-    (interactive)
-    (let ((any-visible nil))
-      ;; First pass: check if any TODO entries are visible
-      (org-map-entries
-       (lambda ()
-         (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
-           (when (and is-todo (not (outline-invisible-p (line-end-position))))
-             (setq any-visible t))))
-       nil 'file)
-      ;; Second pass: apply consistent action to all TODO entries
-      (org-map-entries
-       (lambda ()
-         (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
-           (when is-todo
-             (if any-visible
-                 (outline-hide-subtree)
-               (outline-show-subtree)))))
-       nil 'file)
-      (message (if any-visible "Hidden TODO entries" "Shown TODO entries"))))
-  (defun my/org-cycle-done-entries ()
-    "Cycle visibility for all DONE entries.
-                               If any are visible, hide all. If all are hidden, show all."
-    (interactive)
-    (let ((any-visible nil))
-      ;; First pass: check if any DONE entries are visible
-      (org-map-entries
-       (lambda ()
-         (let ((is-done (member (org-get-todo-state) org-done-keywords)))
-           (when (and is-done (not (outline-invisible-p (line-end-position))))
-             (setq any-visible t))))
-       nil 'file)
-      ;; Second pass: apply consistent action to all DONE entries
-      (org-map-entries
-       (lambda ()
-         (let ((is-done (member (org-get-todo-state) org-done-keywords)))
-           (when is-done
-             (if any-visible
-                 (outline-hide-subtree)
-               (outline-show-subtree)))))
-       nil 'file)
-      (message (if any-visible "Hidden DONE entries" "Shown DONE entries"))))
-
-
-  ;; COLLAPSE DONE ENTRIES ON LAUNCH
-  ;; (ref:launch-done-collapse)
-  (defun my/org-hide-done-entries-dynamic ()
-    "Hide all entries that are in any 'DONE' state defined in the current buffer."
-    (interactive)
-    (when (derived-mode-p 'org-mode)
-      (org-map-entries
-       (lambda ()
-         (let ((state (org-get-todo-state)))
-           (when (member state org-done-keywords)
-             (outline-hide-subtree))))
-       t 'file)))
 
   ;; COLLAPSE DONE ENTRIES WHEN MARKED
   ;; (ref:mark-done-collapse)
@@ -1839,6 +1916,28 @@ Gives you frozen headers when scrolling large tables
 			:anything t
 			:order 99))))
     #+end_src
+** Org-CalDav
+#+begin_src emacs-lisp
+(use-package org-caldav
+  :ensure t
+  :config
+  (setq org-caldav-url "https://cal.catphish.org"
+        ;; Use the specific calendar path from Radicale
+        org-caldav-calendar-id "jordan/7852d29b-8d80-2f1d-cb53-2e30f8db93a4/"
+        ;; New events from your phone land here
+        org-caldav-inbox "~/org/main/Inbox.org"
+        ;; Source files to push to the server
+        org-caldav-files '("~/org/main/Tasks.org" "~/org/main/Inbox.org")
+        ;; Keep metadata out of your main git repo
+        org-caldav-save-directory "~/.config/emacs/org-caldav-cache/"
+        ;; Sync on a regular basis (optional)
+        org-caldav-sync-direction 'twoway)
+
+  ;; This ensures Emacs uses your GPG key to read the password
+  (setq auth-sources '("~/.authinfo.gpg"))
+  (setq org-cycle-hide-drawers t)
+  )
+#+end_src
 ** Source Code Block Tag Expansion
 Org-tempo is not a separate package but a module within org that can be enabled.
 Org-tempo allows for '<s' followed by TAB to expand to a begin_src tag.
@@ -2119,7 +2218,7 @@ Enhances in-buffer completion with a small completion popup.
 Corfu is a small package, which relies on the Emacs completion facilities and concentrates on providing a polished completion.
 For more configuration options check out their [[https://github.com/minad/corfu][git repository]].
 Notes:
-- To enter Orderless field separator, use M-SPC. testiness
+- To enter Orderless field separator, use M-SPC.
 #+begin_src emacs-lisp
 (use-package corfu
   :custom
@@ -2136,11 +2235,22 @@ Notes:
   :init
   (global-corfu-mode)
   :config
+  ;; Disable RET for accepting completions (use normal newline instead)
   (define-key corfu-map (kbd "RET") nil)
-  ;; Use TAB for cycling, default is C-n/C-p
-  (define-key corfu-map (kbd "<tab>") 'corfu-next)
-  (define-key corfu-map (kbd "<backtab>") 'corfu-previous)
-  (define-key corfu-map (kbd "TAB") 'corfu-next)
+
+  ;; Disable TAB for selecting completions
+  (define-key corfu-map (kbd "TAB") nil)
+  (define-key corfu-map (kbd "<tab>") nil)
+
+  ;; Disable arrow keys by binding them to normal line movement
+  (keymap-set corfu-map "<down>" #'next-line)
+  (keymap-set corfu-map "<up>" #'previous-line)
+  (keymap-set corfu-map "M-n" #'ignore)
+  (keymap-set corfu-map "M-p" #'ignore)
+  sh-test
+  ;; C-n/C-p for Corfu navigation
+  (keymap-set corfu-map "C-n" #'corfu-next)
+  (keymap-set corfu-map "C-p" #'corfu-previous)
 
   ;; Add a hook to show completion documentation in a popup
   (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)

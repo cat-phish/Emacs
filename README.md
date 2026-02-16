@@ -329,7 +329,7 @@ Also Doom modeline requires nerd icons.
 A simple dashboard that is shown when opening emacs with no file argument.
 
 
-# DWIM Helper Functions
+# DWIM & Helper Functions
 
 
 ## Line/Heading Manipulation
@@ -370,6 +370,38 @@ item below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
 
 This function enables smart behavior when pressing the RET key. Handles tables
 checkboxes, links, headings, and default line behavior.
+
+
+## Auto-Save Org Buffers (with filter)
+
+This function and timer will auto-save your Org buffers after 30 seconds of
+idle. We add a filter for this init.org file because it's set to tangle. You can
+add more matches to the filter as well.
+
+
+## Auto-Format Src Blocks
+
+Indents every source block in the file on save.
+
+
+## Refile Fixes
+
+This will refile to a new heading, if it was already folded
+it will remain so, otherwise will remain unfolded. Fixes
+weird display issues after refiling as well.
+
+
+## Cycling/Toggling TODO and Done States
+
+These are used to toggle and cycle the collapse state of TODO and DONE entries.
+Toggle switches the state. Cycle will collapse all if any are expanded, if all
+are collapsed it will expand them.
+
+
+## Collapse DONE Entries on File Open
+
+
+## Hide Properties Drawers
 
 
 # Org Mode
@@ -446,6 +478,9 @@ Gives you frozen headers when scrolling large tables
 
 
 ## Org-Super-Agenda
+
+
+## Org-CalDav
 
 
 ## Source Code Block Tag Expansion
@@ -617,7 +652,7 @@ Corfu is a small package, which relies on the Emacs completion facilities and co
 For more configuration options check out their [git repository](https://github.com/minad/corfu).
 Notes:
 
--   To enter Orderless field separator, use M-SPC. testiness
+-   To enter Orderless field separator, use M-SPC.
 
 
 ## Cape
