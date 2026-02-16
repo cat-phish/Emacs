@@ -1557,6 +1557,26 @@
 			:anything t
 			:order 99))))
 
+(use-package org-caldav
+  :ensure t
+  :config
+  (setq org-caldav-url "https://cal.catphish.org"
+        ;; Use the specific calendar path from Radicale
+        org-caldav-calendar-id "jordan/7852d29b-8d80-2f1d-cb53-2e30f8db93a4/"
+        ;; New events from your phone land here
+        org-caldav-inbox "~/org/main/Inbox.org"
+        ;; Source files to push to the server
+        org-caldav-files '("~/org/main/Tasks.org" "~/org/main/Inbox.org")
+        ;; Keep metadata out of your main git repo
+        org-caldav-save-directory "~/.config/emacs/org-caldav-cache/"
+        ;; Sync on a regular basis (optional)
+        org-caldav-sync-direction 'twoway)
+
+  ;; This ensures Emacs uses your GPG key to read the password
+  (setq auth-sources '("~/.authinfo.gpg"))
+  (setq org-cycle-hide-drawers t)
+  )
+
 (use-package org-tempo
   :ensure nil
   :after org)
@@ -1713,40 +1733,44 @@
   :init (global-diff-hl-mode))
 
 (use-package corfu
-  ;; Optional customizations
   :custom
-  (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
+  (corfu-cycle t)                ;; Enable cycling for single candidates
   (corfu-auto t)                 ;; Enable auto completion
-  (corfu-auto-trigger ".") ;; Custom trigger characters
-  (corfu-auto-prefix 2)          ;; Minimum length of prefix for auto completion.
-  (corfu-popupinfo-mode t)       ;; Enable popup information
-  (corfu-popupinfo-delay 0.5)    ;; Lower popup info delay to 0.5 seconds from 2 seconds
-  (corfu-separator ?\s)          ;; Orderless field separator, Use M-SPC to enter separator
-  (corfu-quit-at-boundary t)   ;; Never quit at completion boundary
-  (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
-  ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
-  ;; (corfu-scroll-margin 5)        ;; Use scroll margin
-  (completion-ignore-case t)
-  (corfu-preselect 'prompt)      ;; Focus stays on your typing, not the first result
-  (corfu-preview-current t)      ;; Preview changes in buffer as you cycle
-  (corfu-on-exact-match nil)     ;; Don't finish just because you typed the word
-
-  ;; Emacs 30 and newer: Disable Ispell completion function.
-  ;; Try `cape-dict' as an alternative.
-  (text-mode-ispell-word-completion nil)
-
-  ;; Enable indentation+completion using the TAB key.
-  ;; `completion-at-point' is often bound to M-TAB.
-  (tab-always-indent 'complete)
-
-  ;; Recommended: Enable Corfu globally.  This is recommended since Dabbrev can
-  ;; be used globally (M-/).  See also the customization variable
-  ;; `global-corfu-modes' to exclude certain modes.
+  (corfu-auto-delay 0.2)
+  (corfu-auto-prefix 1)
+  (corfu-separator ?\s)          ;; Orderless field separator
+  (corfu-popupinfo-delay '(0.5 . 0.2))
+  (corfu-preview-current 'insert)
+  (corfu-quit-at-boundary t)
+  (corfu-quit-no-match t)
+  (corfu-preselect-first nil)
   :init
   (global-corfu-mode)
+  :config
+  ;; Disable RET for accepting completions (use normal newline instead)
+  (define-key corfu-map (kbd "RET") nil)
 
+  ;; Disable TAB for selecting completions
+  (define-key corfu-map (kbd "TAB") nil)
+  (define-key corfu-map (kbd "<tab>") nil)
+
+  ;; Disable arrow keys by binding them to normal line movement
+  (keymap-set corfu-map "<down>" #'next-line)
+  (keymap-set corfu-map "<up>" #'previous-line)
+  (keymap-set corfu-map "M-n" #'ignore)
+  (keymap-set corfu-map "M-p" #'ignore)
+  sh-test
+  ;; C-n/C-p for Corfu navigation
+  (keymap-set corfu-map "C-n" #'corfu-next)
+  (keymap-set corfu-map "C-p" #'corfu-previous)
+  ;; Use TAB for cycling, default is C-n/C-p
+  (define-key corfu-map (kbd "<tab>") 'corfu-next)
+  (define-key corfu-map (kbd "<backtab>") 'corfu-previous)
+  (define-key corfu-map (kbd "TAB") 'corfu-next)
+
+  ;; Add a hook to show completion documentation in a popup
+  (add-hook 'corfu-mode-hook #'corfu-popupinfo-mode)
   )
-
 (use-package nerd-icons-corfu
   :after corfu
   :init (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
