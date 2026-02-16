@@ -33,6 +33,7 @@
     - [[#smart-delete-lineheading-with-contents][Smart Delete Line/Heading with Contents]]
     - [[#headinglist-insertion][Heading/List Insertion]]
     - [[#smart-ret-key][Smart RET Key]]
+    - [[#yank-entire-subtree][Yank Entire Subtree]]
     - [[#auto-save-org-buffers-with-filter][Auto-Save Org Buffers (with filter)]]
     - [[#auto-format-src-blocks][Auto-Format Src Blocks]]
     - [[#refile-fixes][Refile Fixes]]

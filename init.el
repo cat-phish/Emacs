@@ -747,6 +747,202 @@
           (message "Subtree copied to kill ring."))
       (error (message "Point is not in an Org subtree.")))))
 
+;; (ref:auto-save)
+(defun my/org-save-all-except ()
+  "Save all Org buffers except for files matching specific strings."
+  (interactive)
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+	  (when (and (derived-mode-p 'org-mode)
+                 (buffer-file-name)
+                 (buffer-modified-p)
+				 (not
+				  ;; Exempt buffer names
+				  (string-match-p "init\\.org" (buffer-file-name))
+				  )
+				 )
+        (save-buffer)))))
+(run-with-idle-timer 30 t #'my/org-save-all-except)
+
+;; (ref:format-src)
+(defun my/org-indent-all-src-blocks ()
+  (when (derived-mode-p 'org-mode)
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward org-babel-src-block-regexp nil t)
+        (let ((element (org-element-at-point)))
+          (when (eq (org-element-type element) 'src-block)
+            (org-babel-do-in-edit-buffer (indent-region (point-min) (point-max)))))))))
+(add-hook 'before-save-hook #'my/org-indent-all-src-blocks)
+
+;; (ref:refile-fix)
+(add-hook 'org-after-refile-insert-hook
+		  (lambda ()
+            (save-excursion
+			  (org-back-to-heading t)
+			  ;; Move to the parent heading to check its state
+			  (when (org-up-heading-safe)
+                ;; Check if the parent heading is currently folded
+                (let ((folded (save-excursion
+                                (end-of-line)
+                                (invisible-p (point)))))
+				  (when folded
+                    ;; If it was folded, re-hide the subtree we just moved
+                    ;; This fixes the 'ghost' display issue
+                    (org-back-to-heading t)
+                    (org-flag-subtree t)))))))
+
+;; (ref:todo-cycle)
+(defun my/org-toggle-todo-entries ()
+  "Cycle visibility for all active TODO entries (non-DONE states)."
+  (interactive)
+  (org-map-entries
+   (lambda ()
+     (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
+       (when is-todo
+         (if (outline-invisible-p (line-end-position))
+             (outline-show-subtree)
+           (outline-hide-subtree)))))
+   nil 'file)
+  (message "Toggled TODO entries"))
+(defun my/org-toggle-done-entries ()
+  "Cycle visibility for all DONE entries without hanging."
+  (interactive)
+  (org-map-entries
+   (lambda ()
+     (let ((is-done (member (org-get-todo-state) org-done-keywords)))
+       (when is-done
+         (if (outline-invisible-p (line-end-position))
+             (outline-show-subtree)
+           (outline-hide-subtree)))))
+   nil 'file)
+  (message "Toggled DONE entries"))
+(defun my/org-cycle-all-todo-done-entries ()
+  "Cycle visibility for all entries with TODO states (both TODO and DONE).
+                               If any are visible, hide all. If all are hidden, show all."
+  (interactive)
+  (let ((any-visible nil))
+    ;; First pass: check if any TODO-state entries are visible
+    (org-map-entries
+     (lambda ()
+       (let ((has-todo-state (org-get-todo-state)))
+         (when (and has-todo-state (not (outline-invisible-p (line-end-position))))
+           (setq any-visible t))))
+     nil 'file)
+    ;; Second pass: apply consistent action to all TODO-state entries
+    (org-map-entries
+     (lambda ()
+       (let ((has-todo-state (org-get-todo-state)))
+         (when has-todo-state
+           (if any-visible
+               (outline-hide-subtree)
+             (outline-show-subtree)))))
+     nil 'file)
+    (message (if any-visible "Hidden all TODO-state entries" "Shown all TODO-state entries"))))
+(defun my/org-cycle-todo-entries ()
+  "Cycle visibility for all TODO entries (non-DONE states).
+    If any are visible, hide all. If all are hidden, show all."
+  (interactive)
+  (let ((any-visible nil))
+    ;; First pass: check if any TODO entries are visible
+    (org-map-entries
+     (lambda ()
+       (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
+         (when (and is-todo (not (outline-invisible-p (line-end-position))))
+           (setq any-visible t))))
+     nil 'file)
+    ;; Second pass: apply consistent action to all TODO entries
+    (org-map-entries
+     (lambda ()
+       (let ((is-todo (member (org-get-todo-state) org-not-done-keywords)))
+         (when is-todo
+           (if any-visible
+               (outline-hide-subtree)
+             (outline-show-subtree)))))
+     nil 'file)
+    (message (if any-visible "Hidden TODO entries" "Shown TODO entries"))))
+(defun my/org-cycle-done-entries ()
+  "Cycle visibility for all DONE entries.
+                               If any are visible, hide all. If all are hidden, show all."
+  (interactive)
+  (let ((any-visible nil))
+    ;; First pass: check if any DONE entries are visible
+    (org-map-entries
+     (lambda ()
+       (let ((is-done (member (org-get-todo-state) org-done-keywords)))
+         (when (and is-done (not (outline-invisible-p (line-end-position))))
+           (setq any-visible t))))
+     nil 'file)
+    ;; Second pass: apply consistent action to all DONE entries
+    (org-map-entries
+     (lambda ()
+       (let ((is-done (member (org-get-todo-state) org-done-keywords)))
+         (when is-done
+           (if any-visible
+               (outline-hide-subtree)
+             (outline-show-subtree)))))
+     nil 'file)
+    (message (if any-visible "Hidden DONE entries" "Shown DONE entries"))))
+
+;; (ref:launch-done-collapse)
+(defun my/org-hide-done-entries-dynamic ()
+  "Hide all entries that are in any 'DONE' state defined in the current buffer."
+  (interactive)
+  (when (derived-mode-p 'org-mode)
+    (org-map-entries
+     (lambda ()
+       (let ((state (org-get-todo-state)))
+         (when (member state org-done-keywords)
+           (outline-hide-subtree))))
+     t 'file)))
+
+;; Source - https://stackoverflow.com/a/17492723
+;; Posted by lawlist, modified by community. See post 'Timeline' for change history
+;; Retrieved 2026-02-15, License - CC BY-SA 3.0
+
+;; Override org-mode's drawer hiding function to actually hide drawers properly
+(with-eval-after-load 'org
+  (defun org-cycle-hide-drawers (state)
+    "Re-hide all drawers after a visibility state change."
+    (when (and (derived-mode-p 'org-mode)
+               (not (memq state '(overview folded contents))))
+      (save-excursion
+        (let* ((globalp (memq state '(contents all)))
+               (beg (if globalp
+                        (point-min)
+                      (point)))
+               (end (if globalp
+                        (point-max)
+                      (if (eq state 'children)
+                          (save-excursion
+                            (outline-next-heading)
+                            (point))
+                        (org-end-of-subtree t)))))
+          (goto-char beg)
+          (while (re-search-forward org-drawer-regexp end t)
+            (save-excursion
+              (beginning-of-line 1)
+              (when (looking-at org-drawer-regexp)
+                (let* ((start (1- (match-beginning 0)))
+                       (limit
+                        (save-excursion
+                          (outline-next-heading)
+                          (point)))
+                       (msg (format
+                             (concat
+                              "org-cycle-hide-drawers:  "
+                              "`:END:`"
+                              " line missing at position %s")
+                             (1+ start))))
+                  (if (re-search-forward "^[ \t]*:END:" limit t)
+                      (outline-flag-region start (point-at-eol) t)
+                    (user-error msg)))))))))))
+
+;; Hide all drawers when opening org files
+(add-hook 'org-mode-hook
+          (lambda ()
+            (org-cycle-hide-drawers 'all)))
+
 (use-package org
   :ensure nil
   :hook ((org-mode . org-indent-mode)
