@@ -731,7 +731,9 @@
     (org-table-next-row))
    ;; Headings
    ((org-at-heading-p)
-    (org-cycle))
+    (org-cycle)
+	(org-cycle-hide-drawers 'subtree)
+	)
    ;; Fallback
    (t
     (evil-next-line))))
