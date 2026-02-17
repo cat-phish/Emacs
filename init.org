@@ -32,7 +32,7 @@
     - [[#lineheading-manipulation][Line/Heading Manipulation]]
     - [[#smart-delete-lineheading-with-contents][Smart Delete Line/Heading with Contents]]
     - [[#headinglist-insertion][Heading/List Insertion]]
-    - [[#smart-ret-key][Smart RET Key]]
+- [[#smart-ret-key][Smart RET Key]]
     - [[#yank-entire-subtree][Yank Entire Subtree]]
     - [[#auto-save-org-buffers-with-filter][Auto-Save Org Buffers (with filter)]]
     - [[#auto-format-src-blocks][Auto-Format Src Blocks]]
@@ -1157,7 +1157,7 @@ item below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
 	  (org-insert-heading-respect-content)
 	  (evil-insert-state))))
 #+end_src
-** Smart RET Key
+* Smart RET Key
 This function enables smart behavior when pressing the RET key. Handles tables
 checkboxes, links, headings, and default line behavior.
 #+begin_src emacs-lisp
@@ -2095,7 +2095,16 @@ Gives you frozen headers when scrolling large tables
         ;; Keep metadata out of your main git repo
         org-caldav-save-directory "~/.config/emacs/org-caldav-cache/"
         ;; Sync on a regular basis (optional)
-        org-caldav-sync-direction 'twoway)
+        org-caldav-sync-direction 'twoway
+        ;; Map TODO keywords to percentage states
+        org-caldav-todo-percent-states '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
+                                         (100 "DONE" "CANCELED"))
+        ;; Don't pop up a buffer showing results (silent sync)
+        org-caldav-show-sync-results nil)
+
+  ;; Setup automatic sync (runs every 1 hour when idle)
+  ;; Note: This will momentarily freeze Emacs while syncing
+  (run-with-idle-timer 3600 t 'org-caldav-sync)
 
   ;; This ensures Emacs uses your GPG key to read the password
   (setq auth-sources '("~/.authinfo.gpg"))

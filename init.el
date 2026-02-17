@@ -1570,7 +1570,16 @@
         ;; Keep metadata out of your main git repo
         org-caldav-save-directory "~/.config/emacs/org-caldav-cache/"
         ;; Sync on a regular basis (optional)
-        org-caldav-sync-direction 'twoway)
+        org-caldav-sync-direction 'twoway
+        ;; Map TODO keywords to percentage states
+        org-caldav-todo-percent-states '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
+                                         (100 "DONE" "CANCELED"))
+        ;; Don't pop up a buffer showing results (silent sync)
+        org-caldav-show-sync-results nil)
+
+  ;; Setup automatic sync (runs every 1 hour when idle)
+  ;; Note: This will momentarily freeze Emacs while syncing
+  (run-with-idle-timer 3600 t 'org-caldav-sync)
 
   ;; This ensures Emacs uses your GPG key to read the password
   (setq auth-sources '("~/.authinfo.gpg"))
