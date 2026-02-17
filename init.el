@@ -725,17 +725,6 @@
 	  (org-insert-heading-respect-content)
 	  (evil-insert-state))))
 
-(defun my/org-yank-entire-subtree ()
-  "Copy the current Org subtree (heading and all sub-contents) to the kill ring."
-  (interactive)
-  (save-excursion
-    (condition-case nil
-        (progn
-          (org-back-to-heading t)
-          (org-copy-subtree)
-          (message "Subtree copied to kill ring."))
-      (error (message "Point is not in an Org subtree.")))))
-
 ;; (ref:ret-dwim)
 (defun my/org-return-dwim ()
   "Context-aware RET for Org (normal mode only)."
@@ -921,7 +910,6 @@
      t 'file)))
 
 ;; Source - https://stackoverflow.com/a/17492723
-;; Posted by lawlist, modified by community. See post 'Timeline' for change history
 ;; Retrieved 2026-02-15, License - CC BY-SA 3.0
 
 ;; Override org-mode's drawer hiding function to actually hide drawers properly
@@ -960,7 +948,31 @@
                              (1+ start))))
                   (if (re-search-forward "^[ \t]*:END:" limit t)
                       (outline-flag-region start (point-at-eol) t)
-                    (user-error msg)))))))))))
+                    (user-error msg))))))))))
+
+  (defun my/org-drawers-hidden-p ()
+    "Check if drawers are hidden in the current subtree."
+    (save-excursion
+      (org-back-to-heading t)
+      (let ((end (save-excursion (org-end-of-subtree t) (point))))
+        (if (re-search-forward org-drawer-regexp end t)
+            (progn
+              (goto-char (match-beginning 0))
+              (invisible-p (point)))
+          t))))
+
+  (defun my/org-cycle-dwim ()
+    "TAB cycling with 4 states: folded -> children -> subtree (hidden) -> subtree (shown)."
+    (interactive)
+    (if (and (org-at-heading-p)
+             (eq org-cycle-subtree-status 'subtree)
+             (my/org-drawers-hidden-p))
+        (progn
+          (org-show-subtree)
+          (message "SUBTREE (drawers shown)"))
+      (org-cycle)
+      (unless (memq org-cycle-subtree-status '(overview folded contents))
+        (org-cycle-hide-drawers 'subtree)))))
 
 ;; Hide all drawers when opening org files
 (add-hook 'org-mode-hook
@@ -1365,6 +1377,10 @@
 	(kbd "M-j") #'my/org-meta-down-smart
 	(kbd "M-k") #'my/org-meta-up-smart
 	(kbd "M-l") #'my/org-meta-right-smart)
+
+  ;; Explicitly bind TAB to org-cycle so our advice is triggered
+  (evil-define-key '(normal insert) org-mode-map (kbd "TAB") #'org-cycle)
+  (evil-define-key '(normal insert) org-mode-map (kbd "<tab>") #'org-cycle)
   )
 
 (with-eval-after-load 'evil-org

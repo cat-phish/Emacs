@@ -366,10 +366,7 @@ This function allows us to insert another (empty) parent-version of the current
 item below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
 
 
-## Yank Entire Subtree
-
-
-# Smart RET Key
+## Smart RET Key
 
 This function enables smart behavior when pressing the RET key. Handles tables
 checkboxes, links, headings, and default line behavior.
