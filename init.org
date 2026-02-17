@@ -2131,7 +2131,7 @@ Gives you frozen headers when scrolling large tables
         ;; Source files to push to the server
         org-caldav-files '("~/org/main/Tasks.org" "~/org/main/Inbox.org")
         ;; Keep metadata out of your main git repo
-        org-caldav-save-directory "~/.config/emacs/org-caldav-cache/"
+        org-caldav-save-directory "~/org/org-caldav-cache/"
         ;; Sync on a regular basis (optional)
         org-caldav-sync-direction 'twoway
         ;; Map TODO keywords to percentage states
