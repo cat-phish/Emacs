@@ -32,8 +32,9 @@
     - [[#lineheading-manipulation][Line/Heading Manipulation]]
     - [[#smart-delete-lineheading-with-contents][Smart Delete Line/Heading with Contents]]
     - [[#headinglist-insertion][Heading/List Insertion]]
-- [[#smart-ret-key][Smart RET Key]]
     - [[#yank-entire-subtree][Yank Entire Subtree]]
+- [[#smart-ret-key][Smart RET Key]]
+    - [[#yank-entire-subtree-1][Yank Entire Subtree]]
     - [[#auto-save-org-buffers-with-filter][Auto-Save Org Buffers (with filter)]]
     - [[#auto-format-src-blocks][Auto-Format Src Blocks]]
     - [[#refile-fixes][Refile Fixes]]
@@ -757,6 +758,17 @@ Note: The Leader key is what you will press when you want to access your keybind
     )
 
   (start/leader-keys
+	"y"   '(:ignore t :wk "+yank")
+	"y c" '(copy-region-as-kill :wk "Yank to clipboard")
+	"y b" '( (lambda ()
+               (interactive)
+               (kill-new (buffer-string))
+               (message "Entire buffer yanked to clipboard."))
+			 :wk "Yank entire buffer")
+	"y h" '(my/org-yank-entire-subtree :wk "Yank heading + subtree")
+	)
+
+  (start/leader-keys
     :major-modes 'pdf-view-mode
     "m" '(:ignore t :wk "pdf-view options")
     "m t" '(pdf-view-midnight-minor-mode :wk "Toggle dark mode"))
@@ -1156,6 +1168,19 @@ item below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
 	  (org-back-to-heading)
 	  (org-insert-heading-respect-content)
 	  (evil-insert-state))))
+#+end_src
+** Yank Entire Subtree
+#+begin_src emacs-lisp
+(defun my/org-yank-entire-subtree ()
+  "Copy the current Org subtree (heading and all sub-contents) to the kill ring."
+  (interactive)
+  (save-excursion
+    (condition-case nil
+        (progn
+          (org-back-to-heading t)
+          (org-copy-subtree)
+          (message "Subtree copied to kill ring."))
+      (error (message "Point is not in an Org subtree.")))))
 #+end_src
 * Smart RET Key
 This function enables smart behavior when pressing the RET key. Handles tables
@@ -2391,7 +2416,7 @@ Enhances in-buffer completion with a small completion popup.
 Corfu is a small package, which relies on the Emacs completion facilities and concentrates on providing a polished completion.
 For more configuration options check out their [[https://github.com/minad/corfu][git repository]].
 Notes:
-- To enter Orderless field separator, use M-SPC. testiness
+- To enter Orderless field separator, use M-SPC.
 #+begin_src emacs-lisp
 (use-package corfu
   :custom

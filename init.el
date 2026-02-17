@@ -383,6 +383,17 @@
     )
 
   (start/leader-keys
+	"y"   '(:ignore t :wk "+yank")
+	"y c" '(copy-region-as-kill :wk "Yank to clipboard")
+	"y b" '( (lambda ()
+               (interactive)
+               (kill-new (buffer-string))
+               (message "Entire buffer yanked to clipboard."))
+			 :wk "Yank entire buffer")
+	"y h" '(my/org-yank-entire-subtree :wk "Yank heading + subtree")
+	)
+
+  (start/leader-keys
     :major-modes 'pdf-view-mode
     "m" '(:ignore t :wk "pdf-view options")
     "m t" '(pdf-view-midnight-minor-mode :wk "Toggle dark mode"))
@@ -713,6 +724,17 @@
 	  (org-back-to-heading)
 	  (org-insert-heading-respect-content)
 	  (evil-insert-state))))
+
+(defun my/org-yank-entire-subtree ()
+  "Copy the current Org subtree (heading and all sub-contents) to the kill ring."
+  (interactive)
+  (save-excursion
+    (condition-case nil
+        (progn
+          (org-back-to-heading t)
+          (org-copy-subtree)
+          (message "Subtree copied to kill ring."))
+      (error (message "Point is not in an Org subtree.")))))
 
 ;; (ref:ret-dwim)
 (defun my/org-return-dwim ()

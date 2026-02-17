@@ -366,6 +366,9 @@ This function allows us to insert another (empty) parent-version of the current
 item below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
 
 
+## Yank Entire Subtree
+
+
 # Smart RET Key
 
 This function enables smart behavior when pressing the RET key. Handles tables
@@ -653,7 +656,7 @@ Corfu is a small package, which relies on the Emacs completion facilities and co
 For more configuration options check out their [git repository](https://github.com/minad/corfu).
 Notes:
 
--   To enter Orderless field separator, use M-SPC. testiness
+-   To enter Orderless field separator, use M-SPC.
 
 
 ## Cape
