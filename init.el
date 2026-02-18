@@ -945,6 +945,11 @@
           (lambda ()
             (org-cycle-hide-drawers 'all)))
 
+(add-hook 'after-save-hook
+          (lambda ()
+            (when (derived-mode-p 'org-mode)
+              (shell-command "syncthingctl rescan-all"))))
+
 (use-package org
   :ensure nil
   :hook ((org-mode . org-indent-mode)

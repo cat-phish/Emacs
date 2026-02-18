@@ -32,7 +32,7 @@
     - [[#lineheading-manipulation][Line/Heading Manipulation]]
     - [[#smart-delete-lineheading-with-contents][Smart Delete Line/Heading with Contents]]
     - [[#headinglist-insertion][Heading/List Insertion]]
-- [[#smart-ret-key][Smart RET Key]]
+    - [[#smart-ret-key][Smart RET Key]]
     - [[#yank-entire-subtree][Yank Entire Subtree]]
     - [[#auto-save-org-buffers-with-filter][Auto-Save Org Buffers (with filter)]]
     - [[#auto-format-src-blocks][Auto-Format Src Blocks]]
@@ -40,6 +40,7 @@
     - [[#cyclingtoggling-todo-and-done-states][Cycling/Toggling TODO and Done States]]
     - [[#collapse-done-entries-on-file-open][Collapse DONE Entries on File Open]]
     - [[#hide-properties-drawers][Hide Properties Drawers]]
+    - [[#trigger-syncthing-sync-on-save][Trigger Syncthing Sync on Save]]
 - [[#org-mode][Org Mode]]
     - [[#org-mode-overview][Org Mode Overview]]
     - [[#org-mode-config][Org Mode Config]]
@@ -1157,7 +1158,7 @@ item below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
 	  (org-insert-heading-respect-content)
 	  (evil-insert-state))))
 #+end_src
-* Smart RET Key
+** Smart RET Key
 This function enables smart behavior when pressing the RET key. Handles tables
 checkboxes, links, headings, and default line behavior.
 #+begin_src emacs-lisp
@@ -1416,6 +1417,14 @@ are collapsed it will expand them.
 (add-hook 'org-mode-hook
           (lambda ()
             (org-cycle-hide-drawers 'all)))
+#+end_src
+** Trigger Syncthing Sync on Save
+Uses syncthingtray to request a syncthing
+#+begin_src emacs-lisp
+(add-hook 'after-save-hook
+          (lambda ()
+            (when (derived-mode-p 'org-mode)
+              (shell-command "syncthingctl rescan-all"))))
 #+end_src
 * Org Mode
 ** Org Mode Overview
