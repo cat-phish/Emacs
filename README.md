@@ -658,7 +658,7 @@ Corfu is a small package, which relies on the Emacs completion facilities and co
 For more configuration options check out their [git repository](https://github.com/minad/corfu).
 Notes:
 
--   To enter Orderless field separator, use M-SPC. testiness
+-   To enter Orderless field separator, use M-SPC.
 
 
 ## Cape
