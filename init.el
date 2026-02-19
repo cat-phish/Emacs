@@ -1608,37 +1608,59 @@
 (use-package org-caldav
   :ensure t
   :config
+  ;; 1. Base URL and Metadata
   (setq org-caldav-url "https://cal.catphish.org"
-        ;; Use the specific calendar path from Radicale
-        org-caldav-calendar-id "jordan/7852d29b-8d80-2f1d-cb53-2e30f8db93a4/"
-        ;; New events from your phone land here
-        org-caldav-inbox "~/org/main/Inbox.org"
-        ;; Source files to push to the server
-        org-caldav-files '("~/org/main/Tasks.org" "~/org/main/Inbox.org")
-        ;; Keep metadata out of your main git repo
         org-caldav-save-directory "~/org/org-caldav-cache/"
-        ;; Sync on a regular basis (optional)
         org-caldav-sync-direction 'twoway
-        ;; Map TODO keywords to percentage states
-        org-caldav-todo-percent-states '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
-                                         (100 "DONE" "CANCELED"))
-        ;; Don't pop up a buffer showing results (silent sync)
-        org-caldav-show-sync-results nil
-        ;; Fix the "DL: DL:" issue by emptying the iCalendar prefixes
-        org-icalendar-deadline-summary-prefix ""
+        org-caldav-show-sync-results nil)
+
+  ;; 2. Multi-Calendar Configuration (Split by TODO keyword)
+  (setq org-caldav-calendars
+        '((:calendar-id "jordan/290ea202-4add-a1fe-3fa8-1cff0f4136df/"
+						:files ("~/org/main/Tasks.org" "~/org/main/Inbox.org")
+						:inbox "~/org/main/Inbox.org"
+						;; Only sync these keywords to the main calendar
+						:todo-filter ("TODO" "NEXT"))
+          (:calendar-id "jordan/332a8323-d8e5-f8f7-8295-1ae6eb82c412/"
+						:files ("~/org/main/Tasks.org")
+						:inbox "~/org/main/Inbox.org"
+						:todo-filter ("ASSIGNMENT"))
+          (:calendar-id "jordan/4e3147bb-a02a-4dea-b1e1-c182ccaa2eef/"
+						:files ("~/org/main/Tasks.org")
+						:inbox "~/org/main/Inbox.org"
+						:todo-filter ("BILL"))
+          (:calendar-id "jordan/a20ab2df-50e1-04a5-539e-70133159c660/"
+						:files ("~/org/main/Tasks.org")
+						:inbox "~/org/main/Inbox.org"
+						:todo-filter ("CHORE"))
+          (:calendar-id "jordan/e57a627d-83a4-b64a-a0a0-974c1e4d1708/"
+						:files ("~/org/main/Tasks.org")
+						:inbox "~/org/main/Inbox.org"
+						:todo-filter ("MEETING"))
+          (:calendar-id "jordan/9fbe7921-94f8-3406-cfa1-af0233228ecd/"
+						:files ("~/org/main/Tasks.org")
+						:inbox "~/org/main/Inbox.org"
+						:todo-filter ("PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE"))
+		  ))
+
+  ;; 3. Keywords and Percentages
+  (setq org-caldav-todo-percent-states
+        '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
+          (100 "DONE" "CANCELED")))
+
+  ;; 4. iCalendar Export Cleanup (Prevents "DL: DL:" or "S: S:")
+  (setq org-icalendar-deadline-summary-prefix ""
         org-icalendar-scheduled-summary-prefix "")
 
-  ;; Setup automatic sync (runs every 1 hour when idle)
-  ;; Note: This will momentarily freeze Emacs while syncing
-  (run-with-idle-timer 3600 t 'org-caldav-sync)
-
-  ;; This ensures Emacs uses your GPG key to read the password
+  ;; 5. Security and Maintenance
   (setq auth-sources '("~/sync/.authinfo.gpg"))
   (setq org-cycle-hide-drawers t)
-  )
 
+  ;; 6. Automated Sync (Runs every hour when idle)
+  (run-with-idle-timer 3600 t 'org-caldav-sync))
+
+;; Final fix for eval timing
 (with-eval-after-load 'org-caldav
-  ;; Ensure prefixes are empty to avoid doubling "DL:" or "S:"
   (setq org-icalendar-deadline-summary-prefix ""
         org-icalendar-scheduled-summary-prefix ""))
 
