@@ -35,6 +35,10 @@
       org-caldav-todo-percent-states '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
                                        (100 "DONE" "CANCELED"))
       
+      ;; Fix the "DL: DL:" issue
+      org-icalendar-deadline-summary-prefix ""
+      org-icalendar-scheduled-summary-prefix ""
+      
       ;; OAuth/Auth handling
       ;; If using .authinfo.gpg, you need gpg and the key in the container.
       ;; For a headless server, plain .authinfo is easier if secure, 

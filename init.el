@@ -1618,7 +1618,10 @@
         org-caldav-todo-percent-states '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
                                          (100 "DONE" "CANCELED"))
         ;; Don't pop up a buffer showing results (silent sync)
-        org-caldav-show-sync-results nil)
+        org-caldav-show-sync-results nil
+        ;; Fix the "DL: DL:" issue by emptying the iCalendar prefixes
+        org-icalendar-deadline-summary-prefix ""
+        org-icalendar-scheduled-summary-prefix "")
 
   ;; Setup automatic sync (runs every 1 hour when idle)
   ;; Note: This will momentarily freeze Emacs while syncing
@@ -1628,6 +1631,11 @@
   (setq auth-sources '("~/.authinfo.gpg"))
   (setq org-cycle-hide-drawers t)
   )
+
+(with-eval-after-load 'org-caldav
+  ;; Ensure prefixes are empty to avoid doubling "DL:" or "S:"
+  (setq org-icalendar-deadline-summary-prefix ""
+        org-icalendar-scheduled-summary-prefix ""))
 
 (use-package org-tempo
   :ensure nil
