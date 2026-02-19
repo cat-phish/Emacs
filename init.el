@@ -1607,57 +1607,80 @@
 
 (use-package org-caldav
   :ensure t
+  :init
+  ;; Master Switches from the Manual
+  (setq org-icalendar-include-todo 'all  ; Critical: Use 'all symbol
+        org-caldav-sync-todo t           ; Tells org-caldav to handle VTODOs
+        org-icalendar-categories '(local-tags)) ; Prevents tag doubling
+
+  ;; Keyword Mappings
+  ;; Each keyword must have its own list entry because org-caldav only checks the first string.
+  (setq org-caldav-todo-percent-states
+        '((0 "TODO")
+          (0 "ASSIGNMENT")
+          (0 "BILL")
+          (0 "CHORE")
+          (0 "MEETING")
+          (0 "NEXT")
+          (0 "PLANNING")
+          (0 "REVIEW")
+          (0 "HOLD")
+          (0 "READY")
+          (0 "ACTIVE")
+          (100 "DONE")
+          (100 "CANCELED")))
   :config
-  ;; 1. Base URL and Metadata
   (setq org-caldav-url "https://cal.catphish.org"
         org-caldav-save-directory "~/org/org-caldav-cache/"
         org-caldav-sync-direction 'twoway
         org-caldav-show-sync-results nil)
 
-  ;; 2. Multi-Calendar Configuration (Split by TODO keyword)
+  ;; Multi-Calendar Configuration
   (setq org-caldav-calendars
-        '((:calendar-id "jordan/290ea202-4add-a1fe-3fa8-1cff0f4136df/"
-						:files ("~/org/main/Tasks.org" "~/org/main/Inbox.org")
-						:inbox "~/org/main/Inbox.org"
-						;; Only sync these keywords to the main calendar
-						:todo-filter ("TODO" "NEXT"))
-          (:calendar-id "jordan/332a8323-d8e5-f8f7-8295-1ae6eb82c412/"
+        '((:calendar-id "jordan/20415cf7-d643-14bd-2ef8-e0fe230ccb15/"
 						:files ("~/org/main/Tasks.org")
 						:inbox "~/org/main/Inbox.org"
-						:todo-filter ("ASSIGNMENT"))
-          (:calendar-id "jordan/4e3147bb-a02a-4dea-b1e1-c182ccaa2eef/"
+						:skip-conditions (todo ( "ASSIGNMENT" "BILL" "CHORE" "MEETING" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE" )))
+		  ;; :skip-conditions (nottodo ( "TODO" "NEXT" )))
+
+          (:calendar-id "jordan/98e939a9-73d3-1b92-bd5f-c63c2eb353f2/"
 						:files ("~/org/main/Tasks.org")
 						:inbox "~/org/main/Inbox.org"
-						:todo-filter ("BILL"))
-          (:calendar-id "jordan/a20ab2df-50e1-04a5-539e-70133159c660/"
+						;; :skip-conditions (nottodo ( "ASSIGNMENT" )))
+						:skip-conditions (todo ( "TODO" "NEXT" "BILL" "CHORE" "MEETING" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE" )))
+
+          ;; (:calendar-id "jordan/4e3147bb-a02a-4dea-b1e1-c182ccaa2eef/"
+		  ;; 				:files ("~/org/main/Tasks.org")
+		  ;; 				:inbox "~/org/main/Inbox.org"
+		  ;; 				:skip-conditions (nottodo "BILL"))
+
+          (:calendar-id "jordan/7ab8f350-a064-3738-9932-9f195881e0b4/"
 						:files ("~/org/main/Tasks.org")
 						:inbox "~/org/main/Inbox.org"
-						:todo-filter ("CHORE"))
-          (:calendar-id "jordan/e57a627d-83a4-b64a-a0a0-974c1e4d1708/"
-						:files ("~/org/main/Tasks.org")
-						:inbox "~/org/main/Inbox.org"
-						:todo-filter ("MEETING"))
-          (:calendar-id "jordan/9fbe7921-94f8-3406-cfa1-af0233228ecd/"
-						:files ("~/org/main/Tasks.org")
-						:inbox "~/org/main/Inbox.org"
-						:todo-filter ("PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE"))
+						;; :skip-conditions (nottodo "CHORE"))
+						:skip-conditions (todo ( "TODO" "NEXT" "ASSIGNMENT" "BILL" "MEETING" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE" )))
+
+          ;; (:calendar-id "jordan/e57a627d-83a4-b64a-a0a0-974c1e4d1708/"
+		  ;; 				:files ("~/org/main/Tasks.org")
+		  ;; 				:inbox "~/org/main/Inbox.org"
+		  ;; 				:skip-conditions (nottodo "MEETING"))
+
+          ;; (:calendar-id "jordan/9fbe7921-94f8-3406-cfa1-af0233228ecd/"
+		  ;; 				:files ("~/org/main/Tasks.org")
+		  ;; 				:inbox "~/org/main/Inbox.org"
+		  ;; 				:skip-conditions (nottodo "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE"))
 		  ))
 
-  ;; 3. Keywords and Percentages
-  (setq org-caldav-todo-percent-states
-        '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
-          (100 "DONE" "CANCELED")))
+  ;; iCalendar Time Handling
+  (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo todo-due)
+		org-icalendar-use-scheduled '(event-if-todo event-if-not-todo todo-start)
+		org-icalendar-deadline-summary-prefix ""
+		org-icalendar-scheduled-summary-prefix "")
 
-  ;; 4. iCalendar Export Cleanup (Prevents "DL: DL:" or "S: S:")
-  (setq org-icalendar-deadline-summary-prefix ""
-        org-icalendar-scheduled-summary-prefix "")
-
-  ;; 5. Security and Maintenance
   (setq auth-sources '("~/sync/.authinfo.gpg"))
-  (setq org-cycle-hide-drawers t)
-
-  ;; 6. Automated Sync (Runs every hour when idle)
-  (run-with-idle-timer 3600 t 'org-caldav-sync))
+  ;; (run-with-idle-timer 3600 t 'org-caldav-sync)
+  (setq org-caldav-todo-percent nil)
+  )
 
 ;; Final fix for eval timing
 (with-eval-after-load 'org-caldav

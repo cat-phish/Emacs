@@ -35,6 +35,38 @@
       org-caldav-todo-percent-states '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
                                        (100 "DONE" "CANCELED"))
       
+      org-caldav-calendars
+      '((:calendar-id "jordan/290ea202-4add-a1fe-3fa8-1cff0f4136df/"
+                      :files ("/org/Tasks.org" "/org/Inbox.org")
+                      :inbox "/org/Inbox.org"
+                      ;; Main Calendar: Skip specialized items (Assignment, Bill, etc)
+                      :skip-conditions (regexp "^\\*+ .*\\(ASSIGNMENT\\|BILL\\|CHORE\\|MEETING\\|PLANNING\\|REVIEW\\|HOLD\\|READY\\|ACTIVE\\)"))
+        (:calendar-id "jordan/332a8323-d8e5-f8f7-8295-1ae6eb82c412/"
+                      :files ("/org/Tasks.org")
+                      :inbox "/org/Inbox.org"
+                      ;; Assignment Cal: Skip if NOT Assignment
+                      :skip-conditions (notregexp "^\\*+ .*ASSIGNMENT"))
+        (:calendar-id "jordan/4e3147bb-a02a-4dea-b1e1-c182ccaa2eef/"
+                      :files ("/org/Tasks.org")
+                      :inbox "/org/Inbox.org"
+                      ;; Bill Cal: Skip if NOT Bill
+                      :skip-conditions (notregexp "^\\*+ .*BILL"))
+        (:calendar-id "jordan/a20ab2df-50e1-04a5-539e-70133159c660/"
+                      :files ("/org/Tasks.org")
+                      :inbox "/org/Inbox.org"
+                      ;; Chore Cal: Skip if NOT Chore
+                      :skip-conditions (notregexp "^\\*+ .*CHORE"))
+        (:calendar-id "jordan/e57a627d-83a4-b64a-a0a0-974c1e4d1708/"
+                      :files ("/org/Tasks.org")
+                      :inbox "/org/Inbox.org"
+                      ;; Meeting Cal: Skip if NOT Meeting
+                      :skip-conditions (notregexp "^\\*+ .*MEETING"))
+        (:calendar-id "jordan/9fbe7921-94f8-3406-cfa1-af0233228ecd/"
+                      :files ("/org/Tasks.org")
+                      :inbox "/org/Inbox.org"
+                      ;; Planning Cal: Skip if NOT Planning/Review/etc
+                      :skip-conditions (notregexp "^\\*+ .*\\(PLANNING\\|REVIEW\\|HOLD\\|READY\\|ACTIVE\\)")))
+
       ;; Fix the "DL: DL:" issue
       org-icalendar-deadline-summary-prefix ""
       org-icalendar-scheduled-summary-prefix ""
