@@ -1637,35 +1637,38 @@
 
   ;; Multi-Calendar Configuration
   (setq org-caldav-calendars
-        '((:calendar-id "jordan/20415cf7-d643-14bd-2ef8-e0fe230ccb15/"
+        '((:calendar-id "jordan/7a6b3fa8-dbaf-aac9-1024-48cc62faafb3/"
 						:files ("~/org/main/Tasks.org")
 						:inbox "~/org/main/Inbox.org"
-						:skip-conditions (todo ( "ASSIGNMENT" "BILL" "CHORE" "MEETING" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE" )))
-		  ;; :skip-conditions (nottodo ( "TODO" "NEXT" )))
+						;; :skip-conditions (todo ( "ASSIGNMENT" "BILL" "CHORE" "MEETING" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE" )))
+						;; :skip-conditions (nottodo ( "TODO" "NEXT" )))
+						:skip-conditions (notregexp "TODO"))
 
-          (:calendar-id "jordan/98e939a9-73d3-1b92-bd5f-c63c2eb353f2/"
+		  (:calendar-id "jordan/5f213fda-f378-8e9f-ab8e-fe5684cd073d/"
 						:files ("~/org/main/Tasks.org")
 						:inbox "~/org/main/Inbox.org"
 						;; :skip-conditions (nottodo ( "ASSIGNMENT" )))
-						:skip-conditions (todo ( "TODO" "NEXT" "BILL" "CHORE" "MEETING" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE" )))
+						:skip-conditions (notregexp "ASSIGNMENT"))
+		  ;; :skip-conditions (todo ( "TODO" "NEXT" "BILL" "CHORE" "MEETING" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE" )))
 
-          ;; (:calendar-id "jordan/4e3147bb-a02a-4dea-b1e1-c182ccaa2eef/"
+		  ;; (:calendar-id "jordan/4e3147bb-a02a-4dea-b1e1-c182ccaa2eef/"
 		  ;; 				:files ("~/org/main/Tasks.org")
 		  ;; 				:inbox "~/org/main/Inbox.org"
 		  ;; 				:skip-conditions (nottodo "BILL"))
 
-          (:calendar-id "jordan/7ab8f350-a064-3738-9932-9f195881e0b4/"
-						:files ("~/org/main/Tasks.org")
-						:inbox "~/org/main/Inbox.org"
-						;; :skip-conditions (nottodo "CHORE"))
-						:skip-conditions (todo ( "TODO" "NEXT" "ASSIGNMENT" "BILL" "MEETING" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE" )))
+		  ;; (:calendar-id "jordan/6de3bbd6-caf6-61f0-0561-6ab07d358e54/"
+		  ;; 				:files ("~/org/main/Tasks.org")
+		  ;; 				:inbox "~/org/main/Inbox.org"
+		  ;; :skip-conditions (nottodo ( "CHORE" )))
+		  ;; :skip-conditions (notregexp "CHORE"))
+		  ;; :skip-conditions (todo ( "TODO" "NEXT" "ASSIGNMENT" "BILL" "MEETING" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE" )))
 
-          ;; (:calendar-id "jordan/e57a627d-83a4-b64a-a0a0-974c1e4d1708/"
+		  ;; (:calendar-id "jordan/e57a627d-83a4-b64a-a0a0-974c1e4d1708/"
 		  ;; 				:files ("~/org/main/Tasks.org")
 		  ;; 				:inbox "~/org/main/Inbox.org"
 		  ;; 				:skip-conditions (nottodo "MEETING"))
 
-          ;; (:calendar-id "jordan/9fbe7921-94f8-3406-cfa1-af0233228ecd/"
+		  ;; (:calendar-id "jordan/9fbe7921-94f8-3406-cfa1-af0233228ecd/"
 		  ;; 				:files ("~/org/main/Tasks.org")
 		  ;; 				:inbox "~/org/main/Inbox.org"
 		  ;; 				:skip-conditions (nottodo "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE"))
