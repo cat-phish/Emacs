@@ -409,7 +409,7 @@ are collapsed it will expand them.
 
 ## Trigger Syncthing Sync on Save
 
-Uses syncthingtray to request a syncthing
+Uses syncthingtray to request a rescan of all folders
 
 
 # Org Mode
