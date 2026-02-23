@@ -974,27 +974,27 @@
       (unless (memq org-cycle-subtree-status '(overview folded contents))
         (org-cycle-hide-drawers 'subtree)))))
 
-  (defun my/org-drawers-hidden-global-p ()
-    "Check if drawers are hidden in the whole buffer."
-    (save-excursion
-      (goto-char (point-min))
-      (if (re-search-forward org-drawer-regexp nil t)
-          (progn
-            (goto-char (match-beginning 0))
-            (invisible-p (point)))
-        t)))
-
-  (defun my/org-shifttab-dwim ()
-    "S-TAB cycling with 4 states: overview -> contents -> all (hidden) -> all (shown)."
-    (interactive)
-    (if (and (eq org-cycle-global-status 'all)
-             (my/org-drawers-hidden-global-p))
+(defun my/org-drawers-hidden-global-p ()
+  "Check if drawers are hidden in the whole buffer."
+  (save-excursion
+    (goto-char (point-min))
+    (if (re-search-forward org-drawer-regexp nil t)
         (progn
-          (org-show-all)
-          (message "SHOW ALL (drawers shown)"))
-      (org-global-cycle)
-      (unless (memq org-cycle-global-status '(overview contents))
-        (org-cycle-hide-drawers 'all))))
+          (goto-char (match-beginning 0))
+          (invisible-p (point)))
+      t)))
+
+(defun my/org-shifttab-dwim ()
+  "S-TAB cycling with 4 states: overview -> contents -> all (hidden) -> all (shown)."
+  (interactive)
+  (if (and (eq org-cycle-global-status 'all)
+           (my/org-drawers-hidden-global-p))
+      (progn
+        (org-show-all)
+        (message "SHOW ALL (drawers shown)"))
+    (org-global-cycle)
+    (unless (memq org-cycle-global-status '(overview contents))
+      (org-cycle-hide-drawers 'all))))
 
 ;; Hide all drawers when opening org files
 (add-hook 'org-mode-hook
@@ -1646,7 +1646,7 @@
 
   ;; Setup automatic sync (runs every 1 hour when idle)
   ;; Note: This will momentarily freeze Emacs while syncing
-  (run-with-idle-timer 3600 t 'org-caldav-sync)
+  ;; (run-with-idle-timer 3600 t 'org-caldav-sync)
 
   ;; This ensures Emacs uses your GPG key to read the password
   (setq auth-sources '("~/.authinfo.gpg"))
