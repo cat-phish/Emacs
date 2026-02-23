@@ -1447,6 +1447,28 @@ are collapsed it will expand them.
       (unless (memq org-cycle-subtree-status '(overview folded contents))
         (org-cycle-hide-drawers 'subtree)))))
 
+  (defun my/org-drawers-hidden-global-p ()
+    "Check if drawers are hidden in the whole buffer."
+    (save-excursion
+      (goto-char (point-min))
+      (if (re-search-forward org-drawer-regexp nil t)
+          (progn
+            (goto-char (match-beginning 0))
+            (invisible-p (point)))
+        t)))
+
+  (defun my/org-shifttab-dwim ()
+    "S-TAB cycling with 4 states: overview -> contents -> all (hidden) -> all (shown)."
+    (interactive)
+    (if (and (eq org-cycle-global-status 'all)
+             (my/org-drawers-hidden-global-p))
+        (progn
+          (org-show-all)
+          (message "SHOW ALL (drawers shown)"))
+      (org-global-cycle)
+      (unless (memq org-cycle-global-status '(overview contents))
+        (org-cycle-hide-drawers 'all))))
+
 ;; Hide all drawers when opening org files
 (add-hook 'org-mode-hook
           (lambda ()
@@ -1895,8 +1917,10 @@ and TODOs. [[(subitem-below-map)][[keymapping]​]]
     (kbd "M-l") #'my/org-meta-right-smart)
 
   ;; Explicitly bind TAB to org-cycle so our advice is triggered
-  (evil-define-key '(normal insert) org-mode-map (kbd "TAB") #'org-cycle)
-  (evil-define-key '(normal insert) org-mode-map (kbd "<tab>") #'org-cycle)
+  (evil-define-key '(normal insert) org-mode-map (kbd "TAB") #'my/org-cycle-dwim)
+  (evil-define-key '(normal insert) org-mode-map (kbd "<tab>") #'my/org-cycle-dwim)
+  (evil-define-key '(normal insert) org-mode-map (kbd "S-TAB") #'my/org-shifttab-dwim)
+  (evil-define-key '(normal insert) org-mode-map (kbd "<backtab>") #'my/org-shifttab-dwim)
   )
 
 (with-eval-after-load 'evil-org
