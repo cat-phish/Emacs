@@ -194,6 +194,20 @@
 
   )
 
+;; Add pipe to text objects
+(defmacro define-and-bind-quoted-text-object (name key start-regexp end-regexp)
+  (let ((inner-name (make-symbol (concat "evil-inner-" name)))
+        (outer-name (make-symbol (concat "evil-a-" name))))
+    `(progn
+       (evil-define-text-object ,inner-name (count &optional beg end type)
+         (evil-select-paren ,start-regexp ,end-regexp beg end type count nil))
+       (evil-define-text-object ,outer-name (count &optional beg end type)
+         (evil-select-paren ,start-regexp ,end-regexp beg end type count t))
+       (define-key evil-inner-text-objects-map ,key #',inner-name)
+       (define-key evil-outer-text-objects-map ,key #',outer-name))))
+
+;; Bind the pipe | to a text object
+(define-and-bind-quoted-text-object "pipe" "|" "|" "|")
 
 (use-package evil-nerd-commenter
   :ensure t
@@ -227,7 +241,6 @@
   (add-to-list 'evil-surround-pairs-alist '(?s . ("~" . "~"))) ; gsa s for ~code~
   (add-to-list 'evil-surround-pairs-alist '(?b . ("*" . "*"))) ; gsa b for *bold*
   (add-to-list 'evil-surround-pairs-alist '(?i . ("/" . "/"))) ; gsa i for /italics/
-  (add-to-list 'evil-surround-pairs-alist '(?c . ("| " . " |"))) ; add pipes to surround text objects
   )
 
 ;; Evil-collection (after evil)
