@@ -1090,8 +1090,13 @@ below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
   ;; (org-back-to-heading)
   (cond
    ;; Tables
+   ;; Tables: Insert row, then insert h-line below it
    ((org-at-table-p)
-    (org-table-insert-row 'below))
+    (org-table-insert-hline) ; This puts a line below the row we just made
+    (forward-line 1)        ; Move back up into the empty row
+    (org-table-insert-row 'below)
+    (org-table-align)
+    (evil-insert-state))
    ;; Checkboxes
    ((org-at-item-checkbox-p)
     (org-end-of-line)
