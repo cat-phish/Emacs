@@ -589,7 +589,7 @@ Notes:
   (add-to-list 'evil-surround-pairs-alist '(?s . ("~" . "~"))) ; gsa s for ~code~
   (add-to-list 'evil-surround-pairs-alist '(?b . ("*" . "*"))) ; gsa b for *bold*
   (add-to-list 'evil-surround-pairs-alist '(?i . ("/" . "/"))) ; gsa i for /italics/
-  (push '(?| . ("|" . "|")) evil-surround-pairs-alist) ; add pipes to surround text objects
+  (add-to-list 'evil-surround-pairs-alist '(?c . ("| " . " |"))) ; add pipes to surround text objects
   )
 
 ;; Evil-collection (after evil)
