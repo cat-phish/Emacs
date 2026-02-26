@@ -226,7 +226,9 @@
 (with-eval-after-load 'evil-surround
   (add-to-list 'evil-surround-pairs-alist '(?s . ("~" . "~"))) ; gsa s for ~code~
   (add-to-list 'evil-surround-pairs-alist '(?b . ("*" . "*"))) ; gsa b for *bold*
-  (add-to-list 'evil-surround-pairs-alist '(?i . ("/" . "/")))) ; gsa i for /italics/
+  (add-to-list 'evil-surround-pairs-alist '(?i . ("/" . "/"))) ; gsa i for /italics/
+  (push '(?| . ("|" . "|")) evil-surround-pairs-alist) ; add pipes to surround text objects
+  )
 
 ;; Evil-collection (after evil)
 (use-package evil-collection
@@ -1646,7 +1648,7 @@
 
   ;; Setup automatic sync (runs every 1 hour when idle)
   ;; Note: This will momentarily freeze Emacs while syncing
-  ;; (run-with-idle-timer 3600 t 'org-caldav-sync)
+										; (run-with-idle-timer 3600 t 'org-caldav-sync)
 
   ;; This ensures Emacs uses your GPG key to read the password
   (setq auth-sources '("~/.authinfo.gpg"))
