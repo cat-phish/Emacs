@@ -1461,14 +1461,12 @@ Returns t if active TODOs were found, nil otherwise."
           (org-back-to-heading t)
           (org-show-subtree)
           (my/org-hide-drawers-subtree)
-          ;; Quick scan: Are there any active TODOs in this subtree?
           (org-map-entries
            (lambda ()
              (when (member (org-get-todo-state) org-not-done-keywords)
                (setq has-active-todos t)))
            nil 'tree))
 
-        ;; Only fold the DONE tasks if there is actually active work to hide them from!
         (when has-active-todos
           (org-map-entries
            (lambda ()
@@ -1497,7 +1495,6 @@ Returns t if active TODOs were found, nil otherwise."
               (progn
                 (setq org-cycle-subtree-status 'smart)
                 (message "TODOs Expanded (DONEs folded)"))
-            ;; Fast-forward the cycle state if there were no active TODOs!
             (setq org-cycle-subtree-status 'subtree)
             (message "DONEs Expanded (No active TODOs)")))
          ((eq state 'smart)
@@ -1570,7 +1567,37 @@ Returns t if active TODOs were found, nil otherwise."
          (t nil))))))
 
   ;; 7. Initialize file
-  (add-hook 'org-mode-hook #'my/org-hide-drawers-global))
+  (add-hook 'org-mode-hook #'my/org-hide-drawers-global)
+
+  ;; 8. Auto-Restore Folds on Undo
+  (defun my/org-restore-fold-on-undo (&rest _)
+    "Re-apply smart folding to the current heading after an undo (like 'u' in evil)."
+    (when (derived-mode-p 'org-mode)
+      (save-excursion
+        (ignore-errors
+          (org-back-to-heading t)
+          (let ((state (org-get-todo-state)))
+            (cond
+             ;; If DONE/CANCELED -> Fully fold the entire subtree
+             ((member state org-done-keywords)
+              (if (fboundp 'org-fold-subtree)
+                  (org-fold-subtree t)
+                (outline-hide-subtree)))
+
+             ;; If active TODO -> Fold children, show deadline/entry, vanish drawers
+             ((member state org-not-done-keywords)
+              (if (fboundp 'org-fold-subtree)
+                  (org-fold-subtree t)
+                (outline-hide-subtree))
+              (org-show-entry)
+              (my/org-hide-drawers-subtree))))))))
+
+  ;; Catch all common undo commands to trigger our restore logic
+  (advice-add 'undo :after #'my/org-restore-fold-on-undo)
+  (with-eval-after-load 'evil
+    (advice-add 'evil-undo :after #'my/org-restore-fold-on-undo)
+    (when (fboundp 'undo-tree-undo)
+      (advice-add 'undo-tree-undo :after #'my/org-restore-fold-on-undo))))
 #+end_src
 ** Trigger Syncthing Sync on Save
 Uses syncthingtray to request a syncthing
