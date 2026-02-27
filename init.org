@@ -1193,7 +1193,29 @@ item below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
 This function enables smart behavior when pressing the RET key. Handles tables
 checkboxes, links, headings, and default line behavior.
 #+begin_src emacs-lisp
-;; (ref:ret-dwim)
+(defun my/org-expand-todos-smart (&optional global)
+  "Show content of TODO children, collapse DONE children.
+If GLOBAL is non-nil, apply to entire buffer."
+  (interactive)
+  (save-excursion
+    (if global
+        (progn
+          (org-show-all)
+          (org-cycle-hide-drawers 'all))
+      (org-back-to-heading t)
+      (org-show-subtree)
+      (org-cycle-hide-drawers 'subtree))
+    
+    (org-map-entries
+     (lambda ()
+       (let ((state (org-get-todo-state)))
+         (when (and state (member state org-done-keywords))
+           (org-flag-subtree t) ;; Fold DONE/CANCELED
+           ;; Skip checking children of folded subtree
+           (setq org-map-continue-from (save-excursion (org-end-of-subtree t) (point))))))
+     nil
+     (if global 'file 'tree))))
+
 (defun my/org-return-dwim ()
   "Context-aware RET for Org (normal mode only)."
   (interactive)
@@ -1210,12 +1232,50 @@ checkboxes, links, headings, and default line behavior.
     (org-table-next-row))
    ;; Headings
    ((org-at-heading-p)
-    (org-cycle)
-    (org-cycle-hide-drawers 'subtree)
-    )
+    (let ((state org-cycle-subtree-status))
+      (cond
+       ((eq state 'children)
+        (my/org-expand-todos-smart)
+        (setq org-cycle-subtree-status 'smart)
+        (message "TODOs Expanded (DONEs folded)"))
+       ((eq state 'smart)
+        (org-show-subtree)
+        (org-cycle-hide-drawers 'subtree)
+        (setq org-cycle-subtree-status 'subtree)
+        (message "Subtree (drawers hidden)"))
+       ((eq state 'subtree)
+        (org-cycle)
+        (message "Folded"))
+       (t
+        (org-cycle)
+        (org-cycle-hide-drawers 'subtree) ;; Always enforce drawer hiding
+        ))))
    ;; Fallback
    (t
     (evil-next-line))))
+
+(defun my/org-shifttab-dwim ()
+  "S-TAB cycling with 5 states: overview -> contents -> smart -> all (hidden) -> all (shown)."
+  (interactive)
+  (cond
+   ((eq org-cycle-global-status 'contents)
+    (my/org-expand-todos-smart t)
+    (setq org-cycle-global-status 'smart)
+    (message "TODOs Expanded (DONEs folded)"))
+   ((eq org-cycle-global-status 'smart)
+    (org-show-all)
+    (org-cycle-hide-drawers 'all)
+    (setq org-cycle-global-status 'all)
+    (message "SHOW ALL (drawers hidden)"))
+   ((and (eq org-cycle-global-status 'all)
+         (my/org-drawers-hidden-global-p))
+    (org-show-all)
+    (message "SHOW ALL (drawers shown)"))
+   (t
+    (org-global-cycle)
+    (when (eq org-cycle-global-status 'all)
+      (org-cycle-hide-drawers 'all)
+      (message "SHOW ALL (drawers hidden)")))))
 #+end_src
 ** Yank Entire Subtree
 #+begin_src emacs-lisp

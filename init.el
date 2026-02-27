@@ -194,6 +194,20 @@
 
   )
 
+;; Add pipe to text objects
+(defmacro define-and-bind-quoted-text-object (name key start-regexp end-regexp)
+  (let ((inner-name (make-symbol (concat "evil-inner-" name)))
+        (outer-name (make-symbol (concat "evil-a-" name))))
+    `(progn
+       (evil-define-text-object ,inner-name (count &optional beg end type)
+         (evil-select-paren ,start-regexp ,end-regexp beg end type count nil))
+       (evil-define-text-object ,outer-name (count &optional beg end type)
+         (evil-select-paren ,start-regexp ,end-regexp beg end type count t))
+       (define-key evil-inner-text-objects-map ,key #',inner-name)
+       (define-key evil-outer-text-objects-map ,key #',outer-name))))
+
+;; Bind the pipe | to a text object
+(define-and-bind-quoted-text-object "pipe" "|" "|" "|")
 
 (use-package evil-nerd-commenter
   :ensure t
@@ -226,7 +240,8 @@
 (with-eval-after-load 'evil-surround
   (add-to-list 'evil-surround-pairs-alist '(?s . ("~" . "~"))) ; gsa s for ~code~
   (add-to-list 'evil-surround-pairs-alist '(?b . ("*" . "*"))) ; gsa b for *bold*
-  (add-to-list 'evil-surround-pairs-alist '(?i . ("/" . "/")))) ; gsa i for /italics/
+  (add-to-list 'evil-surround-pairs-alist '(?i . ("/" . "/"))) ; gsa i for /italics/
+  )
 
 ;; Evil-collection (after evil)
 (use-package evil-collection
@@ -639,8 +654,13 @@
   ;; (org-back-to-heading)
   (cond
    ;; Tables
+   ;; Tables: Insert row, then insert h-line below it
    ((org-at-table-p)
-    (org-table-insert-row 'below))
+    (org-table-insert-hline) ; This puts a line below the row we just made
+    (forward-line 1)        ; Move back up into the empty row
+    (org-table-insert-row 'below)
+    (org-table-align)
+    (evil-insert-state))
    ;; Checkboxes
    ((org-at-item-checkbox-p)
     (org-end-of-line)
@@ -725,7 +745,29 @@
       (org-insert-heading-respect-content)
       (evil-insert-state))))
 
-;; (ref:ret-dwim)
+(defun my/org-expand-todos-smart (&optional global)
+  "Show content of TODO children, collapse DONE children.
+If GLOBAL is non-nil, apply to entire buffer."
+  (interactive)
+  (save-excursion
+    (if global
+        (progn
+          (org-show-all)
+          (org-cycle-hide-drawers 'all))
+      (org-back-to-heading t)
+      (org-show-subtree)
+      (org-cycle-hide-drawers 'subtree))
+    
+    (org-map-entries
+     (lambda ()
+       (let ((state (org-get-todo-state)))
+         (when (and state (member state org-done-keywords))
+           (org-flag-subtree t) ;; Fold DONE/CANCELED
+           ;; Skip checking children of folded subtree
+           (setq org-map-continue-from (save-excursion (org-end-of-subtree t) (point))))))
+     nil
+     (if global 'file 'tree))))
+
 (defun my/org-return-dwim ()
   "Context-aware RET for Org (normal mode only)."
   (interactive)
@@ -742,12 +784,50 @@
     (org-table-next-row))
    ;; Headings
    ((org-at-heading-p)
-    (org-cycle)
-    (org-cycle-hide-drawers 'subtree)
-    )
+    (let ((state org-cycle-subtree-status))
+      (cond
+       ((eq state 'children)
+        (my/org-expand-todos-smart)
+        (setq org-cycle-subtree-status 'smart)
+        (message "TODOs Expanded (DONEs folded)"))
+       ((eq state 'smart)
+        (org-show-subtree)
+        (org-cycle-hide-drawers 'subtree)
+        (setq org-cycle-subtree-status 'subtree)
+        (message "Subtree (drawers hidden)"))
+       ((eq state 'subtree)
+        (org-cycle)
+        (message "Folded"))
+       (t
+        (org-cycle)
+        (org-cycle-hide-drawers 'subtree) ;; Always enforce drawer hiding
+        ))))
    ;; Fallback
    (t
     (evil-next-line))))
+
+(defun my/org-shifttab-dwim ()
+  "S-TAB cycling with 5 states: overview -> contents -> smart -> all (hidden) -> all (shown)."
+  (interactive)
+  (cond
+   ((eq org-cycle-global-status 'contents)
+    (my/org-expand-todos-smart t)
+    (setq org-cycle-global-status 'smart)
+    (message "TODOs Expanded (DONEs folded)"))
+   ((eq org-cycle-global-status 'smart)
+    (org-show-all)
+    (org-cycle-hide-drawers 'all)
+    (setq org-cycle-global-status 'all)
+    (message "SHOW ALL (drawers hidden)"))
+   ((and (eq org-cycle-global-status 'all)
+         (my/org-drawers-hidden-global-p))
+    (org-show-all)
+    (message "SHOW ALL (drawers shown)"))
+   (t
+    (org-global-cycle)
+    (when (eq org-cycle-global-status 'all)
+      (org-cycle-hide-drawers 'all)
+      (message "SHOW ALL (drawers hidden)")))))
 
 (defun my/org-yank-entire-subtree ()
   "Copy the current Org subtree (heading and all sub-contents) to the kill ring."
@@ -974,20 +1054,37 @@
       (unless (memq org-cycle-subtree-status '(overview folded contents))
         (org-cycle-hide-drawers 'subtree)))))
 
+(defun my/org-drawers-hidden-global-p ()
+  "Check if drawers are hidden in the whole buffer."
+  (save-excursion
+    (goto-char (point-min))
+    (if (re-search-forward org-drawer-regexp nil t)
+        (progn
+          (goto-char (match-beginning 0))
+          (invisible-p (point)))
+      t)))
+
+(defun my/org-shifttab-dwim ()
+  "S-TAB cycling with 4 states: overview -> contents -> all (hidden) -> all (shown)."
+  (interactive)
+  (if (and (eq org-cycle-global-status 'all)
+           (my/org-drawers-hidden-global-p))
+      (progn
+        (org-show-all)
+        (message "SHOW ALL (drawers shown)"))
+    (org-global-cycle)
+    (unless (memq org-cycle-global-status '(overview contents))
+      (org-cycle-hide-drawers 'all))))
+
 ;; Hide all drawers when opening org files
 (add-hook 'org-mode-hook
           (lambda ()
             (org-cycle-hide-drawers 'all)))
 
 (add-hook 'after-save-hook
-		  (lambda ()
-			(when (derived-mode-p 'org-mode)
-              ;; Use 'call-process' for a silent execution
-              (call-process "syncthingctl" nil 0 nil "rescan-all")
-              (message "Syncthing: Rescanning folders...")
-              ;; Clear it after 2 seconds
-              (run-with-timer 5 nil (lambda () (message "")))))
-		  )
+          (lambda ()
+            (when (derived-mode-p 'org-mode)
+              (shell-command "syncthingctl rescan-all"))))
 
 (use-package org
   :ensure nil
@@ -1389,8 +1486,10 @@
     (kbd "M-l") #'my/org-meta-right-smart)
 
   ;; Explicitly bind TAB to org-cycle so our advice is triggered
-  (evil-define-key '(normal insert) org-mode-map (kbd "TAB") #'org-cycle)
-  (evil-define-key '(normal insert) org-mode-map (kbd "<tab>") #'org-cycle)
+  (evil-define-key '(normal insert) org-mode-map (kbd "TAB") #'my/org-cycle-dwim)
+  (evil-define-key '(normal insert) org-mode-map (kbd "<tab>") #'my/org-cycle-dwim)
+  (evil-define-key '(normal insert) org-mode-map (kbd "S-TAB") #'my/org-shifttab-dwim)
+  (evil-define-key '(normal insert) org-mode-map (kbd "<backtab>") #'my/org-shifttab-dwim)
   )
 
 (with-eval-after-load 'evil-org
@@ -1607,88 +1706,32 @@
 
 (use-package org-caldav
   :ensure t
-  :init
-  ;; Master Switches from the Manual
-  (setq org-icalendar-include-todo 'all  ; Critical: Use 'all symbol
-        org-caldav-sync-todo t           ; Tells org-caldav to handle VTODOs
-        org-icalendar-categories '(local-tags)) ; Prevents tag doubling
-
-  ;; Keyword Mappings
-  ;; Each keyword must have its own list entry because org-caldav only checks the first string.
-  (setq org-caldav-todo-percent-states
-        '((0 "TODO")
-          (0 "ASSIGNMENT")
-          (0 "BILL")
-          (0 "CHORE")
-          (0 "MEETING")
-          (0 "NEXT")
-          (0 "PLANNING")
-          (0 "REVIEW")
-          (0 "HOLD")
-          (0 "READY")
-          (0 "ACTIVE")
-          (100 "DONE")
-          (100 "CANCELED")))
   :config
   (setq org-caldav-url "https://cal.catphish.org"
+        ;; Use the specific calendar path from Radicale
+        org-caldav-calendar-id "jordan/7852d29b-8d80-2f1d-cb53-2e30f8db93a4/"
+        ;; New events from your phone land here
+        org-caldav-inbox "~/org/main/Inbox.org"
+        ;; Source files to push to the server
+        org-caldav-files '("~/org/main/Tasks.org" "~/org/main/Inbox.org")
+        ;; Keep metadata out of your main git repo
         org-caldav-save-directory "~/org/org-caldav-cache/"
+        ;; Sync on a regular basis (optional)
         org-caldav-sync-direction 'twoway
+        ;; Map TODO keywords to percentage states
+        org-caldav-todo-percent-states '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
+                                         (100 "DONE" "CANCELED"))
+        ;; Don't pop up a buffer showing results (silent sync)
         org-caldav-show-sync-results nil)
 
-  ;; Multi-Calendar Configuration
-  (setq org-caldav-calendars
-        '((:calendar-id "jordan/7a6b3fa8-dbaf-aac9-1024-48cc62faafb3/"
-						:files ("~/org/main/Tasks.org")
-						:inbox "~/org/main/Inbox.org"
-						;; :skip-conditions (todo ( "ASSIGNMENT" "BILL" "CHORE" "MEETING" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE" )))
-						;; :skip-conditions (nottodo ( "TODO" "NEXT" )))
-						:skip-conditions (notregexp "TODO"))
+  ;; Setup automatic sync (runs every 1 hour when idle)
+  ;; Note: This will momentarily freeze Emacs while syncing
+										; (run-with-idle-timer 3600 t 'org-caldav-sync)
 
-		  (:calendar-id "jordan/5f213fda-f378-8e9f-ab8e-fe5684cd073d/"
-						:files ("~/org/main/Tasks.org")
-						:inbox "~/org/main/Inbox.org"
-						;; :skip-conditions (nottodo ( "ASSIGNMENT" )))
-						:skip-conditions (notregexp "ASSIGNMENT"))
-		  ;; :skip-conditions (todo ( "TODO" "NEXT" "BILL" "CHORE" "MEETING" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE" )))
-
-		  ;; (:calendar-id "jordan/4e3147bb-a02a-4dea-b1e1-c182ccaa2eef/"
-		  ;; 				:files ("~/org/main/Tasks.org")
-		  ;; 				:inbox "~/org/main/Inbox.org"
-		  ;; 				:skip-conditions (nottodo "BILL"))
-
-		  ;; (:calendar-id "jordan/6de3bbd6-caf6-61f0-0561-6ab07d358e54/"
-		  ;; 				:files ("~/org/main/Tasks.org")
-		  ;; 				:inbox "~/org/main/Inbox.org"
-		  ;; :skip-conditions (nottodo ( "CHORE" )))
-		  ;; :skip-conditions (notregexp "CHORE"))
-		  ;; :skip-conditions (todo ( "TODO" "NEXT" "ASSIGNMENT" "BILL" "MEETING" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE" )))
-
-		  ;; (:calendar-id "jordan/e57a627d-83a4-b64a-a0a0-974c1e4d1708/"
-		  ;; 				:files ("~/org/main/Tasks.org")
-		  ;; 				:inbox "~/org/main/Inbox.org"
-		  ;; 				:skip-conditions (nottodo "MEETING"))
-
-		  ;; (:calendar-id "jordan/9fbe7921-94f8-3406-cfa1-af0233228ecd/"
-		  ;; 				:files ("~/org/main/Tasks.org")
-		  ;; 				:inbox "~/org/main/Inbox.org"
-		  ;; 				:skip-conditions (nottodo "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE"))
-		  ))
-
-  ;; iCalendar Time Handling
-  (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo todo-due)
-		org-icalendar-use-scheduled '(event-if-todo event-if-not-todo todo-start)
-		org-icalendar-deadline-summary-prefix ""
-		org-icalendar-scheduled-summary-prefix "")
-
-  (setq auth-sources '("~/sync/.authinfo.gpg"))
-  ;; (run-with-idle-timer 3600 t 'org-caldav-sync)
-  (setq org-caldav-todo-percent nil)
+  ;; This ensures Emacs uses your GPG key to read the password
+  (setq auth-sources '("~/.authinfo.gpg"))
+  (setq org-cycle-hide-drawers t)
   )
-
-;; Final fix for eval timing
-(with-eval-after-load 'org-caldav
-  (setq org-icalendar-deadline-summary-prefix ""
-        org-icalendar-scheduled-summary-prefix ""))
 
 (use-package org-tempo
   :ensure nil
