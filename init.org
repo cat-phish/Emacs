@@ -1382,75 +1382,105 @@ are collapsed it will expand them.
 
 ;; Override org-mode's drawer hiding function to actually hide drawers properly
 (with-eval-after-load 'org
-  (defun org-cycle-hide-drawers (state)
-    "Re-hide all drawers after a visibility state change."
-    (when (and (derived-mode-p 'org-mode)
-               (not (memq state '(overview folded contents))))
-      (save-excursion
-        (let* ((globalp (memq state '(all contents)))
-               (beg (if globalp (point-min) (save-excursion (org-back-to-heading t) (point))))
-               (end (if globalp (point-max) (save-excursion (org-end-of-subtree t)))))
-          (org-hide-drawer-all beg end)))))
+  ;; 1. Core Functions using Overlays (100% safe from Org's internal parser)
+  (defun my/hide-drawers-completely (beg end)
+    "Use overlays to completely vanish PROPERTIES and LOGBOOK drawers by eating the PRECEDING newline."
+    (save-excursion
+      (goto-char beg)
+      (while (re-search-forward "^[ \t]*:\\(PROPERTIES\\|LOGBOOK\\):" end t)
+        (let* ((drawer-start (line-beginning-position))
+               ;; Grab the newline BEFORE the drawer instead of the one after!
+               ;; This eats the blank line without breaking Org's heading structural boundaries.
+               (ov-start (if (and (> drawer-start (point-min))
+                                  (eq (char-before drawer-start) ?\n))
+                             (1- drawer-start)
+                           drawer-start)))
+          (when (re-search-forward "^[ \t]*:END:[ \t]*$" end t)
+            (let ((ov-end (match-end 0)))
+              ;; Clear any old overlays first to prevent stacking
+              (remove-overlays ov-start ov-end 'my-stealth-drawer t)
+              ;; Create a new overlay that displays as absolutely nothing
+              (let ((ov (make-overlay ov-start ov-end)))
+                (overlay-put ov 'display "")
+                (overlay-put ov 'my-stealth-drawer t))))))))
 
+  (defun my/show-drawers-completely (beg end)
+    "Remove the stealth overlays to reveal the drawers."
+    (remove-overlays beg end 'my-stealth-drawer t))
+
+  (defun my/org-hide-drawers-subtree ()
+    (save-excursion
+      (org-back-to-heading t)
+      (my/hide-drawers-completely (point) (save-excursion (org-end-of-subtree t) (point)))))
+
+  (defun my/org-show-drawers-subtree ()
+    (save-excursion
+      (org-back-to-heading t)
+      (my/show-drawers-completely (point) (save-excursion (org-end-of-subtree t) (point)))))
+
+  (defun my/org-hide-drawers-global ()
+    (my/hide-drawers-completely (point-min) (point-max)))
+
+  (defun my/org-show-drawers-global ()
+    (my/show-drawers-completely (point-min) (point-max)))
+
+  ;; 2. Detection Logic (Checks if the overlay is currently active)
   (defun my/org-drawers-hidden-p ()
-    "Check if drawers are hidden in the current subtree."
     (save-excursion
       (org-back-to-heading t)
       (let ((end (save-excursion (org-end-of-subtree t) (point))))
-        (if (re-search-forward org-drawer-regexp end t)
-            (progn
-              (goto-char (match-beginning 0))
-              (invisible-p (point)))
+        (if (re-search-forward "^[ \t]*:\\(PROPERTIES\\|LOGBOOK\\):" end t)
+            (let ((ovs (overlays-at (line-beginning-position)))
+                  (is-hidden nil))
+              (dolist (ov ovs)
+                (when (overlay-get ov 'my-stealth-drawer)
+                  (setq is-hidden t)))
+              is-hidden)
           t))))
 
   (defun my/org-drawers-hidden-global-p ()
-    "Check if drawers are hidden in the whole buffer."
     (save-excursion
       (goto-char (point-min))
-      (if (re-search-forward org-drawer-regexp nil t)
-          (progn
-            (goto-char (match-beginning 0))
-            (invisible-p (point)))
+      (if (re-search-forward "^[ \t]*:\\(PROPERTIES\\|LOGBOOK\\):" nil t)
+          (let ((ovs (overlays-at (line-beginning-position)))
+                (is-hidden nil))
+            (dolist (ov ovs)
+              (when (overlay-get ov 'my-stealth-drawer)
+                (setq is-hidden t)))
+            is-hidden)
         t)))
 
+  ;; 3. Smart TODO Expander
   (defun my/org-expand-todos-smart (&optional global)
-    "Show content of TODO children, collapse DONE children.
-If GLOBAL is non-nil, apply to entire buffer."
     (interactive)
     (save-excursion
       (if global
           (progn
             (org-show-all)
-            (org-cycle-hide-drawers 'all))
+            (my/org-hide-drawers-global))
         (org-back-to-heading t)
         (org-show-subtree)
-        (org-cycle-hide-drawers 'subtree))
-      
+        (my/org-hide-drawers-subtree))
+
       (org-map-entries
        (lambda ()
          (let ((state (org-get-todo-state)))
            (when (and state (member state org-done-keywords))
-             (org-flag-subtree t) ;; Fold DONE/CANCELED
-             ;; Skip checking children of folded subtree
+             ;; Safely fold DONEs without breaking our overlays
+             (if (fboundp 'org-fold-subtree)
+                 (org-fold-subtree t)
+               (outline-hide-subtree))
              (setq org-map-continue-from (save-excursion (org-end-of-subtree t) (point))))))
        nil
        (if global 'file 'tree))))
 
+  ;; 4. Return DWIM
   (defun my/org-return-dwim ()
-    "Context-aware RET for Org (normal mode only)."
     (interactive)
     (cond
-     ;; Toggle checkbox
-     ((org-at-item-checkbox-p)
-      (org-toggle-checkbox))
-     ;; Follow links
-     ((and org-return-follows-link
-           (org-in-regexp org-link-any-re))
-      (org-open-at-point))
-     ;; Tables
-     ((org-at-table-p)
-      (org-table-next-row))
-     ;; Headings
+     ((org-at-item-checkbox-p) (org-toggle-checkbox))
+     ((and org-return-follows-link (org-in-regexp org-link-any-re)) (org-open-at-point))
+     ((org-at-table-p) (org-table-next-row))
      ((org-at-heading-p)
       (let ((state org-cycle-subtree-status))
         (cond
@@ -1460,7 +1490,7 @@ If GLOBAL is non-nil, apply to entire buffer."
           (message "TODOs Expanded (DONEs folded)"))
          ((eq state 'smart)
           (org-show-subtree)
-          (org-cycle-hide-drawers 'subtree)
+          (my/org-hide-drawers-subtree)
           (setq org-cycle-subtree-status 'subtree)
           (message "Subtree (drawers hidden)"))
          ((eq state 'subtree)
@@ -1468,14 +1498,12 @@ If GLOBAL is non-nil, apply to entire buffer."
           (message "Folded"))
          (t
           (org-cycle)
-          (org-cycle-hide-drawers 'subtree) ;; Always enforce drawer hiding
-          ))))
-     ;; Fallback
+          (my/org-hide-drawers-subtree)))))
      (t
-      (evil-next-line))))
+      (if (fboundp 'evil-next-line) (evil-next-line) (next-line)))))
 
+  ;; 5. Cycle DWIM (TAB)
   (defun my/org-cycle-dwim ()
-    "TAB cycling with 5 states: folded -> children -> smart -> subtree (hidden) -> subtree (shown)."
     (interactive)
     (if (org-at-heading-p)
         (let ((state org-cycle-subtree-status))
@@ -1486,20 +1514,21 @@ If GLOBAL is non-nil, apply to entire buffer."
             (message "TODOs Expanded (DONEs folded)"))
            ((eq state 'smart)
             (org-show-subtree)
-            (org-cycle-hide-drawers 'subtree)
+            (my/org-hide-drawers-subtree)
             (setq org-cycle-subtree-status 'subtree)
             (message "SUBTREE (drawers hidden)"))
            ((and (eq state 'subtree) (my/org-drawers-hidden-p))
             (org-show-subtree)
+            (my/org-show-drawers-subtree)
             (message "SUBTREE (drawers shown)"))
            (t
             (org-cycle)
             (unless (eq org-cycle-subtree-status 'children)
-              (org-cycle-hide-drawers 'subtree)))))
+              (my/org-hide-drawers-subtree)))))
       (org-cycle)))
 
+  ;; 6. Global Cycle DWIM (S-TAB)
   (defun my/org-shifttab-dwim ()
-    "S-TAB cycling with 5 states: overview -> contents -> smart -> all (hidden) -> all (shown)."
     (interactive)
     (cond
      ((eq org-cycle-global-status 'contents)
@@ -1508,26 +1537,25 @@ If GLOBAL is non-nil, apply to entire buffer."
       (message "TODOs Expanded (DONEs folded)"))
      ((eq org-cycle-global-status 'smart)
       (org-show-all)
-      (org-cycle-hide-drawers 'all)
+      (my/org-hide-drawers-global)
       (setq org-cycle-global-status 'all)
       (message "SHOW ALL (drawers hidden)"))
      ((and (eq org-cycle-global-status 'all)
            (my/org-drawers-hidden-global-p))
       (org-show-all)
+      (my/org-show-drawers-global)
       (message "SHOW ALL (drawers shown)"))
      (t
       (org-global-cycle)
       (let ((state org-cycle-global-status))
         (cond
          ((eq state 'all)
-          (org-cycle-hide-drawers 'all)
+          (my/org-hide-drawers-global)
           (message "SHOW ALL (drawers hidden)"))
          (t nil))))))
 
-  ;; Hide all drawers when opening org files
-  (add-hook 'org-mode-hook
-            (lambda ()
-              (org-cycle-hide-drawers 'all))))
+  ;; 7. Initialize file
+  (add-hook 'org-mode-hook #'my/org-hide-drawers-global))
 #+end_src
 ** Trigger Syncthing Sync on Save
 Uses syncthingtray to request a syncthing
