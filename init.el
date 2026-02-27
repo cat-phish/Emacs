@@ -917,17 +917,13 @@
       (goto-char beg)
       (while (re-search-forward "^[ \t]*:\\(PROPERTIES\\|LOGBOOK\\):" end t)
         (let* ((drawer-start (line-beginning-position))
-               ;; Grab the newline BEFORE the drawer instead of the one after!
-               ;; This eats the blank line without breaking Org's heading structural boundaries.
                (ov-start (if (and (> drawer-start (point-min))
                                   (eq (char-before drawer-start) ?\n))
                              (1- drawer-start)
                            drawer-start)))
           (when (re-search-forward "^[ \t]*:END:[ \t]*$" end t)
             (let ((ov-end (match-end 0)))
-              ;; Clear any old overlays first to prevent stacking
               (remove-overlays ov-start ov-end 'my-stealth-drawer t)
-              ;; Create a new overlay that displays as absolutely nothing
               (let ((ov (make-overlay ov-start ov-end)))
                 (overlay-put ov 'display "")
                 (overlay-put ov 'my-stealth-drawer t))))))))
@@ -952,7 +948,7 @@
   (defun my/org-show-drawers-global ()
     (my/show-drawers-completely (point-min) (point-max)))
 
-  ;; 2. Detection Logic (Checks if the overlay is currently active)
+  ;; 2. Detection Logic
   (defun my/org-drawers-hidden-p ()
     (save-excursion
       (org-back-to-heading t)
@@ -980,27 +976,39 @@
 
   ;; 3. Smart TODO Expander
   (defun my/org-expand-todos-smart (&optional global)
+    "Show content of TODO children, collapse DONE children.
+Returns t if active TODOs were found, nil otherwise."
     (interactive)
-    (save-excursion
-      (if global
-          (progn
-            (org-show-all)
-            (my/org-hide-drawers-global))
-        (org-back-to-heading t)
-        (org-show-subtree)
-        (my/org-hide-drawers-subtree))
+    (let ((has-active-todos nil))
+      (save-excursion
+        (if global
+            (progn
+              (org-show-all)
+              (my/org-hide-drawers-global)
+              (setq has-active-todos t))
+          (org-back-to-heading t)
+          (org-show-subtree)
+          (my/org-hide-drawers-subtree)
+          ;; Quick scan: Are there any active TODOs in this subtree?
+          (org-map-entries
+           (lambda ()
+             (when (member (org-get-todo-state) org-not-done-keywords)
+               (setq has-active-todos t)))
+           nil 'tree))
 
-      (org-map-entries
-       (lambda ()
-         (let ((state (org-get-todo-state)))
-           (when (and state (member state org-done-keywords))
-             ;; Safely fold DONEs without breaking our overlays
-             (if (fboundp 'org-fold-subtree)
-                 (org-fold-subtree t)
-               (outline-hide-subtree))
-             (setq org-map-continue-from (save-excursion (org-end-of-subtree t) (point))))))
-       nil
-       (if global 'file 'tree))))
+        ;; Only fold the DONE tasks if there is actually active work to hide them from!
+        (when has-active-todos
+          (org-map-entries
+           (lambda ()
+             (let ((state (org-get-todo-state)))
+               (when (and state (member state org-done-keywords))
+                 (if (fboundp 'org-fold-subtree)
+                     (org-fold-subtree t)
+                   (outline-hide-subtree))
+                 (setq org-map-continue-from (save-excursion (org-end-of-subtree t) (point))))))
+           nil
+           (if global 'file 'tree))))
+      has-active-todos))
 
   ;; 4. Return DWIM
   (defun my/org-return-dwim ()
@@ -1013,9 +1021,13 @@
       (let ((state org-cycle-subtree-status))
         (cond
          ((eq state 'children)
-          (my/org-expand-todos-smart)
-          (setq org-cycle-subtree-status 'smart)
-          (message "TODOs Expanded (DONEs folded)"))
+          (if (my/org-expand-todos-smart)
+              (progn
+                (setq org-cycle-subtree-status 'smart)
+                (message "TODOs Expanded (DONEs folded)"))
+            ;; Fast-forward the cycle state if there were no active TODOs!
+            (setq org-cycle-subtree-status 'subtree)
+            (message "DONEs Expanded (No active TODOs)")))
          ((eq state 'smart)
           (org-show-subtree)
           (my/org-hide-drawers-subtree)
@@ -1037,9 +1049,12 @@
         (let ((state org-cycle-subtree-status))
           (cond
            ((eq state 'children)
-            (my/org-expand-todos-smart)
-            (setq org-cycle-subtree-status 'smart)
-            (message "TODOs Expanded (DONEs folded)"))
+            (if (my/org-expand-todos-smart)
+                (progn
+                  (setq org-cycle-subtree-status 'smart)
+                  (message "TODOs Expanded (DONEs folded)"))
+              (setq org-cycle-subtree-status 'subtree)
+              (message "DONEs Expanded (No active TODOs)")))
            ((eq state 'smart)
             (org-show-subtree)
             (my/org-hide-drawers-subtree)
