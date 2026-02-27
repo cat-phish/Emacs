@@ -369,7 +369,7 @@ item below. It intelligently handles tables, checkboxes, lists, headings/TODOs.
 ## Smart RET Key
 
 This function enables smart behavior when pressing the RET key. Handles tables
-checkboxes, links, headings, and default line behavior.
+checkboxes, links, headings, and default line behavior. (Logic moved to Hide Properties Drawers section)
 
 
 ## Yank Entire Subtree
