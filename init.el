@@ -1813,18 +1813,51 @@ Returns t if active TODOs were found, nil otherwise."
 (with-eval-after-load 'org-roam-ui
   )
 
+;; (use-package org-download
+;;   :after org
+;;   :hook ((dired-mode . org-download-enable)
+;;     	 (org-mode . org-download-enable))
+;;   :config
+;;   (setq org-download-method 'directory)             ;; Save images to a directory
+;;   (setq org-download-image-dir "./images")            ;; The directory name (e.g. ./images)
+;;   (setq org-download-heading-lvl nil)               ;; Don't use headings for sub-folders
+;;   (setq org-download-timestamp "%Y%m%d-%H%M%S_")    ;; Timestamp file names
+;;   (add-hook 'dired-mode-hook 'org-download-enable)
+
+;;   ;; (setq org-download-screenshot-method "xclip")     ;; "scrot", "gnome-screenshot", or "xclip" (Linux)
+;;   ;; (setq org-download-screenshot-method "wl-paste -t image/png > %s")
+;;   ;; On Mac, it uses "pngpaste" automatically if installed
+;;   (setq org-download-screenshot-method
+;; 		(if (string= (getenv "XDG_SESSION_TYPE") "wayland")
+;; 			"wl-paste -t image/png > %s"
+;;           "xclip -selection clipboard -t image/png -o > %s"))
+;;   )
 (use-package org-download
   :after org
   :hook ((dired-mode . org-download-enable)
     	 (org-mode . org-download-enable))
   :config
-  (setq org-download-method 'directory)             ;; Save images to a directory
-  (setq org-download-image-dir "images")            ;; The directory name (e.g. ./images)
-  (setq org-download-heading-lvl nil)               ;; Don't use headings for sub-folders
-  (setq org-download-timestamp "%Y%m%d-%H%M%S_")    ;; Timestamp file names
-  (setq org-download-screenshot-method "xclip")     ;; "scrot", "gnome-screenshot", or "xclip" (Linux)
-  ;; On Mac, it uses "pngpaste" automatically if installed
-  )
+  (setq org-download-timestamp "%Y%m%d-%H%M%S_")
+
+  ;; Dynamic Clipboard Detection
+  (setq org-download-screenshot-method
+        (cond
+         ((executable-find "dms") "dms cl paste > %s")
+         ((and (string= (getenv "XDG_SESSION_TYPE") "wayland")
+               (executable-find "wl-paste")) "wl-paste -t image/png > %s")
+         (t "xclip -selection clipboard -t image/png -o > %s")))
+
+  ;; Custom Directory Logic
+  (defun my/org-download-method (link)
+    (let* ((buffer-path (buffer-file-name))
+           (buffer-name (if buffer-path (file-name-base buffer-path) "unsaved"))
+           (header (or (org-get-heading t t t t) "general"))
+           (clean-header (replace-regexp-in-string "[^A-Za-z0-9]" "_" header))
+           (folder (concat "./images/" buffer-name "/" clean-header "/")))
+      (unless (file-exists-p folder) (make-directory folder t))
+      (concat folder (format-time-string org-download-timestamp) "screenshot.png")))
+
+  (setq org-download-method 'my/org-download-method))
 
 (use-package projectile
   :config
