@@ -135,6 +135,29 @@
          )
   )
 
+(defconst start/is-windows (eq system-type 'windows-nt))
+
+(defconst start/enable-dev-features (not start/is-windows)
+  "When non-nil, enable programming/development tooling.")
+
+(defconst start/org-root
+  (expand-file-name (if start/is-windows "C:/Users/Jordan/org/" "~/org/")))
+
+(defconst start/org-main-dir
+  (expand-file-name "main/" start/org-root))
+
+(defconst start/org-roam-dir
+  (expand-file-name "roam/" start/org-root))
+
+(defconst start/org-tasks-file
+  (expand-file-name "Tasks.org" start/org-main-dir))
+
+(defconst start/org-projects-file
+  (expand-file-name "Projects.org" start/org-main-dir))
+
+(defconst start/org-inbox-file
+  (expand-file-name "Inbox.org" start/org-main-dir))
+
 ;; Must be set before evil loads
 ;; Basic evil customization
 (setq evil-want-keybinding nil
@@ -269,15 +292,18 @@
     "SPC" '(consult-buffer :wk "Switch Buffer")
     "TAB" '(mode-line-other-buffer :wk "Previous Buffer")
     "C" '(comment-line :wk "Comment lines")
-    "q" '(flymake-show-buffer-diagnostics :wk "Flymake buffer diagnostic")
-    "t" '(eat :wk "Eat terminal")
-    ;; "n" '(my/toggle-relative-line-numbers :wk "Toggle relative/absolute line numbers")
-    "p" '(projectile-command-map :wk "Projectile")
-    "s p" '(projectile-discover-projects-in-search-path :wk "Search for projects"))
+    "q" '(flymake-show-buffer-diagnostics :wk "Flymake buffer diagnostic"))
+
+  (when start/enable-dev-features
+    (start/leader-keys
+      "t" '(eat :wk "Eat terminal")
+      ;; "n" '(my/toggle-relative-line-numbers :wk "Toggle relative/absolute line numbers")
+      "p" '(projectile-command-map :wk "Projectile")
+      "s p" '(projectile-discover-projects-in-search-path :wk "Search for projects")))
 
   (start/leader-keys
     "f" '(:ignore t :wk "find")
-    "f c" '((lambda () (interactive) (find-file "~/.config/emacs/init.org")) :wk "Find emacs Config")
+    "f c" '((lambda () (interactive) (find-file (expand-file-name "init.org" user-emacs-directory))) :wk "Find emacs Config")
     "f r" '(consult-recent-file :wk "Find recent files")
     "f F" '(consult-fd :wk "Find files with fd")
     "f f" '(find-file :wk "Find File")
@@ -398,7 +424,7 @@
     )
 
   (start/leader-keys
-    "y"   '(:ignore t :wk "+yank")
+    "y"   '(:ignore t :wk "yank")
     "y c" '(copy-region-as-kill :wk "Yank to clipboard")
     "y b" '( (lambda ()
                (interactive)
@@ -583,7 +609,7 @@
      ((,(nerd-icons-mdicon "nf-md-book_open_variant" :height 1.0)
        "Org files"
        "Open org directory"
-       (lambda () (dired "~/org"))))
+       (lambda () (dired start/org-root))))
 
      ((,(nerd-icons-mdicon "nf-md-graph" :height 1.0)
        "Org-roam"
@@ -1129,7 +1155,8 @@ Returns t if active TODOs were found, nil otherwise."
 
 (add-hook 'after-save-hook
           (lambda ()
-            (when (derived-mode-p 'org-mode)
+            (when (and (derived-mode-p 'org-mode)
+                       (executable-find "syncthingctl"))
               (shell-command "syncthingctl rescan-all"))))
 
 (use-package org
@@ -1201,9 +1228,7 @@ Returns t if active TODOs were found, nil otherwise."
   (org-agenda-window-setup 'current-window)
   (org-agenda-restore-windows-after-quit t)
   (org-agenda-start-with-log-mod t)
-  (org-agenda-files
-   '("~/org/main/Tasks.org")
-   ("~/org/main/Projects.org"))
+  (org-agenda-files (list start/org-tasks-file start/org-projects-file))
   (org-refile-targets
    '(("Archive.org" :maxlevel . 1)
 	 ("Tasks.org" :maxlevel . 1)
@@ -1757,11 +1782,11 @@ Returns t if active TODOs were found, nil otherwise."
         ;; Use the specific calendar path from Radicale
         org-caldav-calendar-id "jordan/7852d29b-8d80-2f1d-cb53-2e30f8db93a4/"
         ;; New events from your phone land here
-        org-caldav-inbox "~/org/main/Inbox.org"
+        org-caldav-inbox start/org-inbox-file
         ;; Source files to push to the server
-        org-caldav-files '("~/org/main/Tasks.org" "~/org/main/Inbox.org")
+        org-caldav-files (list start/org-tasks-file start/org-inbox-file)
         ;; Keep metadata out of your main git repo
-        org-caldav-save-directory "~/org/org-caldav-cache/"
+        org-caldav-save-directory (expand-file-name "org-caldav-cache/" start/org-root)
         ;; Sync on a regular basis (optional)
         org-caldav-sync-direction 'twoway
         ;; Map TODO keywords to percentage states
@@ -1785,7 +1810,7 @@ Returns t if active TODOs were found, nil otherwise."
 
 (use-package org-roam
   :custom
-  (org-roam-directory (file-truename "~/org/roam"))
+  (org-roam-directory (file-truename start/org-roam-dir))
   (org-roam-completion-everywhere t)
   (org-roam-node-display-template
    (concat "${title:*} "
@@ -1860,6 +1885,7 @@ Returns t if active TODOs were found, nil otherwise."
   (setq org-download-method 'my/org-download-method))
 
 (use-package projectile
+  :if start/enable-dev-features
   :config
   (projectile-mode)
   :custom
@@ -1869,6 +1895,7 @@ Returns t if active TODOs were found, nil otherwise."
   (projectile-project-search-path '("~/projects/" "~/source/" ("~/github" . 1)))) ;; . 1 means only search the first subdirectory level for projects
 
 (use-package eglot
+  :if start/enable-dev-features
   :ensure nil ;; Don't install eglot because it's now built-in
   :hook ((c-mode c++-mode ;; Autostart lsp servers for a given mode
                  lua-mode) ;; Lua-mode needs to be installed
@@ -1885,69 +1912,75 @@ Returns t if active TODOs were found, nil otherwise."
   )
 
 (use-package sideline-flymake
+  :if start/enable-dev-features
   :hook (flymake-mode . sideline-mode)
   :custom
   (sideline-flymake-display-mode 'line) ;; Show errors on the current line
   (sideline-backends-right '(sideline-flymake)))
 
 (use-package yasnippet-snippets
+  :if start/enable-dev-features
   :hook (prog-mode . yas-minor-mode))
 
-(setq treesit-language-source-alist
-      '((bash "https://github.com/tree-sitter/tree-sitter-bash")
-        (cmake "https://github.com/uyha/tree-sitter-cmake")
-        (c "https://github.com/tree-sitter/tree-sitter-c")
-        (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
-        (css "https://github.com/tree-sitter/tree-sitter-css")
-        (elisp "https://github.com/Wilfred/tree-sitter-elisp")
-        (go "https://github.com/tree-sitter/tree-sitter-go")
-        (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
-        (html "https://github.com/tree-sitter/tree-sitter-html")
-        (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
-        (json "https://github.com/tree-sitter/tree-sitter-json")
-        (make "https://github.com/alemuller/tree-sitter-make")
-        (markdown "https://github.com/ikatyang/tree-sitter-markdown")
-        (python "https://github.com/tree-sitter/tree-sitter-python")
-        (rust "https://github.com/tree-sitter/tree-sitter-rust")
-        (toml "https://github.com/tree-sitter/tree-sitter-toml")
-        (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
-        (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
-        (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
+(when start/enable-dev-features
+  (when (and (fboundp 'treesit-available-p)
+             (treesit-available-p))
+    (setq treesit-language-source-alist
+          '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+            (cmake "https://github.com/uyha/tree-sitter-cmake")
+            (c "https://github.com/tree-sitter/tree-sitter-c")
+            (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
+            (css "https://github.com/tree-sitter/tree-sitter-css")
+            (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+            (go "https://github.com/tree-sitter/tree-sitter-go")
+            (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
+            (html "https://github.com/tree-sitter/tree-sitter-html")
+            (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
+            (json "https://github.com/tree-sitter/tree-sitter-json")
+            (make "https://github.com/alemuller/tree-sitter-make")
+            (markdown "https://github.com/ikatyang/tree-sitter-markdown")
+            (python "https://github.com/tree-sitter/tree-sitter-python")
+            (rust "https://github.com/tree-sitter/tree-sitter-rust")
+            (toml "https://github.com/tree-sitter/tree-sitter-toml")
+            (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+            (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+            (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
 
-(defun start/install-treesit-grammars ()
-  "Install missing treesitter grammars"
-  (interactive)
-  (dolist (grammar treesit-language-source-alist)
-    (let ((lang (car grammar)))
-      (unless (treesit-language-available-p lang)
-        (treesit-install-language-grammar lang)))))
+    (defun start/install-treesit-grammars ()
+      "Install missing treesitter grammars"
+      (interactive)
+      (dolist (grammar treesit-language-source-alist)
+        (let ((lang (car grammar)))
+          (unless (treesit-language-available-p lang)
+            (treesit-install-language-grammar lang)))))
 
-;; Call this function to install missing grammars
-(start/install-treesit-grammars)
+    ;; Call this function to install missing grammars
+    (start/install-treesit-grammars)
 
-;; Optionally, add any additional mode remappings not covered by defaults
-(setq major-mode-remap-alist
-      '((yaml-mode . yaml-ts-mode)
-        (sh-mode . bash-ts-mode)
-        (c-mode . c-ts-mode)
-        (c++-mode . c++-ts-mode)
-        (css-mode . css-ts-mode)
-        (python-mode . python-ts-mode)
-        (mhtml-mode . html-ts-mode)
-        (javascript-mode . js-ts-mode)
-        (json-mode . json-ts-mode)
-        (typescript-mode . typescript-ts-mode)
-        (conf-toml-mode . toml-ts-mode)
-        ))
+    ;; Optionally, add any additional mode remappings not covered by defaults
+    (setq major-mode-remap-alist
+          '((yaml-mode . yaml-ts-mode)
+            (sh-mode . bash-ts-mode)
+            (c-mode . c-ts-mode)
+            (c++-mode . c++-ts-mode)
+            (css-mode . css-ts-mode)
+            (python-mode . python-ts-mode)
+            (mhtml-mode . html-ts-mode)
+            (javascript-mode . js-ts-mode)
+            (json-mode . json-ts-mode)
+            (typescript-mode . typescript-ts-mode)
+            (conf-toml-mode . toml-ts-mode)
+            ))
 
-;; Or if there is no built in mode
-(use-package cmake-ts-mode :ensure nil :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
-(use-package go-ts-mode :ensure nil :mode "\\.go\\'")
-(use-package go-mod-ts-mode :ensure nil :mode "\\.mod\\'")
-(use-package rust-ts-mode :ensure nil :mode "\\.rs\\'")
-(use-package tsx-ts-mode :ensure nil :mode "\\.tsx\\'")
+    ;; Or if there is no built in mode
+    (use-package cmake-ts-mode :ensure nil :mode ("CMakeLists\\.txt\\'" "\\.cmake\\'"))
+    (use-package go-ts-mode :ensure nil :mode "\\.go\\'")
+    (use-package go-mod-ts-mode :ensure nil :mode "\\.mod\\'")
+    (use-package rust-ts-mode :ensure nil :mode "\\.rs\\'")
+    (use-package tsx-ts-mode :ensure nil :mode "\\.tsx\\'")))
 
 (use-package eat
+  :if start/enable-dev-features
   :hook ('eshell-load-hook #'eat-eshell-mode))
 
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))

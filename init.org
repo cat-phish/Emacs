@@ -803,7 +803,7 @@ Note: The Leader key is what you will press when you want to access your keybind
     )
 
   (start/leader-keys
-    "y"   '(:ignore t :wk "+yank")
+    "y"   '(:ignore t :wk "yank")
     "y c" '(copy-region-as-kill :wk "Yank to clipboard")
     "y b" '( (lambda ()
                (interactive)
