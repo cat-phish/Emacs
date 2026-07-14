@@ -2312,7 +2312,7 @@ Gives you frozen headers when scrolling large tables
   :config
   (setq org-caldav-url "https://cal.catphish.org"
         ;; Use the specific calendar path from Radicale
-        org-caldav-calendar-id "jordan/5f213fda-f378-8e9f-ab8e-fe5684cd073d/"
+        org-caldav-calendar-id "jordan/5862c1ad-977a-1c79-4053-af22365427d0/"
         ;; New events from your phone land here
         org-caldav-inbox start/org-inbox-file
         ;; Source files to push to the server
