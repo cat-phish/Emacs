@@ -61,7 +61,7 @@
     - [[#eglot-lsp][Eglot (LSP)]]
     - [[#sideline-flymake][Sideline-flymake]]
     - [[#yasnippet][Yasnippet]]
-    - [[#tree-sitter-tect-objects][Tree-Sitter (Tect Objects)]]
+    - [[#tree-sitter-text-objects][Tree-Sitter (Text Objects)]]
     - [[#language-modes][Language modes]]
     - [[#terminal][Terminal]]
 - [[#multi-file-example][Multi File Example]]
@@ -2312,7 +2312,7 @@ Gives you frozen headers when scrolling large tables
   :config
   (setq org-caldav-url "https://cal.catphish.org"
         ;; Use the specific calendar path from Radicale
-        org-caldav-calendar-id "jordan/7852d29b-8d80-2f1d-cb53-2e30f8db93a4/"
+        org-caldav-calendar-id "jordan/5f213fda-f378-8e9f-ab8e-fe5684cd073d/"
         ;; New events from your phone land here
         org-caldav-inbox start/org-inbox-file
         ;; Source files to push to the server
@@ -2509,7 +2509,7 @@ To use it write out the full keyword (or use autocompletion) and press Tab.
   :if start/enable-dev-features
   :hook (prog-mode . yas-minor-mode))
 #+end_src
-** Tree-Sitter (Tect Objects)
+** Tree-Sitter (Text Objects)
 A parser generator tool and an incremental parsing library.
 Check out TJ's [[https://www.youtube.com/watch?v=09-9LltqWLY][video]] to learn why you should use it.
 
