@@ -1780,7 +1780,7 @@ Returns t if active TODOs were found, nil otherwise."
   :config
   (setq org-caldav-url "https://cal.catphish.org"
         ;; Use the specific calendar path from Radicale
-        org-caldav-calendar-id "jordan/7852d29b-8d80-2f1d-cb53-2e30f8db93a4/"
+        org-caldav-calendar-id "jordan/5862c1ad-977a-1c79-4053-af22365427d0/"
         ;; New events from your phone land here
         org-caldav-inbox start/org-inbox-file
         ;; Source files to push to the server
