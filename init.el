@@ -1775,45 +1775,6 @@ Returns t if active TODOs were found, nil otherwise."
             :anything t
             :order 99))))
 
-(use-package org-caldav
-  :ensure t
-  :config
-  (setq org-caldav-url "https://cal.catphish.org"
-        ;; Use the specific calendar path from Radicale
-        org-caldav-calendar-id "jordan/6e351511-8033-2830-85f4-40bcb1e860a0/"
-        ;; New events from your phone land here
-        org-caldav-inbox start/org-inbox-file
-        ;; Source files to push to the server
-        org-caldav-files (list start/org-tasks-file start/org-inbox-file)
-        ;; Keep metadata out of your main git repo
-        org-caldav-save-directory (expand-file-name "caldav-cache/" start/org-root)
-        ;; Sync on a regular basis (optional)
-        org-caldav-sync-direction 'twoway
-        ;; Map TODO keywords to percentage states
-        org-caldav-todo-percent-states '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
-                                         (100 "DONE" "CANCELED"))
-        ;; Don't pop up a buffer showing results (silent sync)
-        org-caldav-show-sync-results nil)
-
-  ;; --- THE MISSING LINES THAT RESTORE TODO SYNC ---
-  (setq org-caldav-sync-todo t)
-  (setq org-icalendar-include-todo 'all)
-  (setq org-icalendar-use-deadline '(todo-due))
-  (setq org-icalendar-use-scheduled '(todo-start))
-
-  ;; Setup automatic sync (runs every 1 hour when idle)
-  ;; Note: This will momentarily freeze Emacs while syncing
-                                        ; (run-with-idle-timer 3600 t 'org-caldav-sync)
-
-  ;; This ensures Emacs uses your GPG key to read the password
-  (setq auth-sources '("~/.authinfo.gpg"))
-  (setq org-cycle-hide-drawers t)
-  )
-
-(use-package org-tempo
-  :ensure nil
-  :after org)
-
 (use-package org-roam
   :custom
   (org-roam-directory (file-truename start/org-roam-dir))

@@ -2321,17 +2321,22 @@ Gives you frozen headers when scrolling large tables
         org-caldav-save-directory (expand-file-name "caldav-cache/" start/org-root)
         ;; Sync on a regular basis (optional)
         org-caldav-sync-direction 'twoway
-        ;; Map TODO keywords to percentage states
-        org-caldav-todo-percent-states '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
-                                         (100 "DONE" "CANCELED"))
         ;; Don't pop up a buffer showing results (silent sync)
         org-caldav-show-sync-results nil)
 
-  ;; --- THE MISSING LINES THAT RESTORE TODO SYNC ---
-  (setq org-caldav-sync-todo t)
-  (setq org-icalendar-include-todo 'all)
-  (setq org-icalendar-use-deadline '(todo-due))
-  (setq org-icalendar-use-scheduled '(todo-start))
+  ;; --- 1. FIX THE "BILL" ERROR ---
+  ;; Map each state individually as ("KEYWORD" . percentage)
+  (setq org-caldav-todo-percent-states
+        '(("TODO" . 0) ("ASSIGNMENT" . 0) ("BILL" . 0) ("CHORE" . 0)
+          ("MEETING" . 0) ("NEXT" . 0) ("PLANNING" . 0) ("REVIEW" . 0)
+          ("HOLD" . 0) ("READY" . 0) ("ACTIVE" . 0)
+          ("DONE" . 100) ("CANCELED" . 100)))
+
+  ;; --- 2. EXPORT AS EVENTS INSTEAD OF TASKS ---
+  (setq org-caldav-sync-todo nil) ;; Disable VTODO task generation
+  (setq org-icalendar-include-todo t) ;; Allow exporter to read TODO lines
+  (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo)) ;; Push deadlines to calendar grid
+  (setq org-icalendar-use-scheduled '(event-if-todo event-if-not-todo)) ;; Push schedules to calendar grid
 
   ;; Setup automatic sync (runs every 1 hour when idle)
   ;; Note: This will momentarily freeze Emacs while syncing
@@ -2340,8 +2345,7 @@ Gives you frozen headers when scrolling large tables
   ;; This ensures Emacs uses your GPG key to read the password
   (setq auth-sources '("~/.authinfo.gpg"))
   (setq org-cycle-hide-drawers t)
-  )
-#+end_src
+  )#+end_src
 ** Source Code Block Tag Expansion
 Org-tempo is not a separate package but a module within org that can be enabled.
 Org-tempo allows for '<s' followed by TAB to expand to a begin_src tag.
