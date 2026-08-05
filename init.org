@@ -2327,9 +2327,17 @@ Gives you frozen headers when scrolling large tables
         ;; Don't pop up a buffer showing results (silent sync)
         org-caldav-show-sync-results nil)
 
+  ;; --- NEW SETTINGS: Export TODOs as Calendar Events ---
+  ;; Force deadlines to show up as calendar events
+  (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo))
+  ;; Force scheduled dates to show up as calendar events
+  (setq org-icalendar-use-scheduled '(event-if-todo event-if-not-todo))
+  ;; Disable exporting them as hidden VTODO tasks
+  (setq org-icalendar-include-todo nil)
+
   ;; Setup automatic sync (runs every 1 hour when idle)
   ;; Note: This will momentarily freeze Emacs while syncing
-										; (run-with-idle-timer 3600 t 'org-caldav-sync)
+                                        ; (run-with-idle-timer 3600 t 'org-caldav-sync)
 
   ;; This ensures Emacs uses your GPG key to read the password
   (setq auth-sources '("~/.authinfo.gpg"))
