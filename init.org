@@ -2324,19 +2324,17 @@ Gives you frozen headers when scrolling large tables
         ;; Don't pop up a buffer showing results (silent sync)
         org-caldav-show-sync-results nil)
 
-  ;; --- 1. FIX THE "BILL" ERROR ---
-  ;; Map each state individually as ("KEYWORD" . percentage)
+  ;; --- 1. RESTORED CORRECT FORMAT ---
+  ;; This fixes the listp, 0 crash!
   (setq org-caldav-todo-percent-states
-        '(("TODO" . 0) ("ASSIGNMENT" . 0) ("BILL" . 0) ("CHORE" . 0)
-          ("MEETING" . 0) ("NEXT" . 0) ("PLANNING" . 0) ("REVIEW" . 0)
-          ("HOLD" . 0) ("READY" . 0) ("ACTIVE" . 0)
-          ("DONE" . 100) ("CANCELED" . 100)))
+        '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
+          (100 "DONE" "CANCELED")))
 
-  ;; --- 2. EXPORT AS EVENTS INSTEAD OF TASKS ---
-  (setq org-caldav-sync-todo nil) ;; Disable VTODO task generation
-  (setq org-icalendar-include-todo t) ;; Allow exporter to read TODO lines
-  (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo)) ;; Push deadlines to calendar grid
-  (setq org-icalendar-use-scheduled '(event-if-todo event-if-not-todo)) ;; Push schedules to calendar grid
+  ;; --- 2. EXPORT TODOs AS CALENDAR EVENTS ---
+  (setq org-caldav-sync-todo nil) ;; Disables VTODO task generation (and prevents the "BILL" error)
+  (setq org-icalendar-include-todo t) ;; Allows the exporter to read TODO lines
+  (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo)) ;; Pushes deadlines to calendar grid
+  (setq org-icalendar-use-scheduled '(event-if-todo event-if-not-todo)) ;; Pushes schedules to calendar grid
 
   ;; Setup automatic sync (runs every 1 hour when idle)
   ;; Note: This will momentarily freeze Emacs while syncing
