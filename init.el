@@ -1780,7 +1780,7 @@ Returns t if active TODOs were found, nil otherwise."
   :config
   (setq org-caldav-url "https://cal.catphish.org"
         ;; Use the specific calendar path from Radicale
-        org-caldav-calendar-id "jordan/5862c1ad-977a-1c79-4053-af22365427d0/"
+        org-caldav-calendar-id "jordan/6e351511-8033-2830-85f4-40bcb1e860a0/"
         ;; New events from your phone land here
         org-caldav-inbox start/org-inbox-file
         ;; Source files to push to the server
@@ -1789,15 +1789,26 @@ Returns t if active TODOs were found, nil otherwise."
         org-caldav-save-directory (expand-file-name "org-caldav-cache/" start/org-root)
         ;; Sync on a regular basis (optional)
         org-caldav-sync-direction 'twoway
-        ;; Map TODO keywords to percentage states
-        org-caldav-todo-percent-states '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
-                                         (100 "DONE" "CANCELED"))
         ;; Don't pop up a buffer showing results (silent sync)
         org-caldav-show-sync-results nil)
 
+  ;; --- 1. FIX THE "BILL" ERROR ---
+  ;; Map each state individually as ("KEYWORD" . percentage)
+  (setq org-caldav-todo-percent-states
+        '(("TODO" . 0) ("ASSIGNMENT" . 0) ("BILL" . 0) ("CHORE" . 0)
+          ("MEETING" . 0) ("NEXT" . 0) ("PLANNING" . 0) ("REVIEW" . 0)
+          ("HOLD" . 0) ("READY" . 0) ("ACTIVE" . 0)
+          ("DONE" . 100) ("CANCELED" . 100)))
+
+  ;; --- 2. EXPORT AS EVENTS INSTEAD OF TASKS ---
+  (setq org-caldav-sync-todo nil) ;; Disable VTODO task generation
+  (setq org-icalendar-include-todo t) ;; Allow exporter to read TODO lines
+  (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo)) ;; Push deadlines to calendar grid
+  (setq org-icalendar-use-scheduled '(event-if-todo event-if-not-todo)) ;; Push schedules to calendar grid
+
   ;; Setup automatic sync (runs every 1 hour when idle)
   ;; Note: This will momentarily freeze Emacs while syncing
-										; (run-with-idle-timer 3600 t 'org-caldav-sync)
+                                        ; (run-with-idle-timer 3600 t 'org-caldav-sync)
 
   ;; This ensures Emacs uses your GPG key to read the password
   (setq auth-sources '("~/.authinfo.gpg"))
