@@ -1819,7 +1819,7 @@ Returns t if active TODOs were found, nil otherwise."
   :ensure nil ; Built-in with Org mode, no package download needed
   :config
   ;; Where you want the local .ics file to live
-  (setq org-icalendar-combined-agenda-file (expand-file-name "agenda.ics" start/org-root)
+  (setq org-icalendar-combined-agenda-file (expand-file-name "calendars/agenda.ics" start/org-root)
 
         ;; Map your TODO deadlines and scheduled dates directly to calendar events (VEVENT)
         org-icalendar-use-deadline '(event-if-todo event-if-not-todo)
