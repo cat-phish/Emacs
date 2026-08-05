@@ -2308,45 +2308,45 @@ Gives you frozen headers when scrolling large tables
     #+end_src
 ** Org-CalDav
 #+begin_src emacs-lisp
-(use-package org-caldav
-  :ensure t
-  :config
-  (setq org-caldav-url "https://cal.catphish.org"
-        ;; Use the specific calendar path from Radicale
-        org-caldav-calendar-id "jordan/5862c1ad-977a-1c79-4053-af22365427d0/"
-        ;; New events from your phone land here
-        org-caldav-inbox start/org-inbox-file
-        ;; Source files to push to the server
-        org-caldav-files (list start/org-tasks-file start/org-inbox-file)
-        ;; Keep metadata out of your main git repo
-        org-caldav-save-directory (expand-file-name "org-caldav-cache/" start/org-root)
-        ;; Sync on a regular basis (optional)
-        org-caldav-sync-direction 'twoway
-        ;; Don't pop up a buffer showing results (silent sync)
-        org-caldav-show-sync-results nil)
+;; (use-package org-caldav
+;;   :ensure t
+;;   :config
+;;   (setq org-caldav-url "https://cal.catphish.org"
+;;         ;; Use the specific calendar path from Radicale
+;;         org-caldav-calendar-id "jordan/5862c1ad-977a-1c79-4053-af22365427d0/"
+;;         ;; New events from your phone land here
+;;         org-caldav-inbox start/org-inbox-file
+;;         ;; Source files to push to the server
+;;         org-caldav-files (list start/org-tasks-file start/org-inbox-file)
+;;         ;; Keep metadata out of your main git repo
+;;         org-caldav-save-directory (expand-file-name "org-caldav-cache/" start/org-root)
+;;         ;; Sync on a regular basis (optional)
+;;         org-caldav-sync-direction 'twoway
+;;         ;; Don't pop up a buffer showing results (silent sync)
+;;         org-caldav-show-sync-results nil)
 
-  ;; --- 1. THE FINAL FIX FOR PERCENT STATES ---
-  ;; Every keyword must be in its own dedicated list
-  (setq org-caldav-todo-percent-states
-        '((0 "TODO") (0 "ASSIGNMENT") (0 "BILL") (0 "CHORE")
-          (0 "MEETING") (0 "NEXT") (0 "PLANNING") (0 "REVIEW")
-          (0 "HOLD") (0 "READY") (0 "ACTIVE")
-          (100 "DONE") (100 "CANCELED")))
+;;   ;; --- 1. THE FINAL FIX FOR PERCENT STATES ---
+;;   ;; Every keyword must be in its own dedicated list
+;;   (setq org-caldav-todo-percent-states
+;;         '((0 "TODO") (0 "ASSIGNMENT") (0 "BILL") (0 "CHORE")
+;;           (0 "MEETING") (0 "NEXT") (0 "PLANNING") (0 "REVIEW")
+;;           (0 "HOLD") (0 "READY") (0 "ACTIVE")
+;;           (100 "DONE") (100 "CANCELED")))
 
-  ;; --- 2. EXPORT TODOs AS CALENDAR EVENTS ---
-  (setq org-caldav-sync-todo nil) ;; Disables VTODO task generation
-  (setq org-icalendar-include-todo t) ;; Allows the exporter to read TODO lines
-  (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo)) ;; Pushes deadlines to calendar grid
-  (setq org-icalendar-use-scheduled '(event-if-todo event-if-not-todo)) ;; Pushes schedules to calendar grid
+;;   ;; --- 2. EXPORT TODOs AS CALENDAR EVENTS ---
+;;   (setq org-caldav-sync-todo nil) ;; Disables VTODO task generation
+;;   (setq org-icalendar-include-todo t) ;; Allows the exporter to read TODO lines
+;;   (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo)) ;; Pushes deadlines to calendar grid
+;;   (setq org-icalendar-use-scheduled '(event-if-todo event-if-not-todo)) ;; Pushes schedules to calendar grid
 
-  ;; Setup automatic sync (runs every 1 hour when idle)
-  ;; Note: This will momentarily freeze Emacs while syncing
-                                        ; (run-with-idle-timer 3600 t 'org-caldav-sync)
+;;   ;; Setup automatic sync (runs every 1 hour when idle)
+;;   ;; Note: This will momentarily freeze Emacs while syncing
+;;                                         ; (run-with-idle-timer 3600 t 'org-caldav-sync)
 
-  ;; This ensures Emacs uses your GPG key to read the password
-  (setq auth-sources '("~/.authinfo.gpg"))
-  (setq org-cycle-hide-drawers t)
-  )
+;;   ;; This ensures Emacs uses your GPG key to read the password
+;;   (setq auth-sources '("~/.authinfo.gpg"))
+;;   (setq org-cycle-hide-drawers t)
+;;   )
 #+end_src
 ** Org Ox-iCalendar
 
