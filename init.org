@@ -52,6 +52,7 @@
     - [[#org-table-sticky-header][Org-Table-Sticky-Header]]
     - [[#org-super-agenda][Org-Super-Agenda]]
     - [[#org-caldav][Org-CalDav]]
+    - [[#org-ox-icalendar][Org Ox-iCalendar]]
     - [[#source-code-block-tag-expansion][Source Code Block Tag Expansion]]
     - [[#org-roam][Org-Roam]]
     - [[#org-roam-ui][Org-Roam-UI]]
@@ -2346,6 +2347,29 @@ Gives you frozen headers when scrolling large tables
   (setq auth-sources '("~/.authinfo.gpg"))
   (setq org-cycle-hide-drawers t)
   )
+#+end_src
+** Org Ox-iCalendar
+
+#+begin_src emacs-lisp
+(use-package ox-icalendar
+  :ensure nil ; Built-in with Org mode, no package download needed
+  :config
+  ;; Where you want the local .ics file to live
+  (setq org-icalendar-combined-agenda-file (expand-file-name "agenda.ics" start/org-root)
+
+        ;; Map your TODO deadlines and scheduled dates directly to calendar events (VEVENT)
+        org-icalendar-use-deadline '(event-if-todo event-if-not-todo)
+        org-icalendar-use-scheduled '(event-if-todo event-if-not-todo)
+
+        ;; Keep them as clean calendar events rather than separate task lists
+        org-icalendar-include-todo nil)
+
+  ;; Automatically regenerate the local .ics file only when saving tracked task/inbox files
+  (add-hook 'after-save-hook
+            (lambda ()
+              (when (member (buffer-file-name)
+                            (list start/org-tasks-file start/org-inbox-file))
+                (org-icalendar-combine-agenda-files)))))
 #+end_src
 ** Source Code Block Tag Expansion
 Org-tempo is not a separate package but a module within org that can be enabled.

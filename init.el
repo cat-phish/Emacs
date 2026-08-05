@@ -1815,6 +1815,26 @@ Returns t if active TODOs were found, nil otherwise."
   (setq org-cycle-hide-drawers t)
   )
 
+(use-package ox-icalendar
+  :ensure nil ; Built-in with Org mode, no package download needed
+  :config
+  ;; Where you want the local .ics file to live
+  (setq org-icalendar-combined-agenda-file (expand-file-name "agenda.ics" start/org-root)
+
+        ;; Map your TODO deadlines and scheduled dates directly to calendar events (VEVENT)
+        org-icalendar-use-deadline '(event-if-todo event-if-not-todo)
+        org-icalendar-use-scheduled '(event-if-todo event-if-not-todo)
+
+        ;; Keep them as clean calendar events rather than separate task lists
+        org-icalendar-include-todo nil)
+
+  ;; Automatically regenerate the local .ics file only when saving tracked task/inbox files
+  (add-hook 'after-save-hook
+            (lambda ()
+              (when (member (buffer-file-name)
+                            (list start/org-tasks-file start/org-inbox-file))
+                (org-icalendar-combine-agenda-files)))))
+
 (use-package org-tempo
   :ensure nil
   :after org)
