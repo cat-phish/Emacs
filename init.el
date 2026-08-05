@@ -1792,14 +1792,16 @@ Returns t if active TODOs were found, nil otherwise."
         ;; Don't pop up a buffer showing results (silent sync)
         org-caldav-show-sync-results nil)
 
-  ;; --- 1. RESTORED CORRECT FORMAT ---
-  ;; This fixes the listp, 0 crash!
+  ;; --- 1. THE FINAL FIX FOR PERCENT STATES ---
+  ;; Every keyword must be in its own dedicated list
   (setq org-caldav-todo-percent-states
-        '((0 "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING" "NEXT" "PLANNING" "REVIEW" "HOLD" "READY" "ACTIVE")
-          (100 "DONE" "CANCELED")))
+        '((0 "TODO") (0 "ASSIGNMENT") (0 "BILL") (0 "CHORE")
+          (0 "MEETING") (0 "NEXT") (0 "PLANNING") (0 "REVIEW")
+          (0 "HOLD") (0 "READY") (0 "ACTIVE")
+          (100 "DONE") (100 "CANCELED")))
 
   ;; --- 2. EXPORT TODOs AS CALENDAR EVENTS ---
-  (setq org-caldav-sync-todo nil) ;; Disables VTODO task generation (and prevents the "BILL" error)
+  (setq org-caldav-sync-todo nil) ;; Disables VTODO task generation
   (setq org-icalendar-include-todo t) ;; Allows the exporter to read TODO lines
   (setq org-icalendar-use-deadline '(event-if-todo event-if-not-todo)) ;; Pushes deadlines to calendar grid
   (setq org-icalendar-use-scheduled '(event-if-todo event-if-not-todo)) ;; Pushes schedules to calendar grid
