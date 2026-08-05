@@ -1786,7 +1786,7 @@ Returns t if active TODOs were found, nil otherwise."
         ;; Source files to push to the server
         org-caldav-files (list start/org-tasks-file start/org-inbox-file)
         ;; Keep metadata out of your main git repo
-        org-caldav-save-directory (expand-file-name "caldav-cache/" start/org-root)
+        org-caldav-save-directory (expand-file-name "org-caldav-cache/" start/org-root)
         ;; Sync on a regular basis (optional)
         org-caldav-sync-direction 'twoway
         ;; Map TODO keywords to percentage states
