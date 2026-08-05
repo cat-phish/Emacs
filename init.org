@@ -2345,7 +2345,8 @@ Gives you frozen headers when scrolling large tables
   ;; This ensures Emacs uses your GPG key to read the password
   (setq auth-sources '("~/.authinfo.gpg"))
   (setq org-cycle-hide-drawers t)
-  )#+end_src
+  )
+#+end_src
 ** Source Code Block Tag Expansion
 Org-tempo is not a separate package but a module within org that can be enabled.
 Org-tempo allows for '<s' followed by TAB to expand to a begin_src tag.
