@@ -1512,37 +1512,21 @@ Returns t if active TODOs were found, nil otherwise."
   ;; 		  	(lambda ()
   ;; 		  	  (when (derived-mode-p 'org-mode)
   ;; 		  		(my/org-hide-matching-headings))))
-  (defvar my/org-collapse-headings
-	'(("#Future-Bills" .  1)   ; Only level 1
-	  ("#Coffee-Roasting" . 1)
-	  ("#Archive" . nil)         ; Any level
-	  ("#Repeaters" . nil)          ; Any level
-	  )
-	"Alist of (heading-name . level).
-		  		          If level is nil, collapse at any level.
-		  		          If level is a number, only collapse at that level.")
-
-  (defun my/org-hide-matching-headings ()
-	"Force hide all headings that match entries in `my/org-collapse-headings'.
-		  		          Respects level restrictions if specified."
+  ;; AUTO COLLAPSE HEADINGS STARTING WITH '#'
+  (defun my/org-hide-hash-headings ()
+	"Force hide all headings that start with '#' at any level."
 	(org-map-entries
-	 (lambda ()
-	   (let ((heading (org-get-heading t t t t))  ; Get heading without tags, todo, etc.
-		  	 (current-level (org-current-level)))
-		 (dolist (entry my/org-collapse-headings)
-		   (let ((target-heading (car entry))
-		  		 (target-level (cdr entry)))
-		  	 (when (and (string= heading target-heading)
-		  		        (or (null target-level)  ; No level restriction
-		  		            (= current-level target-level)))  ; Matches specific level
-		  	   (outline-hide-subtree))))))
-	 nil 'file))
+     (lambda ()
+       (let ((heading (org-get-heading t t t t)))  ; Get heading without tags, todo, etc.
+         ;; If a heading exists and begins with "#", collapse it
+         (when (and heading (string-prefix-p "#" heading))
+           (outline-hide-subtree))))
+     nil 'file))
+
   (add-hook 'find-file-hook
-		  	(lambda ()
-		  	  (when (derived-mode-p 'org-mode)
-		  		(my/org-hide-matching-headings))))
-
-
+			(lambda ()
+              (when (derived-mode-p 'org-mode)
+				(my/org-hide-hash-headings))))
 
   )
 
