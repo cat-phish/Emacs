@@ -204,10 +204,10 @@
   (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
 
   ;; Option A: Jump to absolute end of line (ignoring newline due to the setq above)
-  (define-key evil-motion-state-map "L" #'evil-end-of-line)
+  ;; (define-key evil-motion-state-map "L" #'evil-end-of-line)
 
   ;; Option B: (Alternative) Jump to the last non-blank character instead of absolute end
-  ;; (define-key evil-motion-state-map "L" #'evil-last-non-blank)
+  (define-key evil-motion-state-map "L" #'evil-last-non-blank)
 
 
   (defun evil-shift-right-keep-visual (beg end &optional count)
