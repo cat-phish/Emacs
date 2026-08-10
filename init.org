@@ -539,20 +539,43 @@ Notes:
   ;; Set initial state for eat-mode
   (evil-set-initial-state 'eat-mode 'insert)
 
-  ;; Jump to beginning of line or first non-blank character
-  (defun start/jump-to-line-start ()
+  ;; ;; Jump to beginning of line or first non-blank character
+  ;; (defun start/jump-to-line-start ()
+  ;;   "If at first non-blank char, go to beginning; else go to first non-blank."
+  ;;   (interactive)
+  ;;   (let ((col (current-column))
+  ;;         (first-non-blank (save-excursion
+  ;;                            (back-to-indentation)
+  ;;                            (current-column))))
+  ;;     (if (= col first-non-blank)
+  ;;         (move-beginning-of-line nil)
+  ;;       (back-to-indentation))))
+  ;; ;; H/L keybindings for motion state
+  ;; (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
+  ;; (define-key evil-motion-state-map "L" #'evil-end-of-line)
+  ;; Tell Evil NOT to select the newline character when jumping to the end of a line in visual mode
+  (setq evil-v-$-excludes-newline t)
+
+  ;; Define H as a true Evil motion so visual mode tracks the selection accurately
+  (evil-define-motion start/jump-to-line-start ()
     "If at first non-blank char, go to beginning; else go to first non-blank."
-    (interactive)
+    :type exclusive
     (let ((col (current-column))
           (first-non-blank (save-excursion
-                             (back-to-indentation)
+                             (evil-first-non-blank)
                              (current-column))))
       (if (= col first-non-blank)
-          (move-beginning-of-line nil)
-        (back-to-indentation))))
+          (evil-beginning-of-line)
+        (evil-first-non-blank))))
+
   ;; H/L keybindings for motion state
   (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
+
+  ;; Option A: Jump to absolute end of line (ignoring newline due to the setq above)
   (define-key evil-motion-state-map "L" #'evil-end-of-line)
+
+  ;; Option B: (Alternative) Jump to the last non-blank character instead of absolute end
+  ;; (define-key evil-motion-state-map "L" #'evil-last-non-blank)
 
 
   (defun evil-shift-right-keep-visual (beg end &optional count)
