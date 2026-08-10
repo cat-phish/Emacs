@@ -172,43 +172,19 @@
   (evil-set-initial-state 'eat-mode 'insert)
 
   ;; ;; Jump to beginning of line or first non-blank character
-  ;; (defun start/jump-to-line-start ()
-  ;;   "If at first non-blank char, go to beginning; else go to first non-blank."
-  ;;   (interactive)
-  ;;   (let ((col (current-column))
-  ;;         (first-non-blank (save-excursion
-  ;;                            (back-to-indentation)
-  ;;                            (current-column))))
-  ;;     (if (= col first-non-blank)
-  ;;         (move-beginning-of-line nil)
-  ;;       (back-to-indentation))))
-  ;; ;; H/L keybindings for motion state
-  ;; (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
-  ;; (define-key evil-motion-state-map "L" #'evil-end-of-line)
-  ;; Tell Evil NOT to select the newline character when jumping to the end of a line in visual mode
-  (setq evil-v-$-excludes-newline t)
-
-  ;; Define H as a true Evil motion so visual mode tracks the selection accurately
-  (evil-define-motion start/jump-to-line-start ()
+  (defun start/jump-to-line-start ()
     "If at first non-blank char, go to beginning; else go to first non-blank."
-    :type exclusive
+    (interactive)
     (let ((col (current-column))
           (first-non-blank (save-excursion
-                             (evil-first-non-blank)
+                             (back-to-indentation)
                              (current-column))))
       (if (= col first-non-blank)
-          (evil-beginning-of-line)
-        (evil-first-non-blank))))
-
+          (move-beginning-of-line nil)
+        (back-to-indentation))))
   ;; H/L keybindings for motion state
   (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
-
-  ;; Option A: Jump to absolute end of line (ignoring newline due to the setq above)
-  ;; (define-key evil-motion-state-map "L" #'evil-end-of-line)
-
-  ;; Option B: (Alternative) Jump to the last non-blank character instead of absolute end
-  (define-key evil-motion-state-map "L" #'evil-last-non-blank)
-
+  (define-key evil-motion-state-map "L" #'evil-end-of-line)
 
   (defun evil-shift-right-keep-visual (beg end &optional count)
     "Shift right but stay in visual mode."
@@ -1870,6 +1846,10 @@ Returns t if active TODOs were found, nil otherwise."
 (use-package ox-icalendar
   :ensure nil ; Built-in with Org mode, no package download needed
   :config
+  ;; Remove the "DL: " and "S: " prefixes from event titles
+  (setq org-icalendar-deadline-summary-prefix ""
+        org-icalendar-scheduled-summary-prefix "")
+
   ;; Where you want the local .ics file to live
   (setq org-icalendar-combined-agenda-file (expand-file-name "calendars/Org-Mode.ics" start/org-root)
 
