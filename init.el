@@ -432,8 +432,7 @@
                (message "Entire buffer yanked to clipboard."))
     		 :wk "Yank entire buffer")
     "y h" '(my/org-yank-entire-subtree :wk "Yank heading + subtree")
-	;; "y i" '(:ignore t :wk "inside")
-    "y i c" '(my/org-yank-inside-code :wk "Yank inside code block")
+    "y C" '(my/org-yank-inside-code :wk "Yank code block to clipboard")
     )
 
   (start/leader-keys

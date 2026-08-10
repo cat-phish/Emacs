@@ -646,7 +646,6 @@ Notes:
   (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
   (define-key evil-motion-state-map "L" #'evil-end-of-line))
 #+end_src
-
 ** General Keybindings
 A keybinding framework to set keybindings easily.
 
@@ -813,8 +812,7 @@ Note: The Leader key is what you will press when you want to access your keybind
                (message "Entire buffer yanked to clipboard."))
     		 :wk "Yank entire buffer")
     "y h" '(my/org-yank-entire-subtree :wk "Yank heading + subtree")
-	;; "y i" '(:ignore t :wk "inside")
-    "y i c" '(my/org-yank-inside-code :wk "Yank inside code block")
+    "y C" '(my/org-yank-inside-code :wk "Yank code block to clipboard")
     )
 
   (start/leader-keys
