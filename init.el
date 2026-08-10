@@ -1164,16 +1164,13 @@ Returns t if active TODOs were found, nil otherwise."
 (defun my/org-yank-inside-code ()
   "Copy the contents of the inline code (~/=), inline src block, or src block at point."
   (interactive)
-  ;; Get the org element at the current cursor position
   (let* ((element (org-element-context))
          (type (car element))
-         (props (cadr element))
-         ;; Check if we are inside a supported code element and extract its value
+         ;; Use org-element-property instead of plist-get to handle deferred values in Org 9.7+
          (text (when (memq type '(code verbatim src-block inline-src-block))
-                 (plist-get props :value))))
+                 (org-element-property :value element))))
     (if text
         (progn
-          ;; Add the raw text to the kill ring (clipboard) without text properties
           (kill-new (substring-no-properties text))
           (message "Yanked inside code block!"))
       (message "Not inside an Org code element!"))))
