@@ -432,6 +432,8 @@
                (message "Entire buffer yanked to clipboard."))
     		 :wk "Yank entire buffer")
     "y h" '(my/org-yank-entire-subtree :wk "Yank heading + subtree")
+	"y i" '(:ignore t :wk "inside")
+    "y i c" '(my/org-yank-inside-code :wk "Yank inside code block")
     )
 
   (start/leader-keys
@@ -1158,6 +1160,23 @@ Returns t if active TODOs were found, nil otherwise."
             (when (and (derived-mode-p 'org-mode)
                        (executable-find "syncthingctl"))
               (shell-command "syncthingctl rescan-all"))))
+
+(defun my/org-yank-inside-code ()
+  "Copy the contents of the inline code (~/=), inline src block, or src block at point."
+  (interactive)
+  ;; Get the org element at the current cursor position
+  (let* ((element (org-element-context))
+         (type (car element))
+         (props (cadr element))
+         ;; Check if we are inside a supported code element and extract its value
+         (text (when (memq type '(code verbatim src-block inline-src-block))
+                 (plist-get props :value))))
+    (if text
+        (progn
+          ;; Add the raw text to the kill ring (clipboard) without text properties
+          (kill-new (substring-no-properties text))
+          (message "Yanked inside code block!"))
+      (message "Not inside an Org code element!"))))
 
 (use-package org
   :ensure nil
