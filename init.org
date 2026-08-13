@@ -641,9 +641,19 @@ Notes:
     	'(dired ibuffer magit corfu vertico consult info org))
   (evil-collection-init)
 
+  ;; Custom Org-mode navigation (gh / gl / gj / gk)
+  (with-eval-after-load 'org
+    (evil-define-key 'normal org-mode-map
+      (kbd "gh") 'org-up-element                  ;; Go to parent heading
+      (kbd "gl") 'org-down-element                ;; Go to first child heading
+      (kbd "gj") 'org-forward-heading-same-level  ;; Next heading at same level
+      (kbd "gk") 'org-backward-heading-same-level ;; Prev heading at same level
+      ))
+
   ;; Reapply global H/L after evil-collection might override
   (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
-  (define-key evil-motion-state-map "L" #'evil-end-of-line))
+  (define-key evil-motion-state-map "L" #'evil-end-of-line)
+  )
 #+end_src
 ** General Keybindings
 A keybinding framework to set keybindings easily.
