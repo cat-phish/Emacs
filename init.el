@@ -274,16 +274,14 @@
   (evil-collection-init)
 
   ;; Custom Org-mode navigation (gh / gl / gj / gk)
-  ;; Custom Org-mode navigation that lands on heading text (skipping stars)
+  ;; Lands on heading text (skipping stars)
   (with-eval-after-load 'org
     (defun my/org-goto-heading-text (fn)
       "Execute heading navigation function FN, then place cursor at start of heading text."
-      (funcall fn)
+      (ignore-errors (funcall fn))
       (when (org-at-heading-p)
-        ;; Move to beginning of line, skip stars and trailing spaces
         (beginning-of-line)
         (skip-chars-forward "* ")
-        ;; Handle tags or TODO keywords gracefully if present
         (when (looking-at org-todo-regexp)
           (goto-char (match-beginning 0)))))
 
@@ -292,7 +290,6 @@
       (kbd "gl") (lambda () (interactive) (my/org-goto-heading-text #'org-down-element))
       (kbd "gj") (lambda () (interactive) (my/org-goto-heading-text #'org-forward-heading-same-level))
       (kbd "gk") (lambda () (interactive) (my/org-goto-heading-text #'org-backward-heading-same-level))))
-
   ;; Reapply global H/L after evil-collection might override
   (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
   (define-key evil-motion-state-map "L" #'evil-end-of-line)
