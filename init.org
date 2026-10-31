@@ -79,7 +79,7 @@
     - [[#orderless][Orderless]]
     - [[#vertico-and-marginalia][Vertico and Marginalia]]
 - [[#navigation][Navigation]]
-    - [[#flash][Flash]]
+    - [[#flash][Flash]]:config (ws-butler-global-mode))
     - [[#avy-disabled][Avy (Disabled)]]
     - [[#ivy][Ivy]]
 - [[#utilities][Utilities]]
@@ -3133,7 +3133,8 @@ Which-key is a helper utility for keychords (which key to press).
 Removes whitespace from the ends of lines.
 #+begin_src emacs-lisp
 (use-package ws-butler
-  :init (ws-butler-global-mode))
+  ; :init (ws-butler-global-mode))
+    :config (ws-butler-global-mode))
 #+end_src
 
 * Runtime Performance

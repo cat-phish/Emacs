@@ -2339,7 +2339,8 @@ Returns t if active TODOs were found, nil otherwise."
   (which-key-allow-imprecise-window-fit nil)) ;; Fixes which-key window slipping out in Emacs Daemon
 
 (use-package ws-butler
-  :init (ws-butler-global-mode))
+  ; :init (ws-butler-global-mode))
+    :config (ws-butler-global-mode))
 
 ;; Make gc pauses faster by decreasing the threshold.
 (setq gc-cons-threshold (* 2 1000 1000))
