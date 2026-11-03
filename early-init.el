@@ -1,3 +1,5 @@
+;;; early-init.el --- Early startup settings -*- lexical-binding: nil; -*-
+
 ;; this is a fix for weird window sizing when launching on
 ;; niri, may not be necessary on other systems
 (setq frame-inhibit-implied-resize t)
