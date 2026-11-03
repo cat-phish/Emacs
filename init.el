@@ -940,14 +940,23 @@
     (message (if any-visible "Hidden DONE entries" "Shown DONE entries"))))
 
 ;; (ref:launch-done-collapse)
+(defvar my/org-auto-collapse-keywords '("PLANNING" "HOLD" "READY" "REVIEW")
+  "Additional TODO keywords to automatically collapse like DONE states.")
+
+(defun my/org-should-collapse-state-p (state)
+  "Return non-nil if STATE is a DONE state or in `my/org-auto-collapse-keywords'."
+  (and state
+       (or (member state org-done-keywords)
+           (member state my/org-auto-collapse-keywords))))
+
 (defun my/org-hide-done-entries-dynamic ()
-  "Hide all entries that are in any 'DONE' state defined in the current buffer."
+  "Hide all entries that are in any 'DONE' or auto-collapse state in the current buffer."
   (interactive)
   (when (derived-mode-p 'org-mode)
     (org-map-entries
      (lambda ()
        (let ((state (org-get-todo-state)))
-         (when (member state org-done-keywords)
+         (when (my/org-should-collapse-state-p state)
            (outline-hide-subtree))))
      t 'file)))
 
@@ -1037,15 +1046,17 @@ Returns t if active TODOs were found, nil otherwise."
           (my/org-hide-drawers-subtree)
           (org-map-entries
            (lambda ()
-             (when (member (org-get-todo-state) org-not-done-keywords)
-               (setq has-active-todos t)))
+             (let ((state (org-get-todo-state)))
+               (when (and (member state org-not-done-keywords)
+                          (not (my/org-should-collapse-state-p state)))
+                 (setq has-active-todos t))))
            nil 'tree))
 
         (when has-active-todos
           (org-map-entries
            (lambda ()
              (let ((state (org-get-todo-state)))
-               (when (and state (member state org-done-keywords))
+               (when (my/org-should-collapse-state-p state)
                  (if (fboundp 'org-fold-subtree)
                      (org-fold-subtree t)
                    (outline-hide-subtree))
@@ -1152,8 +1163,8 @@ Returns t if active TODOs were found, nil otherwise."
           (org-back-to-heading t)
           (let ((state (org-get-todo-state)))
             (cond
-             ;; If DONE/CANCELED -> Fully fold the entire subtree
-             ((member state org-done-keywords)
+             ;; If DONE/CANCELED or auto-collapse keyword -> Fully fold the entire subtree
+             ((my/org-should-collapse-state-p state)
               (if (fboundp 'org-fold-subtree)
                   (org-fold-subtree t)
                 (outline-hide-subtree)))
@@ -1482,23 +1493,32 @@ Returns t if active TODOs were found, nil otherwise."
 
   ;; COLLAPSE DONE ENTRIES ON LAUNCH
   ;; (ref:launch-done-collapse)
+  (defvar my/org-auto-collapse-keywords '("PLANNING" "HOLD" "READY" "REVIEW")
+	"Additional TODO keywords to automatically collapse like DONE states.")
+
+  (defun my/org-should-collapse-state-p (state)
+	"Return non-nil if STATE is a DONE state or in `my/org-auto-collapse-keywords'."
+	(and state
+		 (or (member state org-done-keywords)
+			 (member state my/org-auto-collapse-keywords))))
+
   (defun my/org-hide-done-entries-dynamic ()
-	"Hide all entries that are in any 'DONE' state defined in the current buffer."
+	"Hide all entries that are in any 'DONE' or auto-collapse state in the current buffer."
 	(interactive)
 	(when (derived-mode-p 'org-mode)
 	  (org-map-entries
 	   (lambda ()
 		 (let ((state (org-get-todo-state)))
-		   (when (member state org-done-keywords)
+		   (when (my/org-should-collapse-state-p state)
 		  	 (outline-hide-subtree))))
 	   t 'file)))
 
   ;; COLLAPSE DONE ENTRIES WHEN MARKED
   ;; (ref:mark-done-collapse)
   (defun my/org-collapse-on-done ()
-	"Collapse the current heading if moved to a DONE state, with a tiny delay to catch the Logbook."
+	"Collapse the current heading if moved to a DONE or auto-collapse state, with a tiny delay to catch the Logbook."
 	(let ((state org-state))
-	  (when (member state org-done-keywords)
+	  (when (my/org-should-collapse-state-p state)
 		;; We use a 0-second timer to run this AFTER Org finishes writing the logbook
 		(run-at-time 0 nil
 		  		     (lambda (buf)
