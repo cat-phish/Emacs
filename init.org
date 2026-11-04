@@ -1582,7 +1582,13 @@ With SUBTREEP, BEG is the parent heading, which is skipped."
                         blocks)
         (push (cons (- (car run) beg) (- (cdr run) beg)) absolute)))
     (let ((beg-m (copy-marker beg))
-          (end-m (copy-marker end t)))
+          (end-m (copy-marker end t))
+          ;; Undo/redo entry: restores the pre-sort folds when the sort is
+          ;; undone. Its last slot (post-sort folds) is filled in below.
+          (undo-entry (list 'apply #'start/org-sort--undo-folds
+                            beg end runs nil)))
+      (when (listp buffer-undo-list)
+        (push undo-entry buffer-undo-list))
       (unwind-protect (apply orig args)
         (let ((nbeg (marker-position beg-m))
               (nend (marker-position end-m)))
@@ -1597,7 +1603,29 @@ With SUBTREEP, BEG is the parent heading, which is skipped."
           (dolist (run absolute)
             (org-fold-region (+ nbeg (car run))
                              (min nend (+ nbeg (cdr run)))
-                             t 'outline)))))))
+                             t 'outline))
+          (setf (nth 3 undo-entry) (max end nend)
+                (nth 5 undo-entry) (start/org-sort--fold-runs nbeg nend)))))))
+
+(defun start/org-sort--undo-folds (beg end runs other-runs)
+  "Undo-list entry: fold RUNS between BEG and END after the undo finishes.
+Pushes the inverse entry (with OTHER-RUNS) so redo restores those folds."
+  (when (listp buffer-undo-list)
+    (push (list 'apply #'start/org-sort--undo-folds beg end other-runs runs)
+          buffer-undo-list))
+  ;; Text is still being restored by the rest of the undo group; wait for it.
+  (run-at-time 0 nil #'start/org-sort--apply-folds (current-buffer) beg end runs))
+
+(defun start/org-sort--apply-folds (buf beg end runs)
+  "In BUF, unfold BEG..END, then fold each (S . E) in RUNS."
+  (when (buffer-live-p buf)
+    (with-current-buffer buf
+      (let ((end (min end (point-max))))
+        (when (< beg end)
+          (org-fold-region beg end nil 'outline)
+          (dolist (run runs)
+            (when (< (car run) end)
+              (org-fold-region (car run) (min (cdr run) end) t 'outline))))))))
 (advice-add 'org-sort-entries :around #'start/org-sort-preserve-folds)
 
 (defun start/org-sort-default ()
