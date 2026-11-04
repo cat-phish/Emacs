@@ -1522,6 +1522,84 @@ SPEC is a list like (state priority .scheduled); `.' reverses a key."
              (mapconcat (lambda (k) (concat (if (cdr k) "." "") (symbol-name (car k))))
                         start/org-sort--active-keys " → "))))
 
+;; Keep fold state across sorting. `org-sort-entries' expands the whole subtree
+;; first; record which parts were folded (relative to each moved child block)
+;; and re-fold them after the reorder.
+(defun start/org-sort--range ()
+  "Return (BEG END SUBTREEP) for what `org-sort-entries' will sort at point."
+  (cond ((use-region-p) (list (region-beginning) (region-end) nil))
+        ((org-before-first-heading-p) (list (point-min) (point-max) nil))
+        (t (save-excursion
+             (org-back-to-heading t)
+             (list (point) (progn (org-end-of-subtree t t) (point)) t)))))
+
+(defun start/org-sort--blocks (beg end subtreep)
+  "Return ((START . END) ...) for the entries that get sorted in BEG..END.
+With SUBTREEP, BEG is the parent heading, which is skipped."
+  (save-excursion
+    (goto-char beg)
+    (when (or subtreep (not (org-at-heading-p)))
+      (outline-next-heading))
+    (when (and (org-at-heading-p) (< (point) end))
+      (let ((level (org-outline-level)) blocks)
+        (while (and (org-at-heading-p) (< (point) end))
+          (let ((s (point)))
+            (org-end-of-subtree t t)
+            (push (cons s (min (point) end)) blocks)))
+        (nreverse blocks)))))
+
+(defun start/org-sort--fold-runs (beg end)
+  "Return ((S . E) ...) for outline-folded runs between BEG and END."
+  (let ((pos beg) runs)
+    (while (< pos end)
+      (let ((next (min end (or (org-fold-next-folding-state-change 'outline pos end) end))))
+        (when (org-fold-folded-p pos 'outline)
+          (push (cons pos next) runs))
+        (setq pos (max next (1+ pos)))))
+    (nreverse runs)))
+
+(defun start/org-sort--block-key (blk)
+  (string-trim-right (buffer-substring-no-properties (car blk) (cdr blk)) "\n+"))
+
+(defun start/org-sort-preserve-folds (orig &rest args)
+  "Around `org-sort-entries': keep collapsed headings collapsed."
+  (pcase-let* ((`(,beg ,end ,subtreep) (start/org-sort--range))
+               (blocks (start/org-sort--blocks beg end subtreep))
+               (runs (start/org-sort--fold-runs beg end))
+               ;; key -> list of fold-run lists, one per block with that text
+               (per-block (make-hash-table :test #'equal))
+               (absolute nil))
+    ;; Folds inside one child block move with it; anything else (the
+    ;; parent's own text, or a fold spanning the whole parent) stays put.
+    (dolist (blk blocks)
+      (let (rel)
+        (dolist (run runs)
+          (when (and (>= (car run) (car blk)) (<= (cdr run) (cdr blk)))
+            (push (cons (- (car run) (car blk)) (- (cdr run) (car blk))) rel)))
+        (push rel (gethash (start/org-sort--block-key blk) per-block))))
+    (dolist (run runs)
+      (unless (seq-find (lambda (b) (and (>= (car run) (car b)) (<= (cdr run) (cdr b))))
+                        blocks)
+        (push (cons (- (car run) beg) (- (cdr run) beg)) absolute)))
+    (let ((beg-m (copy-marker beg))
+          (end-m (copy-marker end t)))
+      (unwind-protect (apply orig args)
+        (let ((nbeg (marker-position beg-m))
+              (nend (marker-position end-m)))
+          (set-marker beg-m nil)
+          (set-marker end-m nil)
+          (dolist (blk (start/org-sort--blocks nbeg nend subtreep))
+            (let ((key (start/org-sort--block-key blk)))
+              (dolist (run (pop (gethash key per-block)))
+                (org-fold-region (+ (car blk) (car run))
+                                 (min (cdr blk) (+ (car blk) (cdr run)))
+                                 t 'outline))))
+          (dolist (run absolute)
+            (org-fold-region (+ nbeg (car run))
+                             (min nend (+ nbeg (cdr run)))
+                             t 'outline)))))))
+(advice-add 'org-sort-entries :around #'start/org-sort-preserve-folds)
+
 (defun start/org-sort-default ()
   "Sort children by `start/org-sort-default-spec'."
   (interactive) (start/org-sort-by start/org-sort-default-spec))
