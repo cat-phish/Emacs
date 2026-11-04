@@ -543,18 +543,83 @@ Notes:
 
   ;; ;; Jump to beginning of line or first non-blank character
   (defun start/jump-to-line-start ()
-    "If at first non-blank char, go to beginning; else go to first non-blank."
+    "If at first non-blank char, go to beginning; else go to first non-blank.
+On an Org heading, never land on the (hidden) stars: go to the heading text,
+and from there to the title after any TODO keyword and priority."
     (interactive)
-    (let ((col (current-column))
-          (first-non-blank (save-excursion
-                             (back-to-indentation)
-                             (current-column))))
-      (if (= col first-non-blank)
-          (move-beginning-of-line nil)
-        (back-to-indentation))))
+    (if (and (derived-mode-p 'org-mode) (org-at-heading-p))
+        (let* ((text-start (save-excursion
+                             (beginning-of-line)
+                             (skip-chars-forward "* \t")
+                             (point)))
+               (title-start (save-excursion
+                              (goto-char text-start)
+                              (let ((case-fold-search nil))
+                                (when (and org-todo-regexp (looking-at org-todo-regexp))
+                                  (goto-char (match-end 0))
+                                  (skip-chars-forward " \t"))
+                                (when (looking-at "\\[#.\\][ \t]*")
+                                  (goto-char (match-end 0))))
+                              (point))))
+          (goto-char (if (= (point) text-start) title-start text-start)))
+      (let ((col (current-column))
+            (first-non-blank (save-excursion
+                               (back-to-indentation)
+                               (current-column))))
+        (if (= col first-non-blank)
+            (move-beginning-of-line nil)
+          (back-to-indentation)))))
+
+  ;; End of line, skipping text hidden at the end (link brackets, emphasis
+  ;; markers), so the cursor sits on the last character you can see.
+  (evil-define-motion start/evil-end-of-visible-line (count)
+    "Like `evil-end-of-line', but stop on the last visible character."
+    :type inclusive
+    (evil-end-of-line count)
+    (unless (evil-operator-state-p)
+      (while (and (> (point) (line-beginning-position)) (invisible-p (point)))
+        (backward-char))))
+
+  (defun start/rest-of-line-invisible-p (pos)
+    "Non-nil if every char from POS to the end of its line is invisible."
+    (let ((eol (save-excursion (goto-char pos) (line-end-position))))
+      (and (< pos eol)
+           (cl-loop for i from pos below eol always (invisible-p i)))))
+
+  (defun start/evil-append-past-hidden (orig &rest args)
+    "Around `evil-append': if only hidden text follows point, append at eol.
+Otherwise `a' on the last visible char lands inside the hidden text, or, if
+point was already adjusted onto it, wraps to the next line."
+    (if (and (not (eolp))
+             (or (invisible-p (point))
+                 (start/rest-of-line-invisible-p (1+ (point)))))
+        (progn (end-of-line) (apply #'evil-insert args))
+      (apply orig args)))
+  (advice-add 'evil-append :around #'start/evil-append-past-hidden)
+
+  ;; j/k with a count follow the visual line numbers (which skip folded text
+  ;; and hidden drawers and count wrapped lines), so 10j lands on the line
+  ;; labelled 10. Without a count they move by logical lines as usual.
+  (evil-define-motion start/evil-next-line (count)
+    "Move down COUNT lines; with a count and visual line numbers, screen lines."
+    :type line
+    (if (and count (eq display-line-numbers 'visual))
+        (let ((line-move-visual t)) (evil-line-move count))
+      (evil-next-line count)))
+
+  (evil-define-motion start/evil-previous-line (count)
+    "Move up COUNT lines; with a count and visual line numbers, screen lines."
+    :type line
+    (if (and count (eq display-line-numbers 'visual))
+        (let ((line-move-visual t)) (evil-line-move (- count)))
+      (evil-previous-line count)))
+
+  (define-key evil-motion-state-map "j" #'start/evil-next-line)
+  (define-key evil-motion-state-map "k" #'start/evil-previous-line)
+
   ;; H/L keybindings for motion state
   (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
-  (define-key evil-motion-state-map "L" #'evil-end-of-line)
+  (define-key evil-motion-state-map "L" #'start/evil-end-of-visible-line)
 
   (defun evil-shift-right-keep-visual (beg end &optional count)
     "Shift right but stay in visual mode."
@@ -662,7 +727,7 @@ Notes:
       (kbd "gk") (lambda () (interactive) (my/org-goto-heading-text #'org-backward-heading-same-level))))
   ;; Reapply global H/L after evil-collection might override
   (define-key evil-motion-state-map "H" #'start/jump-to-line-start)
-  (define-key evil-motion-state-map "L" #'evil-end-of-line)
+  (define-key evil-motion-state-map "L" #'start/evil-end-of-visible-line)
   )
 #+end_src
 ** General Keybindings
@@ -2549,7 +2614,7 @@ and TODOs. [[(subitem-below-map)][[keymapping]​]]
     (kbd "0") 'evil-beginning-of-line
     (kbd "$") 'evil-end-of-line
     (kbd "H") 'start/jump-to-line-start
-    (kbd "L") 'evil-end-of-line
+    (kbd "L") 'start/evil-end-of-visible-line
     (kbd "^") 'evil-first-non-blank
     (kbd "s") 'flash-emacs-jump
 
