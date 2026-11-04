@@ -18,7 +18,7 @@ A personal, Org-first, Evil-based Emacs config built on Kickstart.emacs (MiniApo
 emacs --batch -l org --eval '(org-babel-tangle-file "init.org")'
 
 # Regenerate README.md (optional; mirrors what the save hook does)
-emacs --batch -l org init.org --eval '(let ((org-export-with-toc nil) (org-export-with-author nil) (org-export-with-date nil) (org-export-with-broken-links t)) (org-md-export-to-markdown))'
+emacs --batch -l org -l ox-md init.org --eval '(let ((org-export-with-toc nil) (org-export-with-author nil) (org-export-with-date nil) (org-export-with-broken-links t)) (org-md-export-to-markdown))'
 
 # Sanity-check that the tangled init loads (needs packages already installed in ~/.config/emacs/elpa)
 emacs --batch --init-directory ~/.config/emacs -l init.el

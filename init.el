@@ -397,7 +397,18 @@
     "o e" '(org-export-dispatch :wk "Export")
     "o d" '(org-deadline :wk "Deadline")
     "o s" '(org-schedule :wk "Schedule")
-    "o S" '(org-sort :wk "Sort region/list")
+    "o S" '(:ignore t :wk "sort")
+    "o S S" '(start/org-sort-default :wk "Default (state→prio→sched)")
+    "o S p" '(start/org-sort-by-priority :wk "Priority")
+    "o S P" '(start/org-sort-by-priority-reverse :wk "Priority (rev)")
+    "o S s" '(start/org-sort-by-scheduled :wk "Scheduled")
+    "o S d" '(start/org-sort-by-deadline :wk "Deadline")
+    "o S t" '(start/org-sort-by-state :wk "TODO state")
+    "o S a" '(start/org-sort-by-title :wk "Title A–Z")
+    "o S A" '(start/org-sort-by-title-reverse :wk "Title Z–A")
+    "o S c" '(start/org-sort-by-created :wk "Created")
+    "o S x" '(start/org-sort-custom :wk "Custom chain…")
+    "o S o" '(org-sort :wk "org-sort (lists/tables)")
     "o T" '(org-set-tags-command :wk "Set Tags")
     "o r" '(org-refile :wk "Refile")
     )
@@ -939,6 +950,148 @@
      nil 'file)
     (message (if any-visible "Hidden DONE entries" "Shown DONE entries"))))
 
+;; (ref:orgzly-sort)
+(require 'cl-lib)
+
+(defvar start/org-sort-state-order
+  '("ACTIVE" "NEXT" "READY" "TODO" "ASSIGNMENT" "BILL" "CHORE" "MEETING"
+    "REVIEW" "PLANNING" "HOLD" nil "DONE" "CANCELED")
+  "Order used by the `state' sort key.
+nil marks where headings without a TODO state go. Unlisted states sort
+right after nil.")
+
+(defvar start/org-sort-default-spec '(state priority scheduled)
+  "Sort chain used by `start/org-sort-default'.")
+
+(defvar start/org-sort-history nil
+  "Minibuffer history for `start/org-sort-custom'.")
+
+(defun start/org-sort--time (time)
+  "Return (MISSINGP . SECONDS) for TIME, which may be nil."
+  (if time (cons nil (float-time time)) (cons t 0)))
+
+(defvar start/org-sort-key-functions
+  `((state
+     . ,(lambda ()
+          (let* ((order start/org-sort-state-order)
+                 (state (org-get-todo-state))
+                 (pos (cl-position state order :test #'equal)))
+            (cons nil (or pos (1+ (or (cl-position nil order) (length order))))))))
+    (priority
+     . ,(lambda () (cons nil (string-to-char (org-entry-get nil "PRIORITY")))))
+    (scheduled . ,(lambda () (start/org-sort--time (org-get-scheduled-time (point)))))
+    (deadline  . ,(lambda () (start/org-sort--time (org-get-deadline-time (point)))))
+    (title     . ,(lambda () (cons nil (downcase (or (org-get-heading t t t t) "")))))
+    (created
+     . ,(lambda ()
+          (let* ((raw (org-entry-get nil "CREATED"))
+                 (secs (and raw (ignore-errors (org-time-string-to-seconds raw)))))
+            (if secs (cons nil secs) (cons t 0))))))
+  "Alist of sort key symbol -> function returning (MISSINGP . VALUE) at a heading.")
+
+(defun start/org-sort--parse (spec)
+  "Turn SPEC (symbols, optionally prefixed with `.') into ((KEY . REVERSEP) ...)."
+  (mapcar (lambda (item)
+            (let* ((name (if (symbolp item) (symbol-name item) item))
+                   (rev (string-prefix-p "." name))
+                   (key (intern (if rev (substring name 1) name))))
+              (unless (assq key start/org-sort-key-functions)
+                (user-error "Unknown sort key: %s" key))
+              (cons key rev)))
+          spec))
+
+(defun start/org-sort--less (a b)
+  "Return non-nil if (MISSINGP . VALUE) A sorts before B, ignoring direction."
+  (let ((va (cdr a)) (vb (cdr b)))
+    (if (stringp va) (string< va vb) (< va vb))))
+
+(defvar start/org-sort--active-keys nil
+  "Parsed ((KEY . REVERSEP) ...) for the sort in progress.
+A dynamic variable, so this works whatever `lexical-binding' is set to.")
+
+(defun start/org-sort--getkey ()
+  "Return the list of key values for the heading at point."
+  (mapcar (lambda (k) (funcall (alist-get (car k) start/org-sort-key-functions)))
+          start/org-sort--active-keys))
+
+(defun start/org-sort--compare (ka kb)
+  "Return non-nil if key list KA sorts before KB."
+  (catch 'done
+    (cl-loop for a in ka for b in kb for k in start/org-sort--active-keys
+             do (let ((rev (cdr k)))
+                  (cond
+                   ;; Missing values always go last, whatever the direction.
+                   ((and (car a) (not (car b))) (throw 'done nil))
+                   ((and (car b) (not (car a))) (throw 'done t))
+                   ((and (car a) (car b)))
+                   ((start/org-sort--less a b) (throw 'done (not rev)))
+                   ((start/org-sort--less b a) (throw 'done rev)))))
+    nil))
+
+(defun start/org-sort-by (spec)
+  "Sort the children of the heading at point by the chained SPEC.
+SPEC is a list like (state priority .scheduled); `.' reverses a key."
+  (let* ((start/org-sort--active-keys (start/org-sort--parse spec))
+         ;; Same range org-sort-entries works on: region, whole buffer, or subtree.
+         (beg (copy-marker
+               (cond ((use-region-p) (region-beginning))
+                     ((org-before-first-heading-p) (point-min))
+                     (t (save-excursion (org-back-to-heading t) (point))))))
+         (end (copy-marker
+               (cond ((use-region-p) (region-end))
+                     ((org-before-first-heading-p) (point-max))
+                     (t (save-excursion (org-end-of-subtree t t) (point))))
+               t)))
+    (org-sort-entries nil ?f #'start/org-sort--getkey #'start/org-sort--compare)
+    ;; Sorting re-inserts text, which strands the drawer-hiding overlays
+    ;; (see "Hide Properties Drawers"); put them back if drawers were hidden.
+    (when (fboundp 'my/org-rehide-drawers-in)
+      (my/org-rehide-drawers-in beg end))
+    (set-marker beg nil)
+    (set-marker end nil)
+    (message "Sorted by %s"
+             (mapconcat (lambda (k) (concat (if (cdr k) "." "") (symbol-name (car k))))
+                        start/org-sort--active-keys " → "))))
+
+(defun start/org-sort-default ()
+  "Sort children by `start/org-sort-default-spec'."
+  (interactive) (start/org-sort-by start/org-sort-default-spec))
+(defun start/org-sort-by-priority ()
+  "Sort children by priority (A first)."
+  (interactive) (start/org-sort-by '(priority)))
+(defun start/org-sort-by-priority-reverse ()
+  "Sort children by priority (lowest first)."
+  (interactive) (start/org-sort-by '(.priority)))
+(defun start/org-sort-by-scheduled ()
+  "Sort children by scheduled date."
+  (interactive) (start/org-sort-by '(scheduled)))
+(defun start/org-sort-by-deadline ()
+  "Sort children by deadline."
+  (interactive) (start/org-sort-by '(deadline)))
+(defun start/org-sort-by-state ()
+  "Sort children by TODO state (see `start/org-sort-state-order')."
+  (interactive) (start/org-sort-by '(state)))
+(defun start/org-sort-by-title ()
+  "Sort children by title, A–Z."
+  (interactive) (start/org-sort-by '(title)))
+(defun start/org-sort-by-title-reverse ()
+  "Sort children by title, Z–A."
+  (interactive) (start/org-sort-by '(.title)))
+(defun start/org-sort-by-created ()
+  "Sort children by the CREATED property."
+  (interactive) (start/org-sort-by '(created)))
+
+(defun start/org-sort-custom (spec)
+  "Sort children by a chain of keys read from the minibuffer.
+Separate keys with commas; prefix with `.' to reverse, e.g. state,.priority,deadline."
+  (interactive
+   (let* ((names (mapcar (lambda (k) (symbol-name (car k))) start/org-sort-key-functions))
+          (cands (append names (mapcar (lambda (n) (concat "." n)) names))))
+     (list (completing-read-multiple
+            "Sort by (comma-separated, .key = reverse): " cands nil t
+            (car start/org-sort-history) 'start/org-sort-history))))
+  (start/org-sort-by spec))
+
 ;; (ref:launch-done-collapse)
 (defvar my/org-auto-collapse-keywords '("PLANNING" "HOLD" "READY" "REVIEW")
   "Additional TODO keywords to automatically collapse like DONE states.")
@@ -1176,6 +1329,60 @@ Returns t if active TODOs were found, nil otherwise."
                 (outline-hide-subtree))
               (org-show-entry)
               (my/org-hide-drawers-subtree))))))))
+
+  ;; 9. Re-hide drawers after text is re-inserted (undo/redo, sorting)
+  ;; Overlays don't travel with deleted/re-inserted text, so after an undo the
+  ;; old stealth overlays sit at the wrong spans and the drawers show again.
+  (defun my/org-rehide-drawers-in (beg end)
+    "If drawers between BEG and END were hidden, clear stale overlays and re-hide them."
+    (save-excursion
+      ;; Snap to whole entries so a drawer is never half inside the range.
+      (let* ((beg (progn (goto-char beg)
+                         (if (org-before-first-heading-p) (point-min)
+                           (org-back-to-heading t) (point))))
+             (end (progn (goto-char end)
+                         (if (outline-next-heading) (point) (point-max))))
+             ;; Only overlays that start inside the range; `remove-overlays'
+             ;; would instead trim a neighbour's overlay and expose its :END:.
+             (ovs (seq-filter (lambda (ov) (and (overlay-get ov 'my-stealth-drawer)
+                                                (>= (overlay-start ov) beg)
+                                                (< (overlay-start ov) end)))
+                              (overlays-in beg end))))
+        (when ovs
+          (mapc #'delete-overlay ovs)
+          (my/hide-drawers-completely beg end)))))
+
+  (defvar-local my/org--undo-changed nil
+    "(BEG . END) span touched by the undo in progress.")
+
+  (defun my/org--track-undo-change (beg end _len)
+    (setq my/org--undo-changed
+          (if my/org--undo-changed
+              (cons (min beg (car my/org--undo-changed))
+                    (max end (cdr my/org--undo-changed)))
+            (cons beg end))))
+
+  (defun my/org-rehide-drawers-after-undo (orig &rest args)
+    "Around `primitive-undo': re-hide drawers in the span the undo touched."
+    (if (not (derived-mode-p 'org-mode))
+        (apply orig args)
+      (setq my/org--undo-changed nil)
+      (add-hook 'after-change-functions #'my/org--track-undo-change nil t)
+      (unwind-protect (apply orig args)
+        (remove-hook 'after-change-functions #'my/org--track-undo-change t)
+        (when my/org--undo-changed
+          (let ((b (copy-marker (car my/org--undo-changed)))
+                (e (copy-marker (cdr my/org--undo-changed) t)))
+            (setq my/org--undo-changed nil)
+            ;; Wait until the whole undo command finishes, then repair.
+            (run-at-time 0 nil
+                         (lambda (buf)
+                           (when (buffer-live-p buf)
+                             (with-current-buffer buf
+                               (my/org-rehide-drawers-in b e)
+                               (set-marker b nil) (set-marker e nil))))
+                         (current-buffer)))))))
+  (advice-add 'primitive-undo :around #'my/org-rehide-drawers-after-undo)
 
   ;; Catch all common undo commands to trigger our restore logic
   (advice-add 'undo :after #'my/org-restore-fold-on-undo)

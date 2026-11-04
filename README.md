@@ -48,10 +48,10 @@ or the META key (usually labeled ALT). Rather than writing that
 in full each time, we'll use the following abbreviations:
 
 C-<chr>  means hold the CONTROL key while typing the character <chr>.
-		 Thus, C-f would be: hold the CONTROL key and type f.
+	 Thus, C-f would be: hold the CONTROL key and type f.
 M-<chr>  means hold the META or ALT key down while typing <chr>.
-		 If there is no META or ALT key, instead press and release the
-		 ESC key and then type <chr>.  We write <ESC> for the ESC key.
+	 If there is no META or ALT key, instead press and release the
+	 ESC key and then type <chr>.  We write <ESC> for the ESC key.
 
 
 ### Where to start?
@@ -242,6 +242,11 @@ If you plan to use a different package manager, remember to remove this section 
 ## Good Defaults
 
 
+## Cross-platform paths
+
+Use a single set of Org paths so Linux and Windows both work cleanly.
+
+
 # Keybindings (Load First)
 
 Packages that we want to load first so we have them as soon as possible if something breaks.
@@ -401,6 +406,19 @@ Toggle switches the state. Cycle will collapse all if any are expanded, if all
 are collapsed it will expand them.
 
 
+## Orgzly-style Sort
+
+Orgzly-style chained sorting of headings, under `SPC o S`. Sorts the children of
+the heading at point (or the top-level headings when point is before the first
+heading) by a chain of keys, e.g. state → priority → scheduled. Prefix a key
+with `.` to reverse it (`.priority`). Entries missing a value (no date, no
+`:CREATED:`) always go last. The file is actually reordered, so `u` undoes it.
+`SPC o S o` is still the classic `org-sort` for lists and tables.
+
+Keys: `state` (order from `start/org-sort-state-order`), `priority`,
+`scheduled`, `deadline`, `title`, `created` (`:CREATED:` property).
+
+
 ## Collapse DONE Entries on File Open
 
 
@@ -410,6 +428,9 @@ are collapsed it will expand them.
 ## Trigger Syncthing Sync on Save
 
 Uses syncthingtray to request a syncthing
+
+
+## Copy Inside Code Blocks
 
 
 # Org Mode
@@ -489,6 +510,9 @@ Gives you frozen headers when scrolling large tables
 ## Org-CalDav
 
 
+## Org Ox-iCalendar
+
+
 ## Source Code Block Tag Expansion
 
 Org-tempo is not a separate package but a module within org that can be enabled.
@@ -562,7 +586,7 @@ A template system for Emacs. And yasnippet-snippets is a snippet collection pack
 To use it write out the full keyword (or use autocompletion) and press Tab.
 
 
-## Tree-Sitter (Tect Objects)
+## Tree-Sitter (Text Objects)
 
 A parser generator tool and an incremental parsing library.
 Check out TJ's [video](https://www.youtube.com/watch?v=09-9LltqWLY) to learn why you should use it.
@@ -757,7 +781,7 @@ Evil Terminal Cursor Changer changes the cursor shape in terminal Emacs.
 
 ;; Better rendering
 (setq pdf-view-use-scaling t
-		pdf-view-use-imagemagick nil)
+	pdf-view-use-imagemagick nil)
 
     ;; Setup Evil bindings for PDF view
     (with-eval-after-load 'evil
