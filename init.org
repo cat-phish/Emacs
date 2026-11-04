@@ -1514,24 +1514,10 @@ A dynamic variable, so this works whatever `lexical-binding' is set to.")
 (defun start/org-sort-by (spec)
   "Sort the children of the heading at point by the chained SPEC.
 SPEC is a list like (state priority .scheduled); `.' reverses a key."
-  (let* ((start/org-sort--active-keys (start/org-sort--parse spec))
-         ;; Same range org-sort-entries works on: region, whole buffer, or subtree.
-         (beg (copy-marker
-               (cond ((use-region-p) (region-beginning))
-                     ((org-before-first-heading-p) (point-min))
-                     (t (save-excursion (org-back-to-heading t) (point))))))
-         (end (copy-marker
-               (cond ((use-region-p) (region-end))
-                     ((org-before-first-heading-p) (point-max))
-                     (t (save-excursion (org-end-of-subtree t t) (point))))
-               t)))
+  (let ((start/org-sort--active-keys (start/org-sort--parse spec)))
+    ;; Drawer overlays are repaired by advice on `org-sort-entries'
+    ;; (see "Hide Properties Drawers").
     (org-sort-entries nil ?f #'start/org-sort--getkey #'start/org-sort--compare)
-    ;; Sorting re-inserts text, which strands the drawer-hiding overlays
-    ;; (see "Hide Properties Drawers"); put them back if drawers were hidden.
-    (when (fboundp 'my/org-rehide-drawers-in)
-      (my/org-rehide-drawers-in beg end))
-    (set-marker beg nil)
-    (set-marker end nil)
     (message "Sorted by %s"
              (mapconcat (lambda (k) (concat (if (cdr k) "." "") (symbol-name (car k))))
                         start/org-sort--active-keys " → "))))
@@ -1862,14 +1848,36 @@ Returns t if active TODOs were found, nil otherwise."
                 (e (copy-marker (cdr my/org--undo-changed) t)))
             (setq my/org--undo-changed nil)
             ;; Wait until the whole undo command finishes, then repair.
-            (run-at-time 0 nil
-                         (lambda (buf)
-                           (when (buffer-live-p buf)
-                             (with-current-buffer buf
-                               (my/org-rehide-drawers-in b e)
-                               (set-marker b nil) (set-marker e nil))))
-                         (current-buffer)))))))
+            ;; Pass B/E as timer args: init.el uses dynamic binding, so a
+            ;; lambda here would not close over them.
+            (run-at-time 0 nil #'my/org--rehide-after-undo (current-buffer) b e))))))
+
+  (defun my/org--rehide-after-undo (buf b e)
+    "Timer callback: re-hide drawers between markers B and E in BUF."
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (my/org-rehide-drawers-in b e)))
+    (set-marker b nil)
+    (set-marker e nil))
   (advice-add 'primitive-undo :around #'my/org-rehide-drawers-after-undo)
+
+  (defun my/org-rehide-drawers-after-sort (orig &rest args)
+    "Around `org-sort-entries': re-hide drawers in the range that was sorted.
+Sorting deletes and re-inserts the text, collapsing the stealth overlays."
+    (let ((beg (copy-marker
+                (cond ((use-region-p) (region-beginning))
+                      ((org-before-first-heading-p) (point-min))
+                      (t (save-excursion (org-back-to-heading t) (point))))))
+          (end (copy-marker
+                (cond ((use-region-p) (region-end))
+                      ((org-before-first-heading-p) (point-max))
+                      (t (save-excursion (org-end-of-subtree t t) (point))))
+                t)))
+      (unwind-protect (apply orig args)
+        (my/org-rehide-drawers-in beg end)
+        (set-marker beg nil)
+        (set-marker end nil))))
+  (advice-add 'org-sort-entries :around #'my/org-rehide-drawers-after-sort)
 
   ;; Catch all common undo commands to trigger our restore logic
   (advice-add 'undo :after #'my/org-restore-fold-on-undo)
