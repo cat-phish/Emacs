@@ -903,7 +903,13 @@ point was already adjusted onto it, wraps to the next line."
       (while (re-search-forward org-babel-src-block-regexp nil t)
         (let ((element (org-element-at-point)))
           (when (eq (org-element-type element) 'src-block)
-            (org-babel-do-in-edit-buffer (indent-region (point-min) (point-max)))))))))
+            ;; Jump to the block's end afterwards: `org-edit-src-exit' moves
+            ;; point back to the #+begin_src line when the block is folded,
+            ;; which would make the search re-match the same block forever.
+            (let ((end (copy-marker (org-element-end element))))
+              (org-babel-do-in-edit-buffer (indent-region (point-min) (point-max)))
+              (goto-char end)
+              (set-marker end nil))))))))
 (add-hook 'before-save-hook #'my/org-indent-all-src-blocks)
 
 ;; (ref:refile-fix)
@@ -1733,35 +1739,6 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
 		  	  (org-super-agenda-groups
 		  	   '((:anything t)))))))))
   :config
-  ;; AUTO-SAVE ORG MODE BUFFERS
-  ;; (ref:auto-save)
-  (defun my/org-save-all-except ()
-	"Save all Org buffers except for files matching specific strings."
-	(interactive)
-	(dolist (buf (buffer-list))
-	  (with-current-buffer buf
-		(when (and (derived-mode-p 'org-mode)
-		  		   (buffer-file-name)
-		  		   (buffer-modified-p)
-		  		   ;; Exempt buffer names
-		  		   (not (string-match-p "init\\.org" (buffer-file-name)))
-		  		   )
-		  (save-buffer)))))
-  (run-with-idle-timer 30 t #'my/org-save-all-except)
-
-  ;; AUTO-FORMAT SRC BLOCKS
-  ;; (ref:format-src)
-  ;; Function to indent every source block in the file
-  (defun my/org-indent-all-src-blocks ()
-	(when (derived-mode-p 'org-mode)
-	  (save-excursion
-		(goto-char (point-min))
-		(while (re-search-forward org-babel-src-block-regexp nil t)
-		  (let ((element (org-element-at-point)))
-		  	(when (eq (org-element-type element) 'src-block)
-		  	  (org-babel-do-in-edit-buffer (indent-region (point-min) (point-max)))))))))
-  (add-hook 'before-save-hook #'my/org-indent-all-src-blocks)
-
   ;; FIX STRANGE REFILE DISPLAY ISSUES
   ;; (ref:refile-fix)
   ;; This will refile to a new heading, if it was already folded
