@@ -100,3 +100,10 @@ This backlog tracks bugs, code hygiene improvements, performance optimizations, 
   - `scripts/fix_duplicate_ids.py` and `scripts/fix_double_dl.py` overwrite `~/org/main/Tasks.org` and `~/org/main/Inbox.org` in-place without backups or dry-run flags (`--dry-run`), and fail with `FileNotFoundError` in `fix_duplicate_ids.py` if a file does not exist. Add existence checks, atomic writes/backups, and CLI arguments.
 - [ ] **Add a `Makefile` or helper script for tangling, exporting, and batch-checking**
   - Since this repo is deployed via Nix home-manager and the `after-save-hook` does not trigger outside `user-emacs-directory`, add a `Makefile` (or `scripts/build.sh`) wrapping the three commands documented in `AGENTS.md` (`tangle`, `readme`, `check`).
+
+---
+
+## 6. Keybindings
+
+- [ ] **Migrate leader keymaps to a verb → target scheme**
+  - Leader prefixes are currently a mix of verbs (`f` find, `s` search) and targets (`n` roam, `o` org, `b` buffers), so the same action can live in two places (e.g. `SPC n f` and `SPC f n` both run `org-roam-node-find`). Restructure so the first key is always the verb (find/open, search, insert, toggle, …) and the second is the target (node, Tasks, Inbox, buffer, project, config, …). Then retire the target-first duplicates such as `SPC n f`, keeping it consistent across the `start/leader-keys` blocks in `init.org`.

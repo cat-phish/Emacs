@@ -391,7 +391,16 @@ point was already adjusted onto it, wraps to the next line."
     "f r" '(consult-recent-file :wk "Find recent files")
     "f F" '(consult-fd :wk "Find files with fd")
     "f f" '(find-file :wk "Find File")
-    "f i" '(consult-imenu :wk "Find Imenu buffer locations")) ;; This one is really cool
+    "f h" '(consult-imenu :wk "Find Header")
+    "f o" '((lambda () (interactive)
+              (if (executable-find "fd") (consult-fd start/org-root) (consult-find start/org-root)))
+            :wk "Find in ~/org (main + roam)")
+    "f m" '((lambda () (interactive)
+              (let ((default-directory start/org-main-dir)) (call-interactively #'find-file)))
+            :wk "Find file in org/main")
+    "f n" '(org-roam-node-find :wk "Find roam node")
+    "f t" '((lambda () (interactive) (find-file start/org-tasks-file)) :wk "Open Tasks.org")
+    "f i" '((lambda () (interactive) (find-file start/org-inbox-file)) :wk "Open Inbox.org"))
 
   (start/leader-keys
     "s" '(:ignore t :wk "search")
