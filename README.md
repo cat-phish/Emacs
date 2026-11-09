@@ -301,6 +301,7 @@ To read more about using the built in methods, check out this awesome article fr
 
 Set gruvbox theme, if you want some themes try out doom-themes.
 Use consult-theme to easily try out themes (**Epilepsy** Warning).
+Break a face inheritance cycle between Emacs 31's Gnus and doom-themes. Gnus makes `gnus-group-news-low` inherit `gnus-group-news-low-empty`, while doom-themes makes `-empty` inherit `-news-low`. Every new frame (e.g. Corfu's popup child frame) then fails with "Face inheritance results in inheritance cycle". Gnus is loaded indirectly through Org's `ol-gnus`.
 
 
 ## Transparency

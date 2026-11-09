@@ -644,6 +644,9 @@ point was already adjusted onto it, wraps to the next line."
   ;; Corrects (and improves) org-mode's native fontification.
   (doom-themes-org-config))
 
+(with-eval-after-load 'gnus
+  (face-spec-set 'gnus-group-news-low '((t :weight bold)) 'face-defface-spec))
+
 (add-to-list 'default-frame-alist '(alpha-background . 90)) ;; For all new frames henceforth
 
 (set-face-attribute 'default nil
