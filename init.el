@@ -1738,6 +1738,7 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
   (advice-add 'org-refile :after 'org-save-all-org-buffers)
   (org-log-done 'time)
   (org-log-into-drawer t)
+  (org-todo-repeat-to-state t) ;; Repeaters keep their keyword (CHORE stays CHORE, not TODO)
 
   ;; TODO KEYWORDS
   ;; (ref:todo-keywords)

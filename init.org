@@ -2279,6 +2279,7 @@ and TODOs. [[(subitem-below-map)][[keymapping]​]]
   (advice-add 'org-refile :after 'org-save-all-org-buffers)
   (org-log-done 'time)
   (org-log-into-drawer t)
+  (org-todo-repeat-to-state t) ;; Repeaters keep their keyword (CHORE stays CHORE, not TODO)
 
   ;; TODO KEYWORDS
   ;; (ref:todo-keywords)
