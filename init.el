@@ -1585,6 +1585,18 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
     (when (fboundp 'undo-tree-undo)
       (advice-add 'undo-tree-undo :after #'my/org-restore-fold-on-undo))))
 
+(defun start/org-revert-delicately ()
+  "Revert Org buffers with a diff so external (synced) edits keep folds."
+  (setq-local revert-buffer-insert-file-contents-function
+              #'revert-buffer-insert-file-contents-delicately))
+(add-hook 'org-mode-hook #'start/org-revert-delicately)
+
+(defun start/org-after-revert-refold ()
+  "Re-hide stealth drawers after a revert (new text arrives without overlays)."
+  (when (and (derived-mode-p 'org-mode) (fboundp 'my/org-hide-drawers-global))
+    (my/org-hide-drawers-global)))
+(add-hook 'after-revert-hook #'start/org-after-revert-refold)
+
 (add-hook 'after-save-hook
           (lambda ()
             (when (and (derived-mode-p 'org-mode)

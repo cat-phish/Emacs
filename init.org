@@ -41,6 +41,7 @@
     - [[#cyclingtoggling-todo-and-done-states][Cycling/Toggling TODO and Done States]]
     - [[#collapse-done-entries-on-file-open][Collapse DONE Entries on File Open]]
     - [[#hide-properties-drawers][Hide Properties Drawers]]
+    - [[#preserve-folds-on-auto-revert][Preserve Folds on Auto-Revert]]
     - [[#trigger-syncthing-sync-on-save][Trigger Syncthing Sync on Save]]
     - [[#copy-inside-code-blocks][Copy Inside Code Blocks]]
 - [[#org-mode][Org Mode]]
@@ -2074,6 +2075,25 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
     (advice-add 'evil-undo :after #'my/org-restore-fold-on-undo)
     (when (fboundp 'undo-tree-undo)
       (advice-add 'undo-tree-undo :after #'my/org-restore-fold-on-undo))))
+#+end_src
+** Preserve Folds on Auto-Revert
+When another device saves an Org file and Syncthing updates it here,
+=global-auto-revert-mode= reloads the buffer. The default revert replaces
+everything between the first and last changed line, which removes every fold
+overlay in that span and expands the headings. Revert Org buffers with a diff
+instead, so only the changed hunks are touched and the other folds stay put.
+#+begin_src emacs-lisp
+(defun start/org-revert-delicately ()
+  "Revert Org buffers with a diff so external (synced) edits keep folds."
+  (setq-local revert-buffer-insert-file-contents-function
+              #'revert-buffer-insert-file-contents-delicately))
+(add-hook 'org-mode-hook #'start/org-revert-delicately)
+
+(defun start/org-after-revert-refold ()
+  "Re-hide stealth drawers after a revert (new text arrives without overlays)."
+  (when (and (derived-mode-p 'org-mode) (fboundp 'my/org-hide-drawers-global))
+    (my/org-hide-drawers-global)))
+(add-hook 'after-revert-hook #'start/org-after-revert-refold)
 #+end_src
 ** Trigger Syncthing Sync on Save
 Uses syncthingtray to request a syncthing

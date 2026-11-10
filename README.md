@@ -426,6 +426,15 @@ Keys: `state` (order from `start/org-sort-state-order`), `priority`,
 ## Hide Properties Drawers
 
 
+## Preserve Folds on Auto-Revert
+
+When another device saves an Org file and Syncthing updates it here,
+`global-auto-revert-mode` reloads the buffer. The default revert replaces
+everything between the first and last changed line, which removes every fold
+overlay in that span and expands the headings. Revert Org buffers with a diff
+instead, so only the changed hunks are touched and the other folds stay put.
+
+
 ## Trigger Syncthing Sync on Save
 
 Uses syncthingtray to request a syncthing
