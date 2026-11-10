@@ -1901,19 +1901,28 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
   ;; COLLAPSE DONE ENTRIES WHEN MARKED
   ;; (ref:mark-done-collapse)
   (defun my/org-collapse-on-done ()
-	"Collapse the current heading if moved to a DONE or auto-collapse state, with a tiny delay to catch the Logbook."
-	(let ((state org-state))
-	  (when (my/org-should-collapse-state-p state)
-		;; We use a 0-second timer to run this AFTER Org finishes writing the logbook
-		(run-at-time 0 nil
-		  		     (lambda (buf)
-		  		       (with-current-buffer buf
-		  		         (save-excursion
-		  		           (org-back-to-heading t)
-		  		           ;; Hide the drawer first, then the subtree
-		  		           (org-cycle-hide-drawers 'all)
-		  		           (outline-hide-subtree))))
-		  		     (current-buffer)))))
+    "Collapse the heading if it ends in a DONE or auto-collapse state.
+Runs on a 0s timer so Org has finished logging and repeating first; a
+repeating task is back to TODO by then and stays open."
+    (when (my/org-should-collapse-state-p org-state)
+      (run-at-time 0 nil #'my/org-collapse-at-marker
+                   (save-excursion (org-back-to-heading t) (point-marker)))))
+
+  (defun my/org-collapse-at-marker (m)
+    "Fold the heading at marker M if it is still in a collapse state."
+    (when (buffer-live-p (marker-buffer m))
+      (with-current-buffer (marker-buffer m)
+        (save-excursion
+          (goto-char m)
+          (if (my/org-should-collapse-state-p (org-get-todo-state))
+              (progn
+                ;; Hide the drawer first, then the subtree
+                (org-cycle-hide-drawers 'all)
+                (outline-hide-subtree))
+            ;; Repeated back to TODO: keep it open, just tuck the
+            ;; new LOGBOOK/LAST_REPEAT drawers away.
+            (my/org-hide-drawers-subtree)))))
+    (set-marker m nil))
   ;; Launch: Auto-collapse when opening a file
   (add-hook 'find-file-hook #'my/org-hide-done-entries-dynamic)
   ;; Interaction: Auto-collapse the moment you mark it DONE
