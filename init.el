@@ -167,6 +167,9 @@
 (when start/is-windows
   (pixel-scroll-precision-mode 1))
 
+;; While scroll events are queued, don't fontify text that's about to scroll past.
+(setq redisplay-skip-fontification-on-input t)
+
 ;; Must be set before evil loads
 ;; Basic evil customization
 (setq evil-want-keybinding nil
@@ -655,8 +658,6 @@ point was already adjusted onto it, wraps to the next line."
 
 (with-eval-after-load 'gnus
   (face-spec-set 'gnus-group-news-low '((t :weight bold)) 'face-defface-spec))
-
-(add-to-list 'default-frame-alist '(alpha-background . 90)) ;; For all new frames henceforth
 
 (set-face-attribute 'default nil
                     ;; :font "JetBrains Mono" ;; Set your favorite type of font or download JetBrains Mono
@@ -2827,7 +2828,12 @@ repeating task is back to TODO by then and stays open."
   ; :init (ws-butler-global-mode))
     :config (ws-butler-global-mode))
 
-;; Make gc pauses faster by decreasing the threshold.
-(setq gc-cons-threshold (* 16 1000 1000)) ;; 16MB: fewer pauses while scrolling/typing, each still short
+;; Collect garbage when idle instead of mid-command.
+(use-package gcmh
+  :config
+  (setq gcmh-idle-delay 'auto              ;; idle delay scales with how long the last GC took
+        gcmh-auto-idle-delay-factor 10
+        gcmh-high-cons-threshold (* 256 1024 1024))
+  (gcmh-mode 1))
 ;; Increase the amount of data which Emacs reads from the process
 (setq read-process-output-max (* 1024 1024)) ;; 1mb

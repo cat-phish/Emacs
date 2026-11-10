@@ -526,6 +526,9 @@ built-in mode.
 
 (when start/is-windows
   (pixel-scroll-precision-mode 1))
+
+;; While scroll events are queued, don't fontify text that's about to scroll past.
+(setq redisplay-skip-fontification-on-input t)
 #+end_src
 * Keybindings (Load First)
 Packages that we want to load first so we have them as soon as possible if something breaks.
@@ -1069,8 +1072,10 @@ Break a face inheritance cycle between Emacs 31's Gnus and doom-themes. Gnus mak
 #+end_src
 
 ** Transparency
-With Emacs version 29, true transparency has been added.
-#+begin_src emacs-lisp
+With Emacs version 29, true transparency has been added. Disabled: the native
+Wayland (pgtk) build actually applies it, and an opaque background is preferred.
+Set the value below 100 and tangle the block to turn it back on.
+#+begin_src emacs-lisp :tangle no
 (add-to-list 'default-frame-alist '(alpha-background . 90)) ;; For all new frames henceforth
 #+end_src
 
@@ -3659,11 +3664,17 @@ Removes whitespace from the ends of lines.
 #+end_src
 
 * Runtime Performance
-  Dial the GC threshold back down so that garbage collection happens more frequently but in less time.
+  gcmh keeps the GC threshold high while you are active and collects when Emacs goes idle,
+  so a collection (~50ms with a typical heap) never lands in the middle of a scroll.
   We also increase Read Process Output Max so Emacs can read more data.
   #+begin_src emacs-lisp
-;; Make gc pauses faster by decreasing the threshold.
-(setq gc-cons-threshold (* 16 1000 1000)) ;; 16MB: fewer pauses while scrolling/typing, each still short
+;; Collect garbage when idle instead of mid-command.
+(use-package gcmh
+  :config
+  (setq gcmh-idle-delay 'auto              ;; idle delay scales with how long the last GC took
+        gcmh-auto-idle-delay-factor 10
+        gcmh-high-cons-threshold (* 256 1024 1024))
+  (gcmh-mode 1))
 ;; Increase the amount of data which Emacs reads from the process
 (setq read-process-output-max (* 1024 1024)) ;; 1mb
   #+end_src

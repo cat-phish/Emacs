@@ -316,7 +316,9 @@ Break a face inheritance cycle between Emacs 31's Gnus and doom-themes. Gnus mak
 
 ## Transparency
 
-With Emacs version 29, true transparency has been added.
+With Emacs version 29, true transparency has been added. Disabled: the native
+Wayland (pgtk) build actually applies it, and an opaque background is preferred.
+Set the value below 100 and tangle the block to turn it back on.
 
 
 ## Setting Fonts
@@ -878,6 +880,7 @@ Removes whitespace from the ends of lines.
 
 # Runtime Performance
 
-Dial the GC threshold back down so that garbage collection happens more frequently but in less time.
+gcmh keeps the GC threshold high while you are active and collects when Emacs goes idle,
+so a collection (~50ms with a typical heap) never lands in the middle of a scroll.
 We also increase Read Process Output Max so Emacs can read more data.
 
