@@ -104,6 +104,7 @@
 
   (global-visual-line-mode t)           ;; Enable truncated lines
   (display-line-numbers-type 'visual) ;; Relative line numbers
+  (display-line-numbers-width-start t) ;; Size the gutter for the largest line number, so switching relative/absolute doesn't shift text
   (global-display-line-numbers-mode t)  ;; Display line numbers
 
   (mouse-wheel-progressive-speed nil) ;; Disable progressive speed when scrolling
@@ -159,9 +160,24 @@
 (defconst start/org-inbox-file
   (expand-file-name "Inbox.org" start/org-main-dir))
 
+(defvar-local start/scroll--line-numbers-orig nil)
+
+(defun start/scroll-absolute-line-numbers (arg)
+  "`ultra-scroll-hide-functions' entry: absolute line numbers while scrolling.
+Relative numbers are renumbered on every scroll step; absolute ones are cheaper.
+ARG is -1 when a scroll starts pushing point and 1 once scrolling stops."
+  (cond ((and (< arg 0) (memq display-line-numbers '(relative visual)))
+         (setq start/scroll--line-numbers-orig display-line-numbers)
+         (setq-local display-line-numbers t))
+        ((and (> arg 0) start/scroll--line-numbers-orig)
+         (setq-local display-line-numbers start/scroll--line-numbers-orig)
+         (setq start/scroll--line-numbers-orig nil))))
+
 (use-package ultra-scroll
   :if (not start/is-windows)
   :config
+  ;; Added after load so the package's default entries (hl-line-mode) stay.
+  (add-hook 'ultra-scroll-hide-functions #'start/scroll-absolute-line-numbers)
   (ultra-scroll-mode 1))
 
 (when start/is-windows

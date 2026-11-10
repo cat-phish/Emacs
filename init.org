@@ -453,6 +453,7 @@ If you plan to use a different package manager, remember to remove this section 
 
   (global-visual-line-mode t)           ;; Enable truncated lines
   (display-line-numbers-type 'visual) ;; Relative line numbers
+  (display-line-numbers-width-start t) ;; Size the gutter for the largest line number, so switching relative/absolute doesn't shift text
   (global-display-line-numbers-mode t)  ;; Display line numbers
 
   (mouse-wheel-progressive-speed nil) ;; Disable progressive speed when scrolling
@@ -516,12 +517,29 @@ Use a single set of Org paths so Linux and Windows both work cleanly.
 =pixel-scroll-precision-mode= (and turns that mode on). It scrolls smoothly over tall
 lines like Org headings and images, works with =scroll-margin=, hides the cursor at
 the window edge instead of letting it bounce, and holds off garbage collection
-during a scroll. Windows doesn't send pixel-level scroll data, so it keeps the
+during a scroll. While a scroll is pushing the cursor, line numbers switch from
+relative to absolute (cheaper to redraw each step) and switch back once
+scrolling stops. Windows doesn't send pixel-level scroll data, so it keeps the
 built-in mode.
 #+begin_src emacs-lisp
+(defvar-local start/scroll--line-numbers-orig nil)
+
+(defun start/scroll-absolute-line-numbers (arg)
+  "`ultra-scroll-hide-functions' entry: absolute line numbers while scrolling.
+Relative numbers are renumbered on every scroll step; absolute ones are cheaper.
+ARG is -1 when a scroll starts pushing point and 1 once scrolling stops."
+  (cond ((and (< arg 0) (memq display-line-numbers '(relative visual)))
+         (setq start/scroll--line-numbers-orig display-line-numbers)
+         (setq-local display-line-numbers t))
+        ((and (> arg 0) start/scroll--line-numbers-orig)
+         (setq-local display-line-numbers start/scroll--line-numbers-orig)
+         (setq start/scroll--line-numbers-orig nil))))
+
 (use-package ultra-scroll
   :if (not start/is-windows)
   :config
+  ;; Added after load so the package's default entries (hl-line-mode) stay.
+  (add-hook 'ultra-scroll-hide-functions #'start/scroll-absolute-line-numbers)
   (ultra-scroll-mode 1))
 
 (when start/is-windows

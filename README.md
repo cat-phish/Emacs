@@ -253,7 +253,9 @@ Use a single set of Org paths so Linux and Windows both work cleanly.
 `pixel-scroll-precision-mode` (and turns that mode on). It scrolls smoothly over tall
 lines like Org headings and images, works with `scroll-margin`, hides the cursor at
 the window edge instead of letting it bounce, and holds off garbage collection
-during a scroll. Windows doesn't send pixel-level scroll data, so it keeps the
+during a scroll. While a scroll is pushing the cursor, line numbers switch from
+relative to absolute (cheaper to redraw each step) and switch back once
+scrolling stops. Windows doesn't send pixel-level scroll data, so it keeps the
 built-in mode.
 
 
