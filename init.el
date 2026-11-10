@@ -375,6 +375,7 @@ point was already adjusted onto it, wraps to the next line."
   (start/leader-keys
     "SPC" '(consult-buffer :wk "Switch Buffer")
     "TAB" '(mode-line-other-buffer :wk "Previous Buffer")
+    "`" '(start/org-reset-folds :wk "Reset Fold")
     "C" '(comment-line :wk "Comment lines")
     "q" '(flymake-show-buffer-diagnostics :wk "Flymake buffer diagnostic"))
 
@@ -457,7 +458,6 @@ point was already adjusted onto it, wraps to the next line."
     "o f d" '(my/org-cycle-done-entries :wk "Fold Done")
     "o f t" '(my/org-cycle-todo-entries :wk "Fold Todo")
     "o f a" '(my/org-cycle-all-todo-done-entries  :wk "Fold All Todo/Done")
-    "o f r" '(start/org-reset-folds :wk "Reset folds")
 
     ;; Clocking (Time tracking)
     "o C" '(:ignore t :wk "clock")
