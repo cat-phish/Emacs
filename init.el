@@ -107,7 +107,6 @@
   (global-display-line-numbers-mode t)  ;; Display line numbers
 
   (mouse-wheel-progressive-speed nil) ;; Disable progressive speed when scrolling
-  (pixel-scroll-precision-mode 1) ;; Modern Browser like smooth scrolling (Emacs 29+)
   (scroll-conservatively 101) ;; Smooth scrolling
   (scroll-preserve-screen-position nil)
   ;; (scroll-margin 15)
@@ -159,6 +158,14 @@
 
 (defconst start/org-inbox-file
   (expand-file-name "Inbox.org" start/org-main-dir))
+
+(use-package ultra-scroll
+  :if (not start/is-windows)
+  :config
+  (ultra-scroll-mode 1))
+
+(when start/is-windows
+  (pixel-scroll-precision-mode 1))
 
 ;; Must be set before evil loads
 ;; Basic evil customization
@@ -2821,6 +2828,6 @@ repeating task is back to TODO by then and stays open."
     :config (ws-butler-global-mode))
 
 ;; Make gc pauses faster by decreasing the threshold.
-(setq gc-cons-threshold (* 2 1000 1000))
+(setq gc-cons-threshold (* 16 1000 1000)) ;; 16MB: fewer pauses while scrolling/typing, each still short
 ;; Increase the amount of data which Emacs reads from the process
 (setq read-process-output-max (* 1024 1024)) ;; 1mb

@@ -247,6 +247,16 @@ If you plan to use a different package manager, remember to remove this section 
 Use a single set of Org paths so Linux and Windows both work cleanly.
 
 
+## Smooth Scrolling
+
+[ultra-scroll](https://github.com/jdtsmith/ultra-scroll) replaces the scroll function of the built-in
+`pixel-scroll-precision-mode` (and turns that mode on). It scrolls smoothly over tall
+lines like Org headings and images, works with `scroll-margin`, hides the cursor at
+the window edge instead of letting it bounce, and holds off garbage collection
+during a scroll. Windows doesn't send pixel-level scroll data, so it keeps the
+built-in mode.
+
+
 # Keybindings (Load First)
 
 Packages that we want to load first so we have them as soon as possible if something breaks.

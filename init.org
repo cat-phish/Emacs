@@ -18,6 +18,7 @@
     - [[#package-manager][Package manager]]
     - [[#good-defaults][Good Defaults]]
     - [[#cross-platform-paths][Cross-platform paths]]
+    - [[#smooth-scrolling][Smooth Scrolling]]
 - [[#keybindings-load-first][Keybindings (Load First)]]
     - [[#evil-mode][Evil Mode]]
     - [[#general-keybindings][General Keybindings]]
@@ -455,7 +456,6 @@ If you plan to use a different package manager, remember to remove this section 
   (global-display-line-numbers-mode t)  ;; Display line numbers
 
   (mouse-wheel-progressive-speed nil) ;; Disable progressive speed when scrolling
-  (pixel-scroll-precision-mode 1) ;; Modern Browser like smooth scrolling (Emacs 29+)
   (scroll-conservatively 101) ;; Smooth scrolling
   (scroll-preserve-screen-position nil)
   ;; (scroll-margin 15)
@@ -510,6 +510,22 @@ Use a single set of Org paths so Linux and Windows both work cleanly.
 
 (defconst start/org-inbox-file
   (expand-file-name "Inbox.org" start/org-main-dir))
+#+end_src
+** Smooth Scrolling
+[[https://github.com/jdtsmith/ultra-scroll][ultra-scroll]] replaces the scroll function of the built-in
+=pixel-scroll-precision-mode= (and turns that mode on). It scrolls smoothly over tall
+lines like Org headings and images, works with =scroll-margin=, hides the cursor at
+the window edge instead of letting it bounce, and holds off garbage collection
+during a scroll. Windows doesn't send pixel-level scroll data, so it keeps the
+built-in mode.
+#+begin_src emacs-lisp
+(use-package ultra-scroll
+  :if (not start/is-windows)
+  :config
+  (ultra-scroll-mode 1))
+
+(when start/is-windows
+  (pixel-scroll-precision-mode 1))
 #+end_src
 * Keybindings (Load First)
 Packages that we want to load first so we have them as soon as possible if something breaks.
@@ -3647,7 +3663,7 @@ Removes whitespace from the ends of lines.
   We also increase Read Process Output Max so Emacs can read more data.
   #+begin_src emacs-lisp
 ;; Make gc pauses faster by decreasing the threshold.
-(setq gc-cons-threshold (* 2 1000 1000))
+(setq gc-cons-threshold (* 16 1000 1000)) ;; 16MB: fewer pauses while scrolling/typing, each still short
 ;; Increase the amount of data which Emacs reads from the process
 (setq read-process-output-max (* 1024 1024)) ;; 1mb
   #+end_src
