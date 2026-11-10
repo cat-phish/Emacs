@@ -457,6 +457,7 @@ point was already adjusted onto it, wraps to the next line."
     "o f d" '(my/org-cycle-done-entries :wk "Fold Done")
     "o f t" '(my/org-cycle-todo-entries :wk "Fold Todo")
     "o f a" '(my/org-cycle-all-todo-done-entries  :wk "Fold All Todo/Done")
+    "o f r" '(start/org-reset-folds :wk "Reset folds")
 
     ;; Clocking (Time tracking)
     "o C" '(:ignore t :wk "clock")
@@ -1965,6 +1966,24 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
 			(lambda ()
               (when (derived-mode-p 'org-mode)
 				(my/org-hide-hash-headings))))
+
+  ;; RESET FOLDS TO LAUNCH LAYOUT
+  ;; Re-runs the same steps that fold a file when it is opened.
+  (defun start/org-reset-folds ()
+    "Reset folding in the current Org buffer to the layout it has on open."
+    (interactive)
+    (when (derived-mode-p 'org-mode)
+      (save-excursion
+        (my/org-show-drawers-global)          ; drop stale stealth overlays
+        (org-fold-show-all)
+        (org-cycle-set-startup-visibility)    ; #+STARTUP / org-startup-folded, drawers
+        (my/org-hide-drawers-global)
+        (my/org-hide-done-entries-dynamic)
+        (my/org-hide-hash-headings))
+      ;; Don't leave point inside hidden text.
+      (when (invisible-p (point))
+        (outline-previous-visible-heading 1))
+      (message "Folds reset to launch layout")))
 
   )
 
