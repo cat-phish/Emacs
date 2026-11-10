@@ -407,6 +407,13 @@ Toggle switches the state. Cycle will collapse all if any are expanded, if all
 are collapsed it will expand them.
 
 
+## Mark DONE (Catch Up Repeats)
+
+`SPC d` marks the entry DONE, in Org buffers and in the agenda. For a repeating
+entry that has fallen behind, it keeps marking DONE until every occurrence up to
+and including today is done, so the entry rolls forward to its next future date.
+
+
 ## Orgzly-style Sort
 
 Orgzly-style chained sorting of headings, under `SPC o S`. Sorts the children of

@@ -757,6 +757,7 @@ Note: The Leader key is what you will press when you want to access your keybind
     "SPC" '(consult-buffer :wk "Switch Buffer")
     "TAB" '(mode-line-other-buffer :wk "Previous Buffer")
     "`" '(start/org-reset-folds :wk "Reset Fold")
+    "d" '(start/org-done-dwim :wk "Done (catch up repeats)")
     "C" '(comment-line :wk "Comment lines")
     "q" '(flymake-show-buffer-diagnostics :wk "Flymake buffer diagnostic"))
 
@@ -1506,6 +1507,53 @@ are collapsed it will expand them.
              (outline-show-subtree)))))
      nil 'file)
     (message (if any-visible "Hidden DONE entries" "Shown DONE entries"))))
+#+end_src
+** Mark DONE (Catch Up Repeats)
+=SPC d= marks the entry DONE, in Org buffers and in the agenda. For a repeating
+entry that has fallen behind, it keeps marking DONE until every occurrence up to
+and including today is done, so the entry rolls forward to its next future date.
+#+begin_src emacs-lisp
+(defun start/org--repeat-due-p ()
+  "Non-nil if this entry has a repeating SCHEDULED/DEADLINE dated today or earlier."
+  (seq-some (lambda (prop)
+              (let ((ts (org-entry-get nil prop)))
+                (and ts (string-match-p org-repeat-re ts)
+                     (<= (org-time-stamp-to-now ts) 0))))
+            '("SCHEDULED" "DEADLINE")))
+
+(defun start/org--done-catch-up ()
+  "Mark the entry at point DONE; repeat for every missed occurrence through today.
+Return how many times it was marked DONE."
+  (save-excursion
+    (org-back-to-heading t)
+    (let ((n 1))
+      (org-todo 'done)
+      (while (and (< n 500) (org-entry-is-todo-p) (start/org--repeat-due-p))
+        ;; Org queues one log note per command and each `org-todo'
+        ;; overwrites it; write it now so every occurrence is logged.
+        (start/org--flush-log-note)
+        (org-todo 'done)
+        (setq n (1+ n)))
+      n)))
+
+(defun start/org--flush-log-note ()
+  "Store a pending timestamp-only log note now instead of after the command."
+  (when (and org-log-setup (memq org-log-note-how '(time state)))
+    (save-window-excursion (org-add-log-note))))
+
+(defun start/org-done-dwim ()
+  "Mark DONE; for a repeating entry, also mark all missed occurrences through today.
+Works in Org buffers and in the agenda."
+  (interactive)
+  (let ((n (if (derived-mode-p 'org-agenda-mode)
+               (let ((m (or (org-get-at-bol 'org-hd-marker) (org-agenda-error)))
+                     (line (line-number-at-pos)))
+                 (prog1 (org-with-point-at m (start/org--done-catch-up))
+                   (org-agenda-redo)
+                   (goto-char (point-min))
+                   (forward-line (1- line))))
+             (start/org--done-catch-up))))
+    (message (if (> n 1) "Marked %d occurrences DONE" "Marked DONE") n)))
 #+end_src
 ** Orgzly-style Sort
 Orgzly-style chained sorting of headings, under =SPC o S=. Sorts the children of
