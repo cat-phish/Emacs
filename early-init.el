@@ -5,5 +5,8 @@
 (setq frame-inhibit-implied-resize t)
 (setq frame-resize-pixelwise t)
 
-;; Force the frame to be maximized on startup to fill the Niri window
-(add-to-list 'default-frame-alist '(fullscreen . maximized))
+;; Window size is left to the window manager. On niri, the window rule
+;; matching app-id "^[Ee]macs$" opens it as a full-width column.
+;; (Forcing `(fullscreen . maximized)' here makes the native Wayland
+;; build request a true maximize, which niri shows edge-to-edge with no
+;; focus ring.)
