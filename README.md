@@ -414,6 +414,14 @@ it will remain so, otherwise will remain unfolded. Fixes
 weird display issues after refiling as well.
 
 
+## Bulk Refile Old DONE Entries
+
+`SPC o R` refiles every DONE/CANCELED entry whose deadline is more than
+`start/org-refile-old-done-days` days past to one target, picked once. It works on
+the whole buffer, or only the active region. A matching entry's subtree moves
+with it, so its children are not checked separately.
+
+
 ## Cycling/Toggling TODO and Done States
 
 These are used to toggle and cycle the collapse state of TODO and DONE entries.

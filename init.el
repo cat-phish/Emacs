@@ -510,6 +510,7 @@ point was already adjusted onto it, wraps to the next line."
     "o S o" '(org-sort :wk "org-sort (lists/tables)")
     "o T" '(org-set-tags-command :wk "Set Tags")
     "o r" '(org-refile :wk "Refile")
+    "o R" '(start/org-refile-old-done :wk "Refile old DONE")
     )
 
 
@@ -963,6 +964,55 @@ point was already adjusted onto it, wraps to the next line."
                     ;; This fixes the 'ghost' display issue
                     (org-back-to-heading t)
                     (org-flag-subtree t)))))))
+
+(defvar start/org-refile-old-done-days 3
+  "Refile DONE entries whose deadline is more than this many days past.")
+
+(defun start/org--old-done-p ()
+  "Non-nil if the entry at point is done with a deadline older than the cutoff."
+  (let ((dl (org-entry-get nil "DEADLINE")))
+    (and (org-entry-is-done-p)
+         dl
+         (< (org-time-stamp-to-now dl) (- start/org-refile-old-done-days)))))
+
+(defun start/org-refile-old-done ()
+  "Refile all done entries with a deadline more than N days past to one target.
+N is `start/org-refile-old-done-days'.  Acts on the active region, or else
+the whole (possibly narrowed) buffer."
+  (interactive)
+  (unless (derived-mode-p 'org-mode) (user-error "Not in an Org buffer"))
+  (let (markers)
+    (org-map-entries
+     (lambda ()
+       (when (start/org--old-done-p)
+         (push (point-marker) markers)
+         ;; Skip the subtree: it moves along with this entry.
+         (setq org-map-continue-from (save-excursion (org-end-of-subtree t t)))))
+     nil (when (use-region-p) 'region))
+    (setq markers (nreverse markers))
+    (if (null markers)
+        (message "No DONE entries with a deadline over %d days past"
+                 start/org-refile-old-done-days)
+      (let* ((rfloc (org-refile-get-location
+                     (format "Refile %d old DONE entries to" (length markers))))
+             (pos (nth 3 rfloc))
+             ;; Track the target with a marker: refiling entries above it
+             ;; in the same file shifts its position.
+             (target (when pos
+                       (with-current-buffer (find-file-noselect (nth 1 rfloc))
+                         (copy-marker pos))))
+             (n 0))
+        (unwind-protect
+            (dolist (m markers)
+              (when (marker-buffer m)
+                (save-excursion
+                  (goto-char m)
+                  (org-refile nil nil (list (nth 0 rfloc) (nth 1 rfloc) (nth 2 rfloc)
+                                            (and target (marker-position target))))
+                  (setq n (1+ n))))
+              (set-marker m nil))
+          (when target (set-marker target nil)))
+        (message "Refiled %d entries to %s" n (nth 0 rfloc))))))
 
 ;; (ref:todo-cycle)
 (defun my/org-toggle-todo-entries ()
