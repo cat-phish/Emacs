@@ -525,7 +525,7 @@ TODO keyword colors, shared by Org and Org-Modern so they only need to be set on
 
 `SPC o c` opens capture. Type a template key, fill in the prompts, and the entry
 gets filed without leaving the buffer you're in (`C-c C-c` saves, `C-c C-k` aborts).
-The popup opens in insert state; in normal state `q` or `ESC` aborts.
+The popup opens in insert state; `ESC` in normal state aborts.
 
 -   `i` Inbox: pick `Inbox` itself or one of its subheadings (Coffee, Fitness, &hellip;),
     or type a new name to create that subheading. Adds a `- [ ]` checkbox item to

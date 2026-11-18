@@ -2212,9 +2212,8 @@ the current heading."
   ;; Start typing right away in the capture popup
   :hook (org-capture-mode . evil-insert-state)
   :config
-  ;; q or ESC in normal state aborts the capture (same as C-c C-k)
+  ;; ESC in normal state aborts the capture (same as C-c C-k)
   (evil-define-minor-mode-key 'normal 'org-capture-mode
-    "q" #'org-capture-kill
     (kbd "<escape>") #'org-capture-kill)
   :custom
   (org-capture-templates
