@@ -821,12 +821,12 @@ point was already adjusted onto it, wraps to the next line."
     (evil-insert-state))
    ;; Checkboxes
    ((org-at-item-checkbox-p)
-    (org-end-of-line)
+    (goto-char (line-end-position)) ;; logical EOL; org-end-of-line stops at visual EOL under visual-line-mode
     (org-insert-item t) ;; The 't' argument forces a checkbox
     (evil-insert-state))
    ;; Lists
    ((org-in-item-p)
-    (org-end-of-line)
+    (goto-char (line-end-position))
     (org-insert-item)
     (evil-insert-state))
    ;; Headings/TODOs
@@ -851,13 +851,13 @@ point was already adjusted onto it, wraps to the next line."
   (cond
    ;; Checkbox -> Insert a nested checkbox
    ((org-at-item-checkbox-p)
-    (org-end-of-line)
+    (goto-char (line-end-position))
     (org-insert-item t)
     (org-indent-item)
     (evil-insert-state))
    ;; List -> Insert a nested list item
    ((org-in-item-p)
-    (org-end-of-line)
+    (goto-char (line-end-position))
     (org-insert-item)
     (org-indent-item)
     (evil-insert-state))
