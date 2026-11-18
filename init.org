@@ -2030,6 +2030,21 @@ Separate keys with commas; prefix with `.' to reverse, e.g. state,.priority,dead
   (defun my/org-show-drawers-global ()
     (my/show-drawers-completely (point-min) (point-max)))
 
+  ;; Evil's A (`evil-append-line') and $ move with `move-end-of-line', which
+  ;; skips invisible text at the end of a line. The hidden-drawer overlay
+  ;; starts at a heading's newline, so that skipped past the whole drawer and
+  ;; A on such a heading typed after :END:. Without a count, stay on the line.
+  (defun start/evil-move-end-of-line-stay-on-line (orig &optional arg)
+    "Around `evil-move-end-of-line': without a count, don't leave the line."
+    (let ((eol (line-end-position)))
+      (funcall orig arg)
+      (when (and (or (null arg) (eq arg 1))
+                 (derived-mode-p 'org-mode)
+                 (> (point) eol))
+        (goto-char eol))))
+  (with-eval-after-load 'evil
+    (advice-add 'evil-move-end-of-line :around #'start/evil-move-end-of-line-stay-on-line))
+
   ;; RET at the end of a heading followed by hidden text (a folded subtree or
   ;; a hidden drawer). Plain `org-return' puts the new line before the hidden
   ;; text: the fold's ▾ moves down to the new line, and a property drawer gets
@@ -3142,10 +3157,6 @@ individually via the org-modern customization group.
   :after org
   :custom
   (org-modern-todo-faces start/org-todo-faces)
-  ;; Heading star arrows, (FOLDED . EXPANDED) per level: open headings point
-  ;; right, folded ones point down (the reverse of org-modern's default).
-  (org-modern-fold-stars
-   '(("▼" . "▶") ("▽" . "▷") ("⯆" . "⯈") ("▿" . "▹") ("▾" . "▸")))
 
   :hook (org-mode . org-modern-mode)
   )
@@ -3169,6 +3180,62 @@ individually via the org-modern customization group.
      '((?X . "☑")  ; checked
        (?- . "❍")  ; intermediate
        (?\s . "☐")))))  ; unchecked
+#+end_src
+** Expanded Heading Indicator
+Folded headings end with =org-ellipsis= (" ▾"). This puts " ▸" at the end of
+open headings that have something visible under them, so the end of the line
+shows the state either way. It's drawn on the heading's last visible character
+(as part of fontification, like org-modern's stars), since the newline after a
+heading can be inside the hidden-drawer overlay.
+#+begin_src emacs-lisp
+(defvar start/org-expanded-indicator " ▸"
+  "Shown at the end of open headings that have visible content.")
+
+(defun start/org--heading-has-visible-content-p ()
+  "Non-nil if the heading at point has body text or children (not just a drawer)."
+  (let ((level (org-current-level)))
+    (save-excursion
+      (org-end-of-meta-data t)
+      (skip-chars-forward " \t\n")
+      (and (not (eobp))
+           (not (and (org-at-heading-p) (<= (org-current-level) level)))))))
+
+(defun start/org--expanded-indicator-matcher (limit)
+  "Font-lock matcher: match the last visible char of an open heading with content."
+  (let (found)
+    (while (and (not found) (re-search-forward org-outline-regexp-bol limit t))
+      (let* ((bol (match-beginning 0))
+             (eol (line-end-position))
+             (pos eol))
+        (while (and (> pos bol) (invisible-p (1- pos)))
+          (setq pos (1- pos)))
+        (when (and (> pos bol)
+                   (< eol (point-max))
+                   (not (org-fold-folded-p eol 'outline))
+                   (save-excursion (goto-char bol) (start/org--heading-has-visible-content-p)))
+          (set-match-data (list (1- pos) pos))
+          (setq found t))
+        (goto-char eol)))
+    found))
+
+(defun start/org--expanded-indicator-display ()
+  "Display spec for the matched char: what it already shows, plus the indicator.
+Keeps an existing display string, e.g. the end of org-modern's progress bar on
+the ] of a [1/4] cookie."
+  (let* ((old (get-text-property (match-beginning 0) 'display))
+         (base (if (stringp old) old (match-string 0))))
+    (list 'face nil
+          'display (if (string-suffix-p start/org-expanded-indicator base)
+                       base
+                     (concat base (propertize start/org-expanded-indicator
+                                              'face 'org-ellipsis))))))
+
+(defun start/org-expanded-indicator-setup ()
+  (font-lock-add-keywords
+   nil '((start/org--expanded-indicator-matcher (0 (start/org--expanded-indicator-display) append)))
+   'append)
+  (add-to-list (make-local-variable 'font-lock-extra-managed-props) 'display))
+(add-hook 'org-mode-hook #'start/org-expanded-indicator-setup 90)
 #+end_src
 ** Org-Table-Sticky-Header
 Gives you frozen headers when scrolling large tables

@@ -566,6 +566,15 @@ The styling is configurable, you can disable or modify the style of each syntax 
 individually via the org-modern customization group.
 
 
+## Expanded Heading Indicator
+
+Folded headings end with `org-ellipsis` (" ▾"). This puts " ▸" at the end of
+open headings that have something visible under them, so the end of the line
+shows the state either way. It's drawn on the heading's last visible character
+(as part of fontification, like org-modern's stars), since the newline after a
+heading can be inside the hidden-drawer overlay.
+
+
 ## Org-Table-Sticky-Header
 
 Gives you frozen headers when scrolling large tables
