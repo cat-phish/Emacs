@@ -3136,6 +3136,19 @@ individually via the org-modern customization group.
   :hook (org-mode . org-modern-mode)
   )
 
+;; org-modern picks the folded (▶) or expanded (▼) heading star by checking
+;; whether the end of the heading line is invisible. The hidden-drawer overlay
+;; (see "Hide Properties Drawers") starts there, so every expanded heading
+;; with a drawer showed the folded star. Count only real outline folds.
+(defun start/org-modern-star-outline-folds-only (orig &rest args)
+  "Around `org-modern--star': treat a heading as folded only if its subtree is."
+  (cl-letf (((symbol-function 'org-invisible-p)
+             (lambda (&optional pos _folding-only)
+               (org-fold-folded-p (or pos (point)) 'outline))))
+    (apply orig args)))
+(with-eval-after-load 'org-modern
+  (advice-add 'org-modern--star :around #'start/org-modern-star-outline-folds-only))
+
 (with-eval-after-load 'org-modern
   (custom-set-variables
    '(org-modern-checkbox
