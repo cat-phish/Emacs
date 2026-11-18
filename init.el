@@ -2460,6 +2460,28 @@ repeating task is back to TODO by then and stays open."
                               "#+title: ${title}\n")
            :unnarrowed t))))
 
+(defvar start/org-roam-db-sync-idle-seconds 120
+  "Idle seconds before `start/org-roam-db-sync-quietly' runs.")
+
+(defvar start/org-roam-db-sync-timer nil
+  "Idle timer that periodically runs `org-roam-db-sync'.")
+
+(defun start/org-roam-db-sync-quietly ()
+  "Run `org-roam-db-sync' without messages; demote errors to warnings.
+Loads org-roam if needed, since `:bind' defers it until first use."
+  (let ((inhibit-message t)
+        (message-log-max nil))
+    (with-demoted-errors "org-roam periodic sync: %S"
+      (when (and (require 'org-roam nil t)
+                 (file-directory-p org-roam-directory))
+        (org-roam-db-sync)))))
+
+(when (timerp start/org-roam-db-sync-timer)
+  (cancel-timer start/org-roam-db-sync-timer))
+(setq start/org-roam-db-sync-timer
+      (run-with-idle-timer start/org-roam-db-sync-idle-seconds t
+                           #'start/org-roam-db-sync-quietly))
+
 (use-package org-roam-ui
   :after org-roam
   :config
@@ -2751,6 +2773,14 @@ repeating task is back to TODO by then and stays open."
          ("C-d" . ivy-reverse-i-search-kill))
   :config
   (ivy-mode 1))
+
+(use-package evil-fringe-mark
+  :after evil
+  :custom
+  (evil-fringe-mark-side 'right-fringe)
+  (evil-fringe-mark-show-special nil) ;; hide automatic marks like . ^ < >
+  :config
+  (global-evil-fringe-mark-mode 1))
 
 (use-package grease
   :load-path "~/.config/emacs-org/lisp/grease.el"

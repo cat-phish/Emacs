@@ -3052,6 +3052,35 @@ Org-tempo allows for '<s' followed by TAB to expand to a begin_src tag.
            :unnarrowed t))))
 
 #+end_src
+*** Periodic DB Sync
+=org-roam-db-autosync-mode= only catches saves made inside Emacs. Nodes that
+arrive via Syncthing or are written to the roam directory by other tools stay
+invisible until =org-roam-db-sync= runs, so sync quietly whenever Emacs has been
+idle for a couple of minutes. The sync is incremental (file hashes), so a no-op
+run takes ~30ms.
+#+begin_src emacs-lisp
+(defvar start/org-roam-db-sync-idle-seconds 120
+  "Idle seconds before `start/org-roam-db-sync-quietly' runs.")
+
+(defvar start/org-roam-db-sync-timer nil
+  "Idle timer that periodically runs `org-roam-db-sync'.")
+
+(defun start/org-roam-db-sync-quietly ()
+  "Run `org-roam-db-sync' without messages; demote errors to warnings.
+Loads org-roam if needed, since `:bind' defers it until first use."
+  (let ((inhibit-message t)
+        (message-log-max nil))
+    (with-demoted-errors "org-roam periodic sync: %S"
+      (when (and (require 'org-roam nil t)
+                 (file-directory-p org-roam-directory))
+        (org-roam-db-sync)))))
+
+(when (timerp start/org-roam-db-sync-timer)
+  (cancel-timer start/org-roam-db-sync-timer))
+(setq start/org-roam-db-sync-timer
+      (run-with-idle-timer start/org-roam-db-sync-idle-seconds t
+                           #'start/org-roam-db-sync-quietly))
+#+end_src
 ** Org-Roam-UI
 #+begin_src emacs-lisp
 (use-package org-roam-ui
@@ -3507,6 +3536,19 @@ Avy allows you to jump to visible text using a char-based decision tree.
          ("C-d" . ivy-reverse-i-search-kill))
   :config
   (ivy-mode 1))
+#+end_src
+** Evil Fringe Marks
+Shows Evil marks (=ma=, =mB=, ...) in the fringe next to the line they are on,
+like vim-signature. They go on the right fringe because diff-hl uses the left
+one. Terminal frames have no fringe, so marks fall back to the left margin there.
+#+begin_src emacs-lisp
+(use-package evil-fringe-mark
+  :after evil
+  :custom
+  (evil-fringe-mark-side 'right-fringe)
+  (evil-fringe-mark-show-special nil) ;; hide automatic marks like . ^ < >
+  :config
+  (global-evil-fringe-mark-mode 1))
 #+end_src
 * Utilities
 ** Grease

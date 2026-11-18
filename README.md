@@ -561,6 +561,15 @@ Org-tempo allows for '<s' followed by TAB to expand to a begin<sub>src</sub> tag
 ## Org-Roam
 
 
+### Periodic DB Sync
+
+`org-roam-db-autosync-mode` only catches saves made inside Emacs. Nodes that
+arrive via Syncthing or are written to the roam directory by other tools stay
+invisible until `org-roam-db-sync` runs, so sync quietly whenever Emacs has been
+idle for a couple of minutes. The sync is incremental (file hashes), so a no-op
+run takes ~30ms.
+
+
 ## Org-Roam-UI
 
 
@@ -773,6 +782,13 @@ Avy allows you to jump to visible text using a char-based decision tree.
 
 
 ## Ivy
+
+
+## Evil Fringe Marks
+
+Shows Evil marks (`ma`, `mB`, &hellip;) in the fringe next to the line they are on,
+like vim-signature. They go on the right fringe because diff-hl uses the left
+one. Terminal frames have no fringe, so marks fall back to the left margin there.
 
 
 # Utilities
