@@ -414,6 +414,9 @@ so adding or deleting items by hand (typing, `dd`) leaves them stale. This
 recounts every cookie in the file on save (which includes the 30s idle
 auto-save), and the current heading's cookie when leaving insert state.
 
+Empty checkboxes (a bare `- [ ]` with no text, e.g. a placeholder) aren't
+counted, so a heading with only an empty box, or no boxes, shows `[0/0]`.
+
 
 ## Refile Fixes
 

@@ -1445,7 +1445,38 @@ Org only recounts =[n/m]= / =[%]= cookies when a checkbox is toggled through Org
 so adding or deleting items by hand (typing, =dd=) leaves them stale. This
 recounts every cookie in the file on save (which includes the 30s idle
 auto-save), and the current heading's cookie when leaving insert state.
+
+Empty checkboxes (a bare =- [ ]= with no text, e.g. a placeholder) aren't
+counted, so a heading with only an empty box, or no boxes, shows =[0/0]=.
 #+begin_src emacs-lisp
+(defvar start/org--counting-checkboxes nil
+  "Non-nil while `org-update-checkbox-count' is counting.")
+
+(defun start/org--empty-checkbox-item-p (item struct)
+  "Non-nil if ITEM in STRUCT is just a bullet and a checkbox, with no text or body."
+  (save-excursion
+    (goto-char item)
+    (and (looking-at "[ \t]*\\(?:[-+*]\\|[0-9A-Za-z]+[.)]\\)[ \t]+\\(?:\\[@[^]]+\\][ \t]*\\)?\\[[- X]\\][ \t]*$")
+         (<= (org-list-get-item-end item struct) (1+ (line-end-position))))))
+
+(defun start/org--drop-empty-checkbox-items (orig item struct &rest args)
+  "While counting, leave empty checkbox items out of the items Org counts.
+\=`org-list-get-checkbox' is a defsubst, so it can't be advised; the item lists
+the counter walks come from these functions instead."
+  (let ((items (apply orig item struct args)))
+    (if start/org--counting-checkboxes
+        (seq-remove (lambda (i) (start/org--empty-checkbox-item-p i struct)) items)
+      items)))
+
+(defun start/org--while-counting-checkboxes (orig &rest args)
+  (let ((start/org--counting-checkboxes t))
+    (apply orig args)))
+
+(with-eval-after-load 'org-list
+  (dolist (fn '(org-list-get-all-items org-list-get-children org-list-get-subtree))
+    (advice-add fn :around #'start/org--drop-empty-checkbox-items))
+  (advice-add 'org-update-checkbox-count :around #'start/org--while-counting-checkboxes))
+
 (defun start/org-update-all-cookies ()
   "Recount every statistics cookie in an Org buffer."
   (when (derived-mode-p 'org-mode)
