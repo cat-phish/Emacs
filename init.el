@@ -2242,10 +2242,34 @@ repeating task is back to TODO by then and stays open."
     (kbd "TAB") 'org-agenda-goto
     (kbd "J") 'org-agenda-goto-date
     ))
+;; general's `:major-modes' only scopes which-key labels, not bindings, so the
+;; org-mode `SPC o' keys are really global. Keys shared with the agenda
+;; dispatch on the current mode instead. Defined at top level so it exists
+;; before the `with-eval-after-load' form below is macroexpanded.
+(defmacro start/org-or-agenda (org-cmd agenda-cmd)
+  "Key definition running AGENDA-CMD in org-agenda, ORG-CMD elsewhere."
+  `(general-predicate-dispatch #',org-cmd
+     (derived-mode-p 'org-agenda-mode) #',agenda-cmd))
+
 ;; Set up leader key bindings for org-agenda
 (with-eval-after-load 'org-agenda
   (evil-define-key 'motion org-agenda-mode-map
     (kbd "SPC") nil)  ; Clear SPC first if needed
+
+  ;; Make the org `SPC o' keys work in the agenda too, so e.g. `SPC o t d'
+  ;; marks DONE in both places. See `start/org-or-agenda'.
+  (start/leader-keys
+    "o t" `(:def ,(start/org-or-agenda org-todo org-agenda-todo) :wk "Todo State")
+    "o ." `(:def ,(start/org-or-agenda org-set-tags-command org-agenda-set-tags) :wk "Set tags")
+    "o T" `(:def ,(start/org-or-agenda org-set-tags-command org-agenda-set-tags) :wk "Set Tags")
+    "o p" `(:def ,(start/org-or-agenda org-priority org-agenda-priority) :wk "Priority")
+    "o d" `(:def ,(start/org-or-agenda org-deadline org-agenda-deadline) :wk "Deadline")
+    "o s" `(:def ,(start/org-or-agenda org-schedule org-agenda-schedule) :wk "Schedule")
+    "o r" `(:def ,(start/org-or-agenda org-refile org-agenda-refile) :wk "Refile")
+    "o i n" `(:def ,(start/org-or-agenda org-add-note org-agenda-add-note) :wk "Add note")
+    "o C i" `(:def ,(start/org-or-agenda org-clock-in org-agenda-clock-in) :wk "Clock in")
+    "o C o" `(:def ,(start/org-or-agenda org-clock-out org-agenda-clock-out) :wk "Clock out")
+    "o C g" `(:def ,(start/org-or-agenda org-clock-goto org-agenda-clock-goto) :wk "Go to clock"))
 
   ;; Define clean which-key labels with emojis
   (which-key-add-key-based-replacements
