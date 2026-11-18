@@ -1950,8 +1950,12 @@ Separate keys with commas; prefix with `.' to reverse, e.g. state,.priority,dead
           (when (re-search-forward "^[ \t]*:END:[ \t]*$" end t)
             (let ((ov-end (match-end 0)))
               (remove-overlays ov-start ov-end 'my-stealth-drawer t)
-              (let ((ov (make-overlay ov-start ov-end)))
-                (overlay-put ov 'display "")
+              ;; Hidden with `invisible', not `display ""': Emacs pushes point
+              ;; past an empty display string that starts at point, so A on a
+              ;; heading with a drawer jumped to after :END:. FRONT-ADVANCE t
+              ;; keeps text typed at the end of the heading outside the overlay.
+              (let ((ov (make-overlay ov-start ov-end nil t nil)))
+                (overlay-put ov 'invisible t)
                 (overlay-put ov 'my-stealth-drawer t))))))))
 
   (defun my/show-drawers-completely (beg end)
