@@ -827,6 +827,12 @@ Evil Terminal Cursor Changer changes the cursor shape in terminal Emacs.
 
 ## PDF Tools
 
+pdf-tools is installed by Nix (`programs.emacs.extraPackages` in the Nix config),
+which ships its `epdfinfo` server prebuilt. It's `:ensure nil` so package.el
+doesn't install its own copy, which would try to build `epdfinfo` (running
+`sudo dnf install` on Fedora). Where it isn't installed (e.g. Windows), the block
+is skipped and PDFs open in the built-in DocView.
+
 
 ## Super Save (Disabled)
 

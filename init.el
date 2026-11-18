@@ -2983,7 +2983,8 @@ Loads org-roam if needed, since `:bind' defers it until first use."
         conf-mode))
 
 (use-package pdf-tools
-    :ensure t
+    :ensure nil ;; provided by Nix, see above
+    :if (locate-library "pdf-tools")
     :mode ("\\.pdf\\'" . pdf-view-mode)
     :config
     ;; Initialize pdf-tools
