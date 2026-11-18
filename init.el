@@ -2544,6 +2544,10 @@ the current heading."
   :after org
   :custom
   (org-modern-todo-faces start/org-todo-faces)
+  ;; Heading star arrows, (FOLDED . EXPANDED) per level: open headings point
+  ;; right, folded ones point down (the reverse of org-modern's default).
+  (org-modern-fold-stars
+   '(("▼" . "▶") ("▽" . "▷") ("⯆" . "⯈") ("▿" . "▹") ("▾" . "▸")))
 
   :hook (org-mode . org-modern-mode)
   )
