@@ -2707,14 +2707,15 @@ repeating task is back to TODO by then and stays open."
 ** Org Capture
 =SPC o c= opens capture. Type a template key, fill in the prompts, and the entry
 gets filed without leaving the buffer you're in (=C-c C-c= saves, =C-c C-k= aborts).
-- =i= Inbox: a TODO under the =* Inbox= heading at the top of Tasks.org.
+- =i= Inbox: pick =Inbox= itself or one of its subheadings (Coffee, Fitness, ...),
+  or type a new name to create that subheading. Adds a =- [ ]= checkbox item to
+  that heading's list.
 - =a= Assignment: pick a class under =* School= (type a new name to create that
   class), then a title and a deadline. Filed as an ASSIGNMENT under the class.
 #+begin_src emacs-lisp
 (defun start/org-capture-goto-inbox ()
   "Move point to the Inbox heading in the current buffer.
-Creates it above the first heading if it's missing. Used as the capture target
-for the Inbox template."
+Creates it above the first heading if it's missing."
   (widen)
   (let ((pos (org-find-exact-headline-in-buffer start/org-inbox-heading nil t)))
     (if pos
@@ -2736,45 +2737,56 @@ for the Inbox template."
   (org-fold-show-children)
   (recenter 0))
 
-(defun start/org-capture-goto-class ()
-  "Prompt for a class under the School heading and move point to it.
-Choices are the direct children of `start/org-school-heading', skipping ones
-that start with # (like #Repeaters). A name that doesn't exist yet is added as
-a new class at the end of the School subtree."
-  (widen)
-  (let ((school (org-find-exact-headline-in-buffer start/org-school-heading nil t))
-        classes)
-    (unless school
-      (user-error "No \"%s\" heading in %s" start/org-school-heading (buffer-name)))
-    (goto-char school)
+(defun start/org-capture--pick-child (prompt &optional parent-choice)
+  "Prompt with PROMPT for a direct child of the heading at point, and go to it.
+Children whose titles start with # (like #Repeaters) aren't offered. A name
+that doesn't exist yet is added as a new child at the end of the subtree.
+If PARENT-CHOICE is a string, it is offered first, and picking it stays on
+the current heading."
+  (let ((level (org-current-level))
+        children)
     (save-excursion
       (when (org-goto-first-child)
         (while (progn
                  (let ((name (org-get-heading t t t t)))
                    (unless (string-prefix-p "#" name)
-                     (push (cons name (point)) classes)))
+                     (push (cons name (point)) children)))
                  (org-get-next-sibling)))))
-    (setq classes (nreverse classes))
-    (let* ((name (string-trim (completing-read "Class: " (mapcar #'car classes))))
-           (found (assoc name classes))
-           (level (org-current-level)))
-      (when (string-empty-p name)
-        (user-error "No class given"))
-      (if found
-          (goto-char (cdr found))
-        (org-end-of-subtree t t)
-        (unless (bolp) (insert "\n"))
-        (insert (make-string (1+ level) ?*) " " name "\n")
-        (forward-line -1)))))
+    (setq children (nreverse children))
+    (let* ((choices (append (and parent-choice (list parent-choice))
+                            (mapcar #'car children)))
+           (name (string-trim (completing-read prompt choices)))
+           (found (assoc name children)))
+      (cond ((string-empty-p name) (user-error "Nothing picked"))
+            ((equal name parent-choice))  ; stay on the parent heading
+            (found (goto-char (cdr found)))
+            (t (org-end-of-subtree t t)
+               (unless (bolp) (insert "\n"))
+               (insert (make-string (1+ level) ?*) " " name "\n")
+               (forward-line -1))))))
+
+(defun start/org-capture-goto-inbox-section ()
+  "Capture target: Inbox, or a subheading of it picked with completion."
+  (start/org-capture-goto-inbox)
+  (start/org-capture--pick-child "Inbox section: " start/org-inbox-heading))
+
+(defun start/org-capture-goto-class ()
+  "Capture target: a class under the School heading, picked with completion."
+  (widen)
+  (let ((school (org-find-exact-headline-in-buffer start/org-school-heading nil t)))
+    (unless school
+      (user-error "No \"%s\" heading in %s" start/org-school-heading (buffer-name)))
+    (goto-char school)
+    (start/org-capture--pick-child "Class: ")))
 
 (use-package org-capture
   :ensure nil
   :commands org-capture
   :custom
   (org-capture-templates
-   '(("i" "Inbox" entry
-      (file+function start/org-tasks-file start/org-capture-goto-inbox)
-      "* TODO %?")
+   '(("i" "Inbox" checkitem
+      (file+function start/org-tasks-file start/org-capture-goto-inbox-section)
+      "- [ ] %?")
      ("a" "Assignment" entry
       (file+function start/org-tasks-file start/org-capture-goto-class)
       "* ASSIGNMENT %^{Assignment}\nDEADLINE: %^t"

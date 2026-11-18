@@ -526,7 +526,9 @@ TODO keyword colors, shared by Org and Org-Modern so they only need to be set on
 `SPC o c` opens capture. Type a template key, fill in the prompts, and the entry
 gets filed without leaving the buffer you're in (`C-c C-c` saves, `C-c C-k` aborts).
 
--   `i` Inbox: a TODO under the `* Inbox` heading at the top of Tasks.org.
+-   `i` Inbox: pick `Inbox` itself or one of its subheadings (Coffee, Fitness, &hellip;),
+    or type a new name to create that subheading. Adds a `- [ ]` checkbox item to
+    that heading's list.
 -   `a` Assignment: pick a class under `* School` (type a new name to create that
     class), then a title and a deadline. Filed as an ASSIGNMENT under the class.
 
