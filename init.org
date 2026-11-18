@@ -2033,24 +2033,24 @@ Separate keys with commas; prefix with `.' to reverse, e.g. state,.priority,dead
   ;; RET at the end of a heading followed by hidden text (a folded subtree or
   ;; a hidden drawer). Plain `org-return' puts the new line before the hidden
   ;; text: the fold's ▾ moves down to the new line, and a property drawer gets
-  ;; split from its heading (so Org stops reading its ID). Instead:
-  ;; - folded heading: new sibling heading after the whole subtree
-  ;; - hidden drawer: new line after :END:, at the start of the body
+  ;; split from its heading (so Org stops reading its ID). Instead the new
+  ;; line goes at the start of the body, after any drawer, and a folded
+  ;; heading is opened first (body plus child headings) so the line is visible.
   (defun start/org-return-past-hidden (orig &rest args)
-    "Around `org-return': at the end of a heading, put new text after hidden text."
+    "Around `org-return': at the end of a heading, start a line in its body."
     (let ((eol (line-end-position)))
       (if (and (org-at-heading-p)
                (or (eolp) (start/rest-of-line-invisible-p (point)))
                (< eol (point-max))
                (invisible-p eol))
-          (if (org-fold-folded-p eol 'outline)
-              (org-insert-heading-respect-content)
+          (progn
+            (when (org-fold-folded-p eol 'outline)
+              (org-fold-show-entry)
+              (org-fold-show-children))
             (let ((ov (seq-find (lambda (o) (overlay-get o 'my-stealth-drawer))
                                 (overlays-at eol))))
-              (if ov
-                  (progn (goto-char (overlay-end ov))
-                         (apply orig args))
-                (apply orig args))))
+              (goto-char (if ov (overlay-end ov) eol)))
+            (apply orig args))
         (apply orig args))))
   ;; Outermost (depth -100): Org adds its own advice to `org-return' when a
   ;; buffer enters org-mode (`org-fold-check-before-invisible-edit-maybe'),
