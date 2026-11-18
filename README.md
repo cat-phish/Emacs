@@ -530,6 +530,8 @@ The popup opens in insert state; in normal state `RET` saves and `ESC` aborts.
 -   `i` Inbox: pick `Inbox` itself or one of its subheadings (Coffee, Fitness, &hellip;),
     or type a new name to create that subheading. Adds a `- [ ]` checkbox item to
     that heading's list.
+-   `s` System: pick a section under `* #System-Mgmt` (General, Nvim, Emacs, Home-Lab,
+    &hellip;), or type a new name to create it. Adds a `- [ ]` checkbox item there.
 -   `a` Assignment: pick a class under `* School` (type a new name to create that
     class), then a title and a deadline. Filed as an ASSIGNMENT under the class.
 

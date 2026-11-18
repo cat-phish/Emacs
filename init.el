@@ -163,6 +163,9 @@
 (defconst start/org-school-heading "School"
   "Top-level heading in `start/org-tasks-file' whose children are classes.")
 
+(defconst start/org-sysmgmt-heading "#System-Mgmt"
+  "Top-level heading in `start/org-tasks-file' whose children are systems/devices.")
+
 (defvar-local start/scroll--line-numbers-orig nil)
 
 (defun start/scroll-absolute-line-numbers (arg)
@@ -2175,7 +2178,11 @@ the current heading."
     (save-excursion
       (when (org-goto-first-child)
         (while (progn
-                 (let ((name (org-get-heading t t t t)))
+                 (let ((name (string-trim
+                              ;; drop statistics cookies like [1/43] or [50%]
+                              (replace-regexp-in-string
+                               "\\[[0-9]*\\(?:%\\|/[0-9]*\\)\\]" ""
+                               (org-get-heading t t t t)))))
                    (unless (string-prefix-p "#" name)
                      (push (cons name (point)) children)))
                  (org-get-next-sibling)))))
@@ -2196,6 +2203,15 @@ the current heading."
   "Capture target: Inbox, or a subheading of it picked with completion."
   (start/org-capture-goto-inbox)
   (start/org-capture--pick-child "Inbox section: " start/org-inbox-heading))
+
+(defun start/org-capture-goto-sysmgmt-section ()
+  "Capture target: a section under the #System-Mgmt heading, picked with completion."
+  (widen)
+  (let ((pos (org-find-exact-headline-in-buffer start/org-sysmgmt-heading nil t)))
+    (unless pos
+      (user-error "No \"%s\" heading in %s" start/org-sysmgmt-heading (buffer-name)))
+    (goto-char pos)
+    (start/org-capture--pick-child "System section: ")))
 
 (defun start/org-capture-goto-class ()
   "Capture target: a class under the School heading, picked with completion."
@@ -2221,6 +2237,9 @@ the current heading."
   (org-capture-templates
    '(("i" "Inbox" checkitem
       (file+function start/org-tasks-file start/org-capture-goto-inbox-section)
+      "- [ ] %?")
+     ("s" "System" checkitem
+      (file+function start/org-tasks-file start/org-capture-goto-sysmgmt-section)
       "- [ ] %?")
      ("a" "Assignment" entry
       (file+function start/org-tasks-file start/org-capture-goto-class)
