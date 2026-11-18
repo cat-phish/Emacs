@@ -602,13 +602,18 @@ point was already adjusted onto it, wraps to the next line."
     "w =" '(balance-windows    :wk "Balance splits"))
 
   (defun my/org-roam-ui-mode-custom-browser ()
-    "Enable org-roam-ui-mode and open the UI in Chromium."
+    "Enable org-roam-ui-mode and open the UI in a Firefox kiosk window.
+Falls back to the default browser when firefox isn't on PATH."
     (interactive)
     (unless org-roam-ui-mode
       (org-roam-ui-mode 1))
     (let ((browse-url-browser-function
-           (lambda (url &optional _)
-             (shell-command (concat "firefox --kiosk --new-window " url)))))
+           (if (executable-find "firefox")
+               (lambda (url &optional _)
+                 ;; Async, so Emacs isn't blocked while Firefox is open
+                 (start-process "org-roam-ui-firefox" nil
+                                "firefox" "--kiosk" "--new-window" url))
+             browse-url-browser-function)))
       (org-roam-ui-open)))
   )
 
@@ -1735,6 +1740,22 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
           (message "Yanked inside code block!"))
       (message "Not inside an Org code element!"))))
 
+(defconst start/org-todo-faces
+  '(("TODO"       . (:foreground "#282c34" :background "#98be65" :weight bold))
+    ("NEXT"       . (:foreground "#282c34" :background "#6f8fff" :weight bold))
+    ("PLANNING"   . (:foreground "#282c34" :background "#c792ea" :weight bold))
+    ("READY"      . (:foreground "#282c34" :background "#82b7ff" :weight bold))
+    ("ACTIVE"     . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
+    ("REVIEW"     . (:foreground "#282c34" :background "#e0a96d" :weight bold))
+    ("HOLD"       . (:foreground "#282c34" :background "#e6d96c" :weight bold))
+    ("ASSIGNMENT" . (:foreground "#282c34" :background "#e5404e" :weight bold))
+    ("BILL"       . (:foreground "#282c34" :background "#fc830a" :weight bold))
+    ("CHORE"      . (:foreground "#282c34" :background "#e2b93d" :weight bold))
+    ("MEETING"    . (:foreground "#282c34" :background "#f52dfc" :weight bold))
+    ("DONE"       . (:foreground "#1f2328" :background "#304b60" :weight bold))
+    ("CANCELED"   . (:foreground "#1f2328" :background "#e06c75" :weight bold)))
+  "TODO keyword faces shared by `org-todo-keyword-faces' and `org-modern-todo-faces'.")
+
 (use-package org
   :ensure nil
   :hook ((org-mode . org-indent-mode)
@@ -1818,21 +1839,7 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
   ;; (ref:todo-keywords)
   (org-todo-keywords
    '((sequence "TODO(t)" "ASSIGNMENT(a)" "BILL(b)" "CHORE(c)" "MEETING(m)" "NEXT(n)" "PLANNING(P)" "REVIEW(V)" "HOLD(H)" "READY(R)" "ACTIVE(A)" "|" "DONE(d!)" "CANCELED(C!)")))
-  ;; Note these also have to be set matching in Org-Modern
-  (org-todo-keyword-faces
-   '(("TODO"     . (:foreground "#282c34" :background "#98be65" :weight bold))
-	 ("NEXT"     . (:foreground "#282c34" :background "#6f8fff" :weight bold))
-	 ("PLANNING" . (:foreground "#282c34" :background "#c792ea" :weight bold))
-	 ("READY"    . (:foreground "#282c34" :background "#82b7ff" :weight bold))
-	 ("ACTIVE"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
-	 ("REVIEW"   . (:foreground "#282c34" :background "#e0a96d" :weight bold))
-	 ("HOLD"     . (:foreground "#282c34" :background "#e6d96c" :weight bold))
-	 ("ASSIGNMENT"  . (:foreground "#282c34" :background "#e5404e" :weight bold))
-	 ("BILL"  . (:foreground "#282c34" :background "#fc830a" :weight bold))
-	 ("CHORE"  . (:foreground "#282c34" :background "#e2b93d" :weight bold))
-	 ("MEETING"  . (:foreground "#282c34" :background "#f52dfc" :weight bold))
-	 ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
-	 ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
+  (org-todo-keyword-faces start/org-todo-faces) ;; defined above, shared with Org-Modern
 
   ;; AGENDA OVERVIEW
   ;; (ref:agenda-overview)
@@ -2340,20 +2347,7 @@ repeating task is back to TODO by then and stays open."
 (use-package org-modern
   :after org
   :custom
-  (org-modern-todo-faces
-   '(("TODO"     . (:foreground "#282c34" :background "#98be65" :weight bold))
-     ("NEXT"     . (:foreground "#282c34" :background "#6f8fff" :weight bold))
-     ("ASSIGNMENT"     . (:foreground "#282c34" :background "#e5404e" :weight bold))
-     ("BILL"  . (:foreground "#282c34" :background "#fc830a" :weight bold))
-     ("CHORE"  . (:foreground "#282c34" :background "#e2b93d" :weight bold))
-     ("PLANNING" . (:foreground "#282c34" :background "#c792ea" :weight bold))
-     ("READY"    . (:foreground "#282c34" :background "#82b7ff" :weight bold))
-     ("ACTIVE"   . (:foreground "#282c34" :background "#7fdc6f" :weight bold))
-     ("REVIEW"   . (:foreground "#282c34" :background "#e0a96d" :weight bold))
-     ("HOLD"     . (:foreground "#282c34" :background "#e6d96c" :weight bold))
-     ("MEETING"  . (:foreground "#282c34" :background "#f52dfc" :weight bold))
-     ("DONE"     . (:foreground "#1f2328" :background "#304b60" :weight bold))
-     ("CANCELED" . (:foreground "#1f2328" :background "#e06c75" :weight bold))))
+  (org-modern-todo-faces start/org-todo-faces)
 
   :hook (org-mode . org-modern-mode)
   )
@@ -2896,6 +2890,45 @@ Loads org-roam if needed, since `:bind' defers it until first use."
   (evil-normal-state-cursor 'box)  ; █
   (evil-insert-state-cursor 'bar)  ; ⎸
   (evil-emacs-state-cursor  'hbar)) ; _
+
+(use-package rainbow-mode
+:ensure t
+:hook (org-mode
+        emacs-lisp-mode
+        css-mode
+        conf-mode))
+
+(use-package pdf-tools
+    :ensure t
+    :mode ("\\.pdf\\'" . pdf-view-mode)
+    :config
+    ;; Initialize pdf-tools
+    (pdf-tools-install)
+
+    ;; Use 'Midnight Mode' by default (Dark mode for PDFs)
+    ;; You can toggle this with 'C-c C-r'
+    (setq-default pdf-view-midnight-colors '("#abb2bf" . "#282c34")) ; One Dark colors
+
+    ;; Better rendering
+    (setq pdf-view-use-scaling t
+            pdf-view-use-imagemagick nil)
+
+    ;; Setup Evil bindings for PDF view
+    (with-eval-after-load 'evil
+        (evil-set-initial-state 'pdf-view-mode 'motion)))
+
+(use-package super-save
+:disabled t
+:ensure t
+:custom
+(super-save-auto-save-idle t) ;; Ensure idle saving is explicitly ON
+;; Save after 5 seconds of idle time
+(super-save-idle-duration 5)
+;; Don't save remote files (TRAMP) to avoid lag
+(super-save-remote-files nil)
+:config
+(super-save-mode +1)
+(setq super-save-silent nil))
 
 (use-package undo-fu-session
   :ensure t

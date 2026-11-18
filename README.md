@@ -518,6 +518,8 @@ and TODOs.
 
 ## Org Mode Config
 
+TODO keyword colors, shared by Org and Org-Modern so they only need to be set once.
+
 
 ## Evil-Org-Mode
 
@@ -808,40 +810,10 @@ Check out their [git repository](https://github.com/minad/consult) for more awes
 Evil Terminal Cursor Changer changes the cursor shape in terminal Emacs.
 
 
-## Rainbow-Mode (Show Colors) FIXME:
-
-\#+begin<sub>src</sub> emacs-lisp
-(use-package rainbow-mode
-:ensure t
-:hook (org-mode
-        emacs-lisp-mode
-        css-mode
-        conf-mode)
-\#+end<sub>src</sub>>
+## Rainbow-Mode (Show Colors)
 
 
 ## PDF Tools
-
-\#+begin<sub>src</sub> emacs-lisp
-(use-package pdf-tools
-    :ensure t
-    :mode ("\\\\.pdf\\\\'" . pdf-view-mode)
-    :config
-    ;; Initialize pdf-tools
-    (pdf-tools-install)
-
-;; Use 'Midnight Mode' by default (Dark mode for PDFs)
-;; You can toggle this with 'C-c C-r'
-(setq-default pdf-view-midnight-colors '("#abb2bf" . "#282c34")) ; One Dark colors
-
-;; Better rendering
-(setq pdf-view-use-scaling t
-	pdf-view-use-imagemagick nil)
-
-    ;; Setup Evil bindings for PDF view
-    (with-eval-after-load 'evil
-        (evil-set-initial-state 'pdf-view-mode 'motion)))
-\#+end<sub>src</sub>>
 
 
 ## Super Save (Disabled)
@@ -849,20 +821,6 @@ Evil Terminal Cursor Changer changes the cursor shape in terminal Emacs.
 This was intended to be used for auto save. But I disabled in favor of
 using the built in auto-save hook for Org buffers only (in the Org Mode
 :config section above)
-\#+begin<sub>src</sub> emacs-lisp
-(use-package super-save
-:disabled t
-:ensure t
-:custom
-(super-save-auto-save-idle t) ;; Ensure idle saving is explicitly ON
-;; Save after 5 seconds of idle time
-(super-save-idle-duration 5)
-;; Don't save remote files (TRAMP) to avoid lag
-(super-save-remote-files nil)
-:config
-(super-save-mode +1)
-(setq super-save-silent nil))
-\#+end<sub>src</sub>>
 
 
 ## Undo-Fu-Session
