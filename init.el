@@ -157,8 +157,11 @@
 (defconst start/org-projects-file
   (expand-file-name "Projects.org" start/org-main-dir))
 
-(defconst start/org-inbox-file
-  (expand-file-name "Inbox.org" start/org-main-dir))
+(defconst start/org-inbox-heading "Inbox"
+  "Top-level heading in `start/org-tasks-file' that serves as the inbox.")
+
+(defconst start/org-school-heading "School"
+  "Top-level heading in `start/org-tasks-file' whose children are classes.")
 
 (defvar-local start/scroll--line-numbers-orig nil)
 
@@ -425,7 +428,7 @@ point was already adjusted onto it, wraps to the next line."
             :wk "Find file in org/main")
     "f n" '(org-roam-node-find :wk "Find roam node")
     "f t" '((lambda () (interactive) (find-file start/org-tasks-file)) :wk "Open Tasks.org")
-    "f i" '((lambda () (interactive) (find-file start/org-inbox-file)) :wk "Open Inbox.org"))
+    "f i" '(start/org-open-inbox :wk "Open Inbox"))
 
   (start/leader-keys
     "s" '(:ignore t :wk "search")
@@ -1860,7 +1863,10 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
 		  		(org-agenda-overriding-header "🔥 TODAY")
 		  		(org-agenda-prefix-format "  %-20b %s")
 		  		(org-super-agenda-groups
-		  		 '((:name "❗Overdue"
+		  		 '((:name "📚 Assignments" ; overdue + due today, above everything else
+		  		          :todo "ASSIGNMENT"
+		  		          :order 0)
+		  		   (:name "❗Overdue"
 		  		          :deadline past
 		  		          :scheduled past
 		  		          :order 1)
@@ -2133,6 +2139,75 @@ repeating task is back to TODO by then and stays open."
 		  	  (run-at-time "0.5 sec" nil
 		  		  		   (lambda ()
 		  		             (org-agenda nil "d"))))))
+
+(defun start/org-capture-goto-inbox ()
+  "Move point to the Inbox heading in the current buffer.
+Creates it above the first heading if it's missing. Used as the capture target
+for the Inbox template."
+  (widen)
+  (let ((pos (org-find-exact-headline-in-buffer start/org-inbox-heading nil t)))
+    (if pos
+        (goto-char pos)
+      (goto-char (point-min))
+      (if (re-search-forward org-outline-regexp-bol nil t)
+          (goto-char (match-beginning 0))
+        (goto-char (point-max))
+        (unless (bolp) (insert "\n")))
+      (insert "* " start/org-inbox-heading "\n")
+      (forward-line -1))))
+
+(defun start/org-open-inbox ()
+  "Open Tasks.org at its Inbox heading."
+  (interactive)
+  (find-file start/org-tasks-file)
+  (start/org-capture-goto-inbox)
+  (org-fold-show-entry)
+  (org-fold-show-children)
+  (recenter 0))
+
+(defun start/org-capture-goto-class ()
+  "Prompt for a class under the School heading and move point to it.
+Choices are the direct children of `start/org-school-heading', skipping ones
+that start with # (like #Repeaters). A name that doesn't exist yet is added as
+a new class at the end of the School subtree."
+  (widen)
+  (let ((school (org-find-exact-headline-in-buffer start/org-school-heading nil t))
+        classes)
+    (unless school
+      (user-error "No \"%s\" heading in %s" start/org-school-heading (buffer-name)))
+    (goto-char school)
+    (save-excursion
+      (when (org-goto-first-child)
+        (while (progn
+                 (let ((name (org-get-heading t t t t)))
+                   (unless (string-prefix-p "#" name)
+                     (push (cons name (point)) classes)))
+                 (org-get-next-sibling)))))
+    (setq classes (nreverse classes))
+    (let* ((name (string-trim (completing-read "Class: " (mapcar #'car classes))))
+           (found (assoc name classes))
+           (level (org-current-level)))
+      (when (string-empty-p name)
+        (user-error "No class given"))
+      (if found
+          (goto-char (cdr found))
+        (org-end-of-subtree t t)
+        (unless (bolp) (insert "\n"))
+        (insert (make-string (1+ level) ?*) " " name "\n")
+        (forward-line -1)))))
+
+(use-package org-capture
+  :ensure nil
+  :commands org-capture
+  :custom
+  (org-capture-templates
+   '(("i" "Inbox" entry
+      (file+function start/org-tasks-file start/org-capture-goto-inbox)
+      "* TODO %?")
+     ("a" "Assignment" entry
+      (file+function start/org-tasks-file start/org-capture-goto-class)
+      "* ASSIGNMENT %^{Assignment}\nDEADLINE: %^t"
+      :immediate-finish t))))
 
 (use-package evil-org
   :ensure t
@@ -2448,11 +2523,10 @@ repeating task is back to TODO by then and stays open."
         ;; Keep them as clean calendar events rather than separate task lists
         org-icalendar-include-todo nil)
 
-  ;; Automatically regenerate the local .ics file only when saving tracked task/inbox files
+  ;; Automatically regenerate the local .ics file only when saving Tasks.org
   (add-hook 'after-save-hook
             (lambda ()
-              (when (member (buffer-file-name)
-                            (list start/org-tasks-file start/org-inbox-file))
+              (when (equal (buffer-file-name) start/org-tasks-file)
                 (org-icalendar-combine-agenda-files)))))
 
 (use-package org-tempo

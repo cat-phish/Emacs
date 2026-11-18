@@ -36,7 +36,7 @@ Top-level headings run in load order, and that order matters:
 
 Conventions:
 - Custom functions and variables use the `start/` prefix.
-- Org file locations come from the constants in "Cross-platform paths" (`start/org-root`, `start/org-tasks-file`, `start/org-inbox-file`, etc.). Org data lives outside this repo, in `~/org/` on Linux and `C:/Users/Jordan/org/` on Windows. Use these constants rather than hardcoding paths.
+- Org file locations come from the constants in "Cross-platform paths" (`start/org-root`, `start/org-tasks-file`, `start/org-projects-file`, etc.). The inbox is the top-level `* Inbox` heading in Tasks.org (`start/org-inbox-heading`), not a separate file; school classes are the children of `* School` (`start/org-school-heading`). Org data lives outside this repo, in `~/org/` on Linux and `C:/Users/Jordan/org/` on Windows. Use these constants rather than hardcoding paths.
 - Dev tooling (Eglot, tree-sitter, yasnippet, Eat, etc.) is gated by `:if start/enable-dev-features` or `(when start/enable-dev-features ...)`. That flag is false on Windows, so new programming-related packages should use the same gate.
 - `custom-file` is `custom-vars.el` (gitignored). `custom-vars.md` and `bookmarks.md` are stray Emacs data files written by the config, not documentation.
 

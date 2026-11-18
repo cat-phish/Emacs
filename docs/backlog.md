@@ -119,3 +119,5 @@ This backlog tracks bugs, code hygiene improvements, performance optimizations, 
     - **Soft wrap:** the config currently uses `global-visual-line-mode` with `org-indent-mode`. Emacs soft-wraps at a single width per window (e.g. `visual-fill-column`), so a true per-line limit isn't possible. Deeper lines would just get less room, unless that's handled with a custom display hack.
   - Values still to choose (`N`, `cap`), e.g. `N=80`, `cap=100`.
   - Source: Emacs TODO list in `~/org/main/Tasks.org`.
+- [ ] **Capture from phone (Orgzly Revived / beorg) into Tasks.org**
+  - The inbox is now the `* Inbox` heading at the top of `Tasks.org`, and assignments go under classes in `* School` (Emacs `SPC o c i` / `SPC o c a`). Find out whether each app can file a new note under a specific heading, or only at the end of a file. If only at the end, decide on a workaround (e.g. a separate phone inbox file that gets refiled from Emacs).
