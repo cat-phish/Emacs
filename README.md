@@ -407,6 +407,14 @@ add more matches to the filter as well.
 Indents every source block in the file on save.
 
 
+## Keep Checkbox Counters Current
+
+Org only recounts `[n/m]` / `[%]` cookies when a checkbox is toggled through Org,
+so adding or deleting items by hand (typing, `dd`) leaves them stale. This
+recounts every cookie in the file on save (which includes the 30s idle
+auto-save), and the current heading's cookie when leaving insert state.
+
+
 ## Refile Fixes
 
 This will refile to a new heading, if it was already folded

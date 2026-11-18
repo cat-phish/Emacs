@@ -959,6 +959,21 @@ Falls back to the default browser when firefox isn't on PATH."
               (set-marker end nil))))))))
 (add-hook 'before-save-hook #'my/org-indent-all-src-blocks)
 
+(defun start/org-update-all-cookies ()
+  "Recount every statistics cookie in an Org buffer."
+  (when (derived-mode-p 'org-mode)
+    (save-excursion
+      (ignore-errors (org-update-statistics-cookies 'all)))))
+(add-hook 'before-save-hook #'start/org-update-all-cookies)
+
+(defun start/org-update-entry-cookie ()
+  "Recount the statistics cookie of the entry at point."
+  (when (derived-mode-p 'org-mode)
+    (save-excursion
+      (ignore-errors (org-update-statistics-cookies nil)))))
+(with-eval-after-load 'evil
+  (add-hook 'evil-insert-state-exit-hook #'start/org-update-entry-cookie))
+
 ;; (ref:refile-fix)
 (add-hook 'org-after-refile-insert-hook
     	  (lambda ()

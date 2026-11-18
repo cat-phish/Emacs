@@ -1440,6 +1440,27 @@ Indents every source block in the file on save.
 (add-hook 'before-save-hook #'my/org-indent-all-src-blocks)
 
 #+end_src
+** Keep Checkbox Counters Current
+Org only recounts =[n/m]= / =[%]= cookies when a checkbox is toggled through Org,
+so adding or deleting items by hand (typing, =dd=) leaves them stale. This
+recounts every cookie in the file on save (which includes the 30s idle
+auto-save), and the current heading's cookie when leaving insert state.
+#+begin_src emacs-lisp
+(defun start/org-update-all-cookies ()
+  "Recount every statistics cookie in an Org buffer."
+  (when (derived-mode-p 'org-mode)
+    (save-excursion
+      (ignore-errors (org-update-statistics-cookies 'all)))))
+(add-hook 'before-save-hook #'start/org-update-all-cookies)
+
+(defun start/org-update-entry-cookie ()
+  "Recount the statistics cookie of the entry at point."
+  (when (derived-mode-p 'org-mode)
+    (save-excursion
+      (ignore-errors (org-update-statistics-cookies nil)))))
+(with-eval-after-load 'evil
+  (add-hook 'evil-insert-state-exit-hook #'start/org-update-entry-cookie))
+#+end_src
 ** Refile Fixes
 This will refile to a new heading, if it was already folded
 it will remain so, otherwise will remain unfolded. Fixes
