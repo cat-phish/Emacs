@@ -1679,6 +1679,16 @@ Returns t if active TODOs were found, nil otherwise."
           (message "SHOW ALL (drawers hidden)"))
          (t nil))))))
 
+  ;; Keep fold-cycling status ("SUBTREE (NO CHILDREN)", "TODOs Expanded", ...)
+  ;; out of the echo area. They still go to *Messages*; prompts and errors
+  ;; aren't affected.
+  (defun start/without-echo-messages (orig &rest args)
+    "Run ORIG with `inhibit-message', so its messages only go to *Messages*."
+    (let ((inhibit-message t))
+      (apply orig args)))
+  (advice-add 'my/org-cycle-dwim :around #'start/without-echo-messages)
+  (advice-add 'my/org-shifttab-dwim :around #'start/without-echo-messages)
+
   ;; 7. Initialize file
   (add-hook 'org-mode-hook #'my/org-hide-drawers-global)
 
