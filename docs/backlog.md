@@ -107,3 +107,15 @@ This backlog tracks bugs, code hygiene improvements, performance optimizations, 
 
 - [ ] **Migrate leader keymaps to a verb → target scheme**
   - Leader prefixes are currently a mix of verbs (`f` find, `s` search) and targets (`n` roam, `o` org, `b` buffers), so the same action can live in two places (e.g. `SPC n f` and `SPC f n` both run `org-roam-node-find`). Restructure so the first key is always the verb (find/open, search, insert, toggle, …) and the second is the target (node, Tasks, Inbox, buffer, project, config, …). Then retire the target-first duplicates such as `SPC n f`, keeping it consistent across the `start/leader-keys` blocks in `init.org`.
+
+---
+
+## 7. Editing & Display
+
+- [ ] **Set a max line length that adjusts to indent level, with an overall cap**
+  - Goal: each line gets `N` columns of text counted from where its indentation ends, but never goes past an absolute column cap. The per-line limit is `min(indent + N, cap)`, so nested list items aren't squeezed.
+  - Undecided: hard wrap or soft wrap.
+    - **Hard wrap:** advise `current-fill-column` (used by `auto-fill-mode`, `fill-paragraph`/`M-q`, and Evil `gq`) to return `min(indent + N, cap)`. Indent would be `current-indentation`, plus the `org-indent-mode` virtual indent (heading depth) in Org buffers. This is reliable, but it puts real newlines in files.
+    - **Soft wrap:** the config currently uses `global-visual-line-mode` with `org-indent-mode`. Emacs soft-wraps at a single width per window (e.g. `visual-fill-column`), so a true per-line limit isn't possible. Deeper lines would just get less room, unless that's handled with a custom display hack.
+  - Values still to choose (`N`, `cap`), e.g. `N=80`, `cap=100`.
+  - Source: Emacs TODO list in `~/org/main/Tasks.org`.
