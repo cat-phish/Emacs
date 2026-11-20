@@ -3982,7 +3982,10 @@ engine-wide settings live in =~/org/main/.voice.toml=, outside Emacs.
 - =s= set, =c= clear, =n= add a spoken name, =l= link to another heading (gives
   the target an =:ID:= if needed and stores =id:...=), =o= toggle =:VOICE: off=.
 - =j= jumps to the heading that sets a value, =g= follows =VOICE_LINK=, =d=
-  lists the heading's spoken names and flags titles shared with other headings.
+  shows how voice addresses the heading: its spoken names, its rules and any
+  names it shares with other headings. It asks the engine (=voice/org_voice.py
+  describe=, which reads the saved files), and falls back to an Emacs-side guess
+  when =python3= or the engine isn't there.
 - =C-c C-x p= also completes the allowed values, through =org-global-properties=.
 
 #+begin_src emacs-lisp
@@ -4164,10 +4167,53 @@ Keys in `start/voice-local-keys' are read from the heading at point only."
     (unless (and v (string-prefix-p "id:" v)) (user-error "No VOICE_LINK here"))
     (org-id-goto (substring v 3))))
 
+(defvar start/voice-engine (expand-file-name "voice/org_voice.py" user-emacs-directory)
+  "The Home Assistant voice engine. Its `describe' output is what voice really hears.")
+
+(defun start/voice--engine-row ()
+  "The engine's `describe' row for the heading at point, or nil if the engine can't run.
+Reads the files on disk, so unsaved edits don't show until the buffer is saved."
+  (when (and (executable-find "python3") (file-exists-p start/voice-engine))
+    (let* ((file (file-name-nondirectory (buffer-file-name (buffer-base-buffer))))
+           (path (save-excursion   ; titles cleaned as the engine cleans them
+                   (org-back-to-heading t)
+                   (let ((p (list (start/voice--title))))
+                     (while (org-up-heading-safe) (push (start/voice--title) p))
+                     p)))
+           (process-environment
+            (cons (concat "VOICE_CONFIG=" (expand-file-name ".voice.toml" start/org-main-dir))
+                  process-environment))
+           (rows (with-temp-buffer
+                   (when (eq 0 (call-process "python3" nil '(t nil) nil "-I"
+                                             start/voice-engine "describe" "--json"))
+                     (goto-char (point-min))
+                     (ignore-errors (json-parse-buffer :object-type 'alist :array-type 'list))))))
+      (seq-find (lambda (r) (and (equal (alist-get 'file r) file)
+                                 (equal (alist-get 'path r) path)))
+                rows))))
+
 (defun start/voice-describe ()
-  "Show the spoken names of the heading at point and any titles it shares.
-TODO: replace with the engine's `describe' output once it exists, so both sides agree."
+  "Show how voice addresses the heading at point.
+Uses the engine's `describe' when it can run, so Emacs and voice agree;
+otherwise an Emacs-side approximation."
   (interactive)
+  (let ((row (start/voice--engine-row)))
+    (if row
+        (with-help-window "*Voice*"
+          (princ (format "Path:    %s\n" (string-join (alist-get 'path row) " › ")))
+          (princ (format "Target:  %s\n" (if (eq (alist-get 'target row) t) "yes"
+                                           "no (has a TODO keyword; give it a VOICE_NAME to make it one)")))
+          (princ (format "Names:   %s\n" (string-join (alist-get 'names row) ", ")))
+          (princ "Rules:\n")
+          (dolist (r (alist-get 'rules row))
+            (princ (format "  %-17s %s\n" (car r) (cdr r))))
+          (when (alist-get 'shared row)
+            (princ (format "\nShared with other headings (say the parent too, or the default target wins):\n  %s\n"
+                           (string-join (alist-get 'shared row) ", ")))))
+      (start/voice--describe-approx))))
+
+(defun start/voice--describe-approx ()
+  "Emacs-side stand-in for the engine's `describe': spoken names and shared titles."
   (let* ((title (start/voice--title))
          (aliases (let ((v (org-entry-get nil "VOICE_NAME")))
                     (and v (split-string v "," t "[ \t]+"))))

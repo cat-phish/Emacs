@@ -656,7 +656,10 @@ engine-wide settings live in `~/org/main/.voice.toml`, outside Emacs.
 -   `s` set, `c` clear, `n` add a spoken name, `l` link to another heading (gives
     the target an `:ID:` if needed and stores `id:...`), `o` toggle `:VOICE: off`.
 -   `j` jumps to the heading that sets a value, `g` follows `VOICE_LINK`, `d`
-    lists the heading's spoken names and flags titles shared with other headings.
+    shows how voice addresses the heading: its spoken names, its rules and any
+    names it shares with other headings. It asks the engine (`voice/org_voice.py
+      describe`, which reads the saved files), and falls back to an Emacs-side guess
+    when `python3` or the engine isn't there.
 -   `C-c C-x p` also completes the allowed values, through `org-global-properties`.
 
 
