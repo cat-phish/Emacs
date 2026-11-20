@@ -509,6 +509,10 @@ Use a single set of Org paths so Linux and Windows both work cleanly.
 (defconst start/org-projects-file
   (expand-file-name "Projects.org" start/org-main-dir))
 
+(defconst start/org-shopping-file
+  (expand-file-name "Shopping.org" start/org-main-dir)
+  "Shopping lists (Grocery, Bar, ...), also edited by Orgzly and Home Assistant.")
+
 (defconst start/org-inbox-heading "Inbox"
   "Top-level heading in `start/org-tasks-file' that serves as the inbox.")
 
@@ -799,6 +803,11 @@ Note: The Leader key is what you will press when you want to access your keybind
   (start/leader-keys
     "SPC" '(consult-buffer :wk "Switch Buffer")
     "S" '(start/org-sort-by-title :wk "Sort A–Z")
+    "l" '(:ignore t :wk "lists")
+    "l a" '(start/org-lists-add :wk "Add items")
+    "l x" '(start/org-lists-check-off :wk "Check off")
+    "l o" '(start/org-lists-bar-out :wk "Bar is out of…")
+    "l f" '(start/org-lists-open :wk "Open Shopping.org")
     "TAB" '(mode-line-other-buffer :wk "Previous Buffer")
     "`" '(start/org-reset-folds :wk "Reset Fold")
     "d" '(start/org-done-dwim :wk "Done (catch up repeats)")
@@ -2996,6 +3005,451 @@ the current heading."
       (file+function start/org-tasks-file start/org-capture-goto-class)
       "* ASSIGNMENT %^{Assignment}\nDEADLINE: %^t"
       :immediate-finish t))))
+#+end_src
+** Shopping Lists
+Commands for the lists in =Shopping.org= (=start/org-shopping-file=), matching
+what the Home Assistant voice scripts (=shopping_list.py=) do, so voice, Orgzly
+and Emacs edits leave the file in the same shape.
+
+- =SPC l a= Add items: pick a list (=Grocery/General= by default; =Bar/Stock=,
+  =Grocery/Costco=, ...), then items separated by commas. An item that's already
+  there and checked is unchecked in place; one that's already unchecked is left
+  alone. New items go directly below the list's blank =- [ ]= entry if it starts
+  with one, otherwise at the top, in the order typed. A blank entry is never
+  created. Adding a new item to a list made of sub-lists (=Bar/Stock=) asks which
+  one.
+- =SPC l x= Check off items on every list where they're unchecked (=C-u= to pick
+  one list).
+- =SPC l o= "The bar is out of X": unchecks X in =Bar/Stock=, and in
+  =Grocery/General= only if it's already there. Never adds anything.
+- =SPC l f= Open =Shopping.org=.
+
+=[ ]= means needed and =[X]= means have it, everywhere. Item names match loosely,
+like the voice scripts: case, punctuation, a leading "the/some/...", plurals
+("lemons" = "lemon") and qualifier order ("green chartreuse" = =Chartreuse
+(Green)=), with a fuzzy fallback for near-misses ("St. Germain" =
+=St-Germaine=). Each command reverts the file first if it changed on disk
+(Syncthing, voice), edits only the lines it has to, and saves right away.
+
+Keeping =Bar/Stock= and =Grocery/General= in sync automatically is deferred:
+most check-offs happen in Orgzly, which Emacs never sees, so it belongs in a
+server-side job.
+#+begin_src emacs-lisp
+;; Shopping lists (ref:shopping-lists)
+;;   start/org-lists-add        SPC l a  add items to a list
+;;   start/org-lists-check-off  SPC l x  check items off (C-u: one list)
+;;   start/org-lists-bar-out    SPC l o  "the bar is out of X"
+;;   start/org-lists-open       SPC l f  open Shopping.org
+(require 'cl-lib)
+
+(defvar start/org-lists-default '("Grocery" "General")
+  "List used when no list, or \"shopping\"/\"grocery\", is given.")
+(defvar start/org-lists-default-names '("shopping" "grocery" "groceries")
+  "List names that mean `start/org-lists-default'.")
+(defvar start/org-lists-bar-stock '("Bar" "Stock")
+  "The bar's stock list, used by `start/org-lists-bar-out'.")
+(defvar start/org-lists-fuzzy-threshold 0.88
+  "Minimum similarity (0-1, from `string-distance') for a fuzzy item match.")
+
+;;;; File access
+
+(defun start/org-lists--call-with-file (fn)
+  "Call FN in an up-to-date, widened buffer of the shopping file, then save.
+Reverts first if the file changed on disk. Refuses when the buffer has unsaved
+changes and the file also changed on disk, so neither side gets clobbered."
+  (let* ((file start/org-shopping-file)
+         (buf (or (get-file-buffer file) (find-file-noselect file))))
+    (with-current-buffer buf
+      (let ((stale (not (verify-visited-file-modtime buf))))
+        (when (and stale (buffer-modified-p))
+          (user-error "%s has unsaved changes and changed on disk; save or revert it first"
+                      (buffer-name)))
+        (cond (stale (revert-buffer t t t))
+              ((buffer-modified-p) (save-buffer))))
+      (prog1 (org-with-wide-buffer (save-excursion (funcall fn)))
+        (when (buffer-modified-p)
+          ;; No before-save-hook: ws-butler would trim trailing spaces on the
+          ;; toggled lines, and the file should change only where we edited.
+          (let ((before-save-hook nil) (inhibit-message t))
+            (save-buffer)))))))
+
+;;;; Parsing
+
+(defconst start/org-lists--item-re
+  "^\\([ \t]*\\)- \\[\\([ X]\\)\\]\\(?:[ \t]+\\(.*?\\)\\)?[ \t]*$"
+  "Checkbox item line: 1 indent, 2 box char, 3 text (nil for a blank entry).")
+
+(defun start/org-lists--title ()
+  "Title of the heading at point, without a trailing colon."
+  (string-trim (replace-regexp-in-string ":\\'" "" (org-get-heading t t t t))))
+
+(defun start/org-lists--all ()
+  "Every heading in the buffer as a plist.
+Keys: :path (titles from the top), :pos (heading start), :body (start of the
+body after planning/drawers), :end (first child or next heading), and :items,
+the heading's own top-level checkbox items, each (:box POS :checked BOOL
+:text STRING-or-nil :bol POS :eol POS :indent STRING)."
+  (let (entries stack)
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward org-outline-regexp-bol nil t)
+        (forward-line 0)
+        (let* ((level (org-outline-level))
+               (title (start/org-lists--title))
+               (pos (point))
+               (end (save-excursion (or (outline-next-heading) (goto-char (point-max))) (point)))
+               (body (save-excursion (org-end-of-meta-data t) (min (point) end)))
+               items indent)
+          (while (and stack (>= (caar stack) level)) (pop stack))
+          (push (cons level title) stack)
+          (save-excursion
+            (goto-char body)
+            (while (re-search-forward start/org-lists--item-re end t)
+              (let ((ind (match-string 1)))
+                (unless indent (setq indent ind))
+                (when (equal ind indent)
+                  (push (list :box (match-beginning 2)
+                              :checked (equal (match-string 2) "X")
+                              :text (let ((text (match-string-no-properties 3)))
+                                      (and text (not (string-empty-p text)) text))
+                              :bol (match-beginning 0)
+                              :eol (match-end 0)
+                              :indent ind)
+                        items)))))
+          (push (list :path (reverse (mapcar #'cdr stack)) :pos pos :body body
+                      :end end :items (nreverse items))
+                entries)
+          (goto-char end))))
+    (nreverse entries)))
+
+(defun start/org-lists--path-string (entry)
+  (string-join (plist-get entry :path) "/"))
+
+(defun start/org-lists--children (entry entries)
+  (let ((path (plist-get entry :path)))
+    (seq-filter (lambda (e) (let ((p (plist-get e :path)))
+                              (and (= (length p) (1+ (length path)))
+                                   (equal (butlast p) path))))
+                entries)))
+
+(defun start/org-lists--descendants (entry entries)
+  (let ((path (plist-get entry :path)))
+    (seq-filter (lambda (e) (let ((p (plist-get e :path)))
+                              (and (> (length p) (length path))
+                                   (equal (take (length path) p) path))))
+                entries)))
+
+;;;; Resolving a list
+
+(defun start/org-lists--resolve (entry entries)
+  "Resolve ENTRY to (:items ITEMS :target ENTRY-or-nil :children CHILDREN).
+A heading with its own items is its own list. A container uses its General
+child, or its only child; with several children it's one combined list of all
+its descendants' items, with no single target (new items ask for a child)."
+  (let ((children (start/org-lists--children entry entries)))
+    (cond
+     ((or (plist-get entry :items) (null children))
+      (list :items (plist-get entry :items) :target entry))
+     ((or (seq-find (lambda (c) (string= (downcase (car (last (plist-get c :path)))) "general"))
+                    children)
+          (and (null (cdr children)) (car children)))
+      (start/org-lists--resolve
+       (or (seq-find (lambda (c) (string= (downcase (car (last (plist-get c :path)))) "general"))
+                     children)
+           (car children))
+       entries))
+     (t (list :items (mapcan (lambda (e) (copy-sequence (plist-get e :items)))
+                             (start/org-lists--descendants entry entries))
+              :target nil :children children)))))
+
+(defun start/org-lists--name-key (s)
+  "Loose key for a list name: lower-case, no apostrophes, no trailing colon/\"list\"."
+  (let* ((s (downcase (string-trim s)))
+         (s (replace-regexp-in-string "['’]" "" s))
+         (s (replace-regexp-in-string "[/>]" " " s))
+         (s (replace-regexp-in-string ":\\'" "" s))
+         (s (replace-regexp-in-string "[ \t]+list\\'" "" s)))
+    (string-trim (replace-regexp-in-string "[ \t]+" " " s))))
+
+(defun start/org-lists--find-list (name entries)
+  "The entry for list NAME: a full path, a title, or \"parent title\"."
+  (let ((key (start/org-lists--name-key (or name ""))))
+    (if (or (string-empty-p key) (member key start/org-lists-default-names))
+        (seq-find (lambda (e) (equal (plist-get e :path) start/org-lists-default)) entries)
+      (or (seq-find (lambda (e) (string= (start/org-lists--name-key (start/org-lists--path-string e)) key))
+                    entries)
+          (seq-find (lambda (e) (string= (start/org-lists--name-key (car (last (plist-get e :path)))) key))
+                    entries)
+          (seq-find (lambda (e) (let ((p (plist-get e :path)))
+                                  (and (cdr p)
+                                       (string= (start/org-lists--name-key
+                                                 (string-join (last p 2) " "))
+                                                key))))
+                    entries)))))
+
+(defun start/org-lists--read-list (prompt entries)
+  "Read a list name with completion; return its entry."
+  (let* ((default (string-join start/org-lists-default "/"))
+         (name (completing-read (format-prompt prompt default)
+                                (mapcar #'start/org-lists--path-string entries)
+                                nil nil nil nil default)))
+    (or (start/org-lists--find-list name entries)
+        (user-error "No list called \"%s\"" name))))
+
+;;;; Matching items
+
+(defun start/org-lists--singular (word)
+  (cond ((<= (length word) 3) word)
+        ((string-suffix-p "ies" word) (concat (substring word 0 -3) "y"))
+        ((string-match-p "\\(?:oes\\|ses\\|xes\\|ches\\|shes\\)\\'" word) (substring word 0 -2))
+        ((string-suffix-p "ss" word) word)
+        ((string-suffix-p "s" word) (substring word 0 -1))
+        (t word)))
+
+(defun start/org-lists--key (text)
+  "Normalized key for item TEXT (see the voice scripts' matching rules)."
+  (let* ((s (downcase text))
+         (s (replace-regexp-in-string "\\(?:https?://\\|www\\.\\)[^ \t]*" " " s))
+         (s (replace-regexp-in-string "&" " and " s))
+         (s (replace-regexp-in-string "['’]n\\b" " and" s))
+         (s (replace-regexp-in-string "[.'’]" "" s))
+         (s (replace-regexp-in-string "[^[:alnum:][:space:]]" " " s))
+         (words (split-string s "[[:space:]]+" t)))
+    (when (and (cdr words) (member (car words) '("a" "an" "the" "some" "more")))
+      (setq words (cdr words)))
+    (string-join (mapcar #'start/org-lists--singular words) " ")))
+
+(defun start/org-lists--variants (text)
+  "Keys TEXT matches: itself, and for \"x (y)\" also \"y x\" and \"x y\", with
+y also tried cut at its first comma."
+  (let ((keys (list (start/org-lists--key text))))
+    (when (string-match "\\`\\(.*?\\)[ \t]*(\\([^)]*\\))" text)
+      (let* ((x (match-string 1 text))
+             (y (match-string 2 text))
+             (ys (delete-dups (list y (car (split-string y ","))))))
+        (dolist (y ys)
+          (push (start/org-lists--key (concat y " " x)) keys)
+          (push (start/org-lists--key (concat x " " y)) keys))))
+    (delete-dups (delete "" keys))))
+
+(defun start/org-lists--similarity (a b)
+  (let ((len (max (length a) (length b))))
+    (if (zerop len) 1.0 (- 1.0 (/ (float (string-distance a b)) len)))))
+
+(defun start/org-lists--find (items text)
+  "Items in ITEMS matching TEXT: every exact match, else the best fuzzy one."
+  (let* ((qkeys (start/org-lists--variants text))
+         (items (seq-filter (lambda (i) (plist-get i :text)) items)) ; never blanks
+         (exact (seq-filter (lambda (i) (seq-intersection
+                                         qkeys (start/org-lists--variants (plist-get i :text))))
+                            items)))
+    (or exact
+        (let (best (score 0))
+          (dolist (i items)
+            (dolist (ik (start/org-lists--variants (plist-get i :text)))
+              (dolist (qk qkeys)
+                (let ((s (start/org-lists--similarity qk ik)))
+                  (when (> s score) (setq score s best i))))))
+          (and best (>= score start/org-lists-fuzzy-threshold) (list best))))))
+
+;;;; Editing
+
+(defun start/org-lists--set-checked (item checked)
+  "Set ITEM's box to CHECKED by replacing the one box character."
+  (save-excursion
+    (goto-char (plist-get item :box))
+    (delete-char 1)
+    (insert (if checked "X" " "))))
+
+(defun start/org-lists--insert-pos (entry)
+  "Where a new item goes in ENTRY: below a leading blank, else before the
+first item, else at the start of the body."
+  (let ((first (car (plist-get entry :items))))
+    (cond ((null first) (plist-get entry :body))
+          ((null (plist-get first :text))
+           (save-excursion (goto-char (plist-get first :eol)) (forward-line 1) (point)))
+          (t (plist-get first :bol)))))
+
+(defun start/org-lists--insert-item (pos indent text)
+  "Insert \"- [ ] TEXT\" as a whole line at POS; return the position after it."
+  (save-excursion
+    (goto-char pos)
+    (unless (bolp) (insert "\n"))
+    (insert indent "- [ ] " text "\n")
+    (point)))
+
+(defun start/org-lists--pick-target (res text entries)
+  "The entry a new item TEXT goes in, for resolved list RES.
+A combined list asks for one of its children, repeating for nested containers."
+  (while (not (plist-get res :target))
+    (let* ((children (plist-get res :children))
+           (name (completing-read (format "Which list for \"%s\": " text)
+                                  (mapcar #'start/org-lists--path-string children)
+                                  nil t))
+           (child (or (seq-find (lambda (c) (string= (start/org-lists--path-string c) name))
+                                children)
+                      (user-error "No list chosen for \"%s\"" text))))
+      (setq res (start/org-lists--resolve child entries))))
+  (plist-get res :target))
+
+(defun start/org-lists--split (input)
+  (seq-remove #'string-empty-p (mapcar #'string-trim (split-string input ","))))
+
+(defun start/org-lists--report (parts)
+  "Message PARTS, an alist of (LABEL . ITEMS), skipping empty ones."
+  (let ((msg (mapconcat (lambda (p) (format "%s: %s" (car p) (string-join (cdr p) ", ")))
+                        (seq-filter #'cdr parts) " · ")))
+    (message "%s" (if (string-empty-p msg) "Nothing changed" msg))
+    msg))
+
+;;;; Commands
+
+(defun start/org-lists--item-texts (items)
+  (delete-dups (delq nil (mapcar (lambda (i) (plist-get i :text)) items))))
+
+(defun start/org-lists-add (list-name items)
+  "Add ITEMS (a comma-separated string) to the list LIST-NAME."
+  (interactive
+   (start/org-lists--call-with-file
+    (lambda ()
+      (let* ((entries (start/org-lists--all))
+             (entry (start/org-lists--read-list "Add to list" entries))
+             (res (start/org-lists--resolve entry entries)))
+        (list (start/org-lists--path-string entry)
+              (string-join
+               (completing-read-multiple
+                (format "Add to %s (comma-separated): " (start/org-lists--path-string entry))
+                (start/org-lists--item-texts (plist-get res :items)))
+               ","))))))
+  (start/org-lists--call-with-file
+   (lambda ()
+     (let* ((entries (start/org-lists--all))
+            (entry (or (start/org-lists--find-list list-name entries)
+                       (user-error "No list called \"%s\"" list-name)))
+            (path (plist-get entry :path))
+            added unchecked already next-pos target)
+       (dolist (text (start/org-lists--split items))
+         ;; Re-parse each time: earlier inserts move positions.
+         (let* ((entries (start/org-lists--all))
+                (entry (seq-find (lambda (e) (equal (plist-get e :path) path)) entries))
+                (res (start/org-lists--resolve entry entries))
+                (matches (start/org-lists--find (plist-get res :items) text)))
+           (cond
+            ((seq-find (lambda (i) (not (plist-get i :checked))) matches)
+             (push text already))
+            (matches
+             (start/org-lists--set-checked (car matches) nil)
+             (push (plist-get (car matches) :text) unchecked))
+            (t
+             (unless target
+               (setq target (start/org-lists--pick-target res text entries)))
+             (let* ((tentry (seq-find (lambda (e) (equal (plist-get e :path)
+                                                         (plist-get target :path)))
+                                      entries))
+                    (pos (if next-pos (marker-position next-pos)
+                           (start/org-lists--insert-pos tentry)))
+                    (indent (or (plist-get (car (plist-get tentry :items)) :indent) ""))
+                    (after (start/org-lists--insert-item pos indent text)))
+               (setq next-pos (copy-marker after t))
+               (push text added))))))
+       (when next-pos (set-marker next-pos nil))
+       (start/org-lists--report
+        `((,(format "Added to %s" (if target (start/org-lists--path-string target)
+                                    (string-join path "/")))
+           . ,(nreverse added))
+          ("Unchecked" . ,(nreverse unchecked))
+          ("Already on the list" . ,(nreverse already))))))))
+
+(defun start/org-lists-check-off (items &optional list-name)
+  "Check off ITEMS (comma-separated) on every list where they're unchecked.
+With LIST-NAME (interactively, with \\[universal-argument]), only on that list."
+  (interactive
+   (start/org-lists--call-with-file
+    (lambda ()
+      (let* ((entries (start/org-lists--all))
+             (entry (and current-prefix-arg (start/org-lists--read-list "Check off on list" entries)))
+             (pool (if entry (plist-get (start/org-lists--resolve entry entries) :items)
+                     (mapcan (lambda (e) (copy-sequence (plist-get e :items))) entries))))
+        (list (string-join
+               (completing-read-multiple
+                "Check off (comma-separated): "
+                (start/org-lists--item-texts
+                 (seq-remove (lambda (i) (plist-get i :checked)) pool)))
+               ",")
+              (and entry (start/org-lists--path-string entry)))))))
+  (start/org-lists--call-with-file
+   (lambda ()
+     (let* ((entries (start/org-lists--all))
+            (lists (if list-name
+                       (list (plist-get (start/org-lists--resolve
+                                         (or (start/org-lists--find-list list-name entries)
+                                             (user-error "No list called \"%s\"" list-name))
+                                         entries)
+                                        :items))
+                     (seq-filter #'identity (mapcar (lambda (e) (plist-get e :items)) entries))))
+            checked already missing)
+       (dolist (text (start/org-lists--split items))
+         (let ((matches (mapcan (lambda (items) (start/org-lists--find items text)) lists)))
+           (cond
+            ((null matches) (push text missing))
+            ((seq-every-p (lambda (i) (plist-get i :checked)) matches) (push text already))
+            (t (dolist (i matches)
+                 (unless (plist-get i :checked)
+                   (start/org-lists--set-checked i t)
+                   (plist-put i :checked t)
+                   (cl-pushnew (plist-get i :text) checked :test #'equal)))))))
+       (start/org-lists--report
+        `(("Checked off" . ,(nreverse checked))
+          ("Already checked" . ,(nreverse already))
+          ("Not found" . ,(nreverse missing))))))))
+
+(defun start/org-lists-bar-out (items)
+  "The bar is out of ITEMS (comma-separated).
+Unchecks each one in the bar stock list, and in the default grocery list only
+if it's already there. Never adds an item to either list."
+  (interactive
+   (start/org-lists--call-with-file
+    (lambda ()
+      (let* ((entries (start/org-lists--all))
+             (stock (start/org-lists--find-list (string-join start/org-lists-bar-stock " ") entries)))
+        (list (string-join
+               (completing-read-multiple
+                "Bar is out of (comma-separated): "
+                (start/org-lists--item-texts
+                 (plist-get (start/org-lists--resolve stock entries) :items)))
+               ","))))))
+  (start/org-lists--call-with-file
+   (lambda ()
+     (let* ((entries (start/org-lists--all))
+            (stock (or (seq-find (lambda (e) (equal (plist-get e :path) start/org-lists-bar-stock)) entries)
+                       (user-error "No %s list" (string-join start/org-lists-bar-stock "/"))))
+            (grocery (seq-find (lambda (e) (equal (plist-get e :path) start/org-lists-default)) entries))
+            (stock-items (plist-get (start/org-lists--resolve stock entries) :items))
+            (grocery-items (and grocery (plist-get (start/org-lists--resolve grocery entries) :items)))
+            out on-grocery missing)
+       (dolist (text (start/org-lists--split items))
+         (let ((matches (start/org-lists--find stock-items text)))
+           (if (null matches)
+               (push text missing)
+             (dolist (i matches)
+               (when (plist-get i :checked)
+                 (start/org-lists--set-checked i nil)
+                 (plist-put i :checked nil)))
+             (push (plist-get (car matches) :text) out)
+             (dolist (g (start/org-lists--find grocery-items text))
+               (when (plist-get g :checked)
+                 (start/org-lists--set-checked g nil)
+                 (plist-put g :checked nil))
+               (cl-pushnew (plist-get g :text) on-grocery :test #'equal)))))
+       (start/org-lists--report
+        `(("Out at the bar" . ,(nreverse out))
+          (,(format "Also on %s" (string-join start/org-lists-default "/")) . ,(nreverse on-grocery))
+          ("Not in bar stock" . ,(nreverse missing))))))))
+
+(defun start/org-lists-open ()
+  "Open the shopping lists file."
+  (interactive)
+  (find-file start/org-shopping-file))
 #+end_src
 ** Evil-Org-Mode
 #+begin_src emacs-lisp

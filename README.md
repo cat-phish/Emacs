@@ -552,6 +552,37 @@ The popup opens in insert state; in normal state `RET` saves and `ESC` aborts.
     class), then a title and a deadline. Filed as an ASSIGNMENT under the class.
 
 
+## Shopping Lists
+
+Commands for the lists in `Shopping.org` (`start/org-shopping-file`), matching
+what the Home Assistant voice scripts (`shopping_list.py`) do, so voice, Orgzly
+and Emacs edits leave the file in the same shape.
+
+-   `SPC l a` Add items: pick a list (`Grocery/General` by default; `Bar/Stock`,
+    `Grocery/Costco`, &hellip;), then items separated by commas. An item that's already
+    there and checked is unchecked in place; one that's already unchecked is left
+    alone. New items go directly below the list's blank `- [ ]` entry if it starts
+    with one, otherwise at the top, in the order typed. A blank entry is never
+    created. Adding a new item to a list made of sub-lists (`Bar/Stock`) asks which
+    one.
+-   `SPC l x` Check off items on every list where they're unchecked (`C-u` to pick
+    one list).
+-   `SPC l o` "The bar is out of X": unchecks X in `Bar/Stock`, and in
+    `Grocery/General` only if it's already there. Never adds anything.
+-   `SPC l f` Open `Shopping.org`.
+
+`[ ]` means needed and `[X]` means have it, everywhere. Item names match loosely,
+like the voice scripts: case, punctuation, a leading "the/some/&hellip;", plurals
+("lemons" = "lemon") and qualifier order ("green chartreuse" = `Chartreuse
+(Green)`), with a fuzzy fallback for near-misses ("St. Germain" =
+`St-Germaine`). Each command reverts the file first if it changed on disk
+(Syncthing, voice), edits only the lines it has to, and saves right away.
+
+Keeping `Bar/Stock` and `Grocery/General` in sync automatically is deferred:
+most check-offs happen in Orgzly, which Emacs never sees, so it belongs in a
+server-side job.
+
+
 ## Evil-Org-Mode
 
 
