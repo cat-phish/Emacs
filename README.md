@@ -480,6 +480,36 @@ overlay in that span and expands the headings. Revert Org buffers with a diff
 instead, so only the changed hunks are touched and the other folds stay put.
 
 
+## Fold Entries Completed Outside Emacs
+
+Home Assistant voice scripts and Orgzly edit the Org files on other devices,
+and Syncthing brings the changes here. Marking an entry DONE in Emacs folds it
+(`my/org-collapse-on-done`), but a revert never runs the state-change hook, so
+an entry completed elsewhere arrived unfolded. If the delicate revert above
+times out, Emacs falls back to delete+insert and every fold is lost.
+
+So, for Org buffers under `start/org-root`:
+
+-   `before-revert-hook` records each heading's TODO keyword and whether its
+    line and its body are hidden. Headings are keyed by `:ID:`, falling back to
+    the outline path plus title (statistics cookies ignored), never by position.
+-   `after-revert-hook` puts that visibility back on every heading it knows, so
+    manual unfolds survive. Headings that went from an active keyword to a
+    collapse state (DONE, CANCELED, or one of `my/org-auto-collapse-keywords`,
+    per `my/org-should-collapse-state-p`) are folded with
+    `my/org-collapse-heading`, the same code that folds a manual change. A
+    repeating bill keeps its BILL keyword when paid, so it is left as it was,
+    just like a manual completion (only the new `LOGBOOK` and `LAST_REPEAT`
+    drawers get hidden).
+-   New headings are hidden if their parent's subtree is folded. Otherwise they
+    get the launch layout: folded if done or auto-collapsed, `#Name`, or
+    `:VISIBILITY: folded`.
+-   Point and each window's start go back where they were.
+
+Nothing happens when the file didn't change (a plain `SPC b r`). Folding only
+adds overlays, so the buffer is never marked modified.
+
+
 ## Trigger Syncthing Sync on Save
 
 Uses syncthingtray to request a syncthing

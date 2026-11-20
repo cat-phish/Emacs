@@ -1968,10 +1968,20 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
     (when (fboundp 'undo-tree-undo)
       (advice-add 'undo-tree-undo :after #'my/org-restore-fold-on-undo))))
 
+(defun start/org-revert-insert-delicately (file-name auto-save-p)
+  "Insert FILE-NAME with `revert-buffer-insert-file-contents-delicately'.
+Org's after-change fold fixer is skipped. When the diff times out, Emacs
+falls back to delete+insert, and the fixer then signals
+`beginning-of-buffer' halfway through the revert, which leaves the buffer
+flagged modified and skips `after-revert-hook'. Folds are handled after
+the revert instead (see \"Fold Entries Completed Outside Emacs\")."
+  (org-fold-core-ignore-modifications
+    (revert-buffer-insert-file-contents-delicately file-name auto-save-p)))
+
 (defun start/org-revert-delicately ()
   "Revert Org buffers with a diff so external (synced) edits keep folds."
   (setq-local revert-buffer-insert-file-contents-function
-              #'revert-buffer-insert-file-contents-delicately))
+              #'start/org-revert-insert-delicately))
 (add-hook 'org-mode-hook #'start/org-revert-delicately)
 
 (defun start/org-after-revert-refold ()
@@ -1979,6 +1989,194 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
   (when (and (derived-mode-p 'org-mode) (fboundp 'my/org-hide-drawers-global))
     (my/org-hide-drawers-global)))
 (add-hook 'after-revert-hook #'start/org-after-revert-refold)
+
+(defvar start/org-revert-fold-dirs (list start/org-root)
+  "Directories whose Org buffers keep their folds across a revert.")
+
+(defvar-local start/org-revert--snapshot nil
+  "Fold state recorded by `start/org-revert-snapshot' for the revert in progress.")
+;; A manual `revert-buffer' re-runs `org-mode', which kills local variables.
+(put 'start/org-revert--snapshot 'permanent-local t)
+
+(defun start/org-revert--applies-p ()
+  "Non-nil if the current buffer is an Org file under `start/org-revert-fold-dirs'."
+  (and (derived-mode-p 'org-mode)
+       buffer-file-name
+       (seq-some (lambda (dir) (file-in-directory-p buffer-file-name dir))
+                 start/org-revert-fold-dirs)))
+
+(defun start/org-revert--headings ()
+  "Return (KEY TODO BEG LEVEL TITLE) for every heading, in buffer order.
+KEY is \"id:ID\", or \"path:Parent/.../Title\" when there is no ID; a #N
+suffix tells repeats apart. Statistics cookies are left out of titles, since
+completing a child changes them."
+  (org-with-wide-buffer
+   (goto-char (point-min))
+   (let ((seen (make-hash-table :test #'equal))
+         (case-fold-search nil)
+         stack out)
+     (while (re-search-forward org-outline-regexp-bol nil t)
+       (save-excursion
+         (goto-char (match-beginning 0))
+         (let* ((comp (org-heading-components))
+                (level (nth 0 comp))
+                (title (string-trim
+                        (replace-regexp-in-string
+                         "\\[[0-9]*\\(?:%\\|/[0-9]*\\)\\]" "" (or (nth 4 comp) ""))))
+                (id (org-entry-get (point) "ID")))
+           (while (and stack (>= (caar stack) level)) (pop stack))
+           (let* ((base (if id (concat "id:" id)
+                          (concat "path:" (string-join
+                                           (reverse (cons title (mapcar #'cdr stack)))
+                                           "/"))))
+                  (n (puthash base (1+ (gethash base seen 0)) seen)))
+             (push (list (format "%s#%d" base n) (nth 2 comp) (point) level title) out))
+           (push (cons level title) stack))))
+     (nreverse out))))
+
+(defun start/org-revert--ranges (headings)
+  "Return (LINE-RANGE BODY-RANGE EOL) for each of HEADINGS.
+LINE-RANGE covers the newline before the heading and the heading line; it is
+nil for a heading on the first line. BODY-RANGE runs from the end of the
+heading line up to that newline before the next heading."
+  (let ((last-end (if (eq (char-before (point-max)) ?\n)
+                      (1- (point-max))
+                    (point-max))))
+    (cl-loop for (h . rest) on headings
+             for beg = (nth 2 h)
+             for eol = (save-excursion (goto-char beg) (line-end-position))
+             for body-end = (if rest (1- (nth 2 (car rest))) (max eol last-end))
+             collect (list (and (> beg (point-min)) (cons (1- beg) eol))
+                           (cons eol body-end)
+                           eol))))
+
+(defun start/org-revert--pos-loc (pos headings)
+  "Return (KEY . OFFSET) locating POS relative to its heading in HEADINGS."
+  (let ((h (cl-find-if (lambda (h) (<= (nth 2 h) pos)) (reverse headings))))
+    (if h (cons (car h) (- pos (nth 2 h))) (cons nil pos))))
+
+(defun start/org-revert--loc-pos (loc headings)
+  "Return the position for LOC (from `start/org-revert--pos-loc'), or nil."
+  (let ((h (and (car loc) (assoc (car loc) headings))))
+    (cond (h (min (+ (nth 2 h) (cdr loc)) (point-max)))
+          ((null (car loc)) (min (cdr loc) (point-max))))))
+
+(defun start/org-revert-snapshot ()
+  "Record TODO keywords, fold state, point and windows before a revert."
+  (setq start/org-revert--snapshot nil)
+  (when (start/org-revert--applies-p)
+    (save-restriction
+      (widen)
+      (let* ((headings (start/org-revert--headings))
+             (state (make-hash-table :test #'equal)))
+        (cl-loop for h in headings
+                 for (line _body eol) in (start/org-revert--ranges headings)
+                 do (puthash (car h)
+                             (list (nth 1 h)
+                                   (and line (org-fold-folded-p (nth 2 h) 'outline) t)
+                                   (and (< eol (point-max))
+                                        (org-fold-folded-p eol 'outline) t))
+                             state))
+        (cl-flet ((spot (pos) (cons (copy-marker pos)
+                                    (start/org-revert--pos-loc pos headings))))
+          (setq start/org-revert--snapshot
+                (list :hash (buffer-hash)
+                      :state state
+                      :point (spot (point))
+                      :windows (mapcar (lambda (w)
+                                         (list w (spot (window-point w))
+                                               (spot (window-start w))))
+                                       (get-buffer-window-list nil nil t)))))))))
+
+(defun start/org-revert--new-heading-folded-p (todo title beg)
+  "Non-nil if a new heading should start folded, as it would on file open."
+  (or (my/org-should-collapse-state-p todo)
+      (string-prefix-p "#" title)
+      (equal (org-entry-get beg "VISIBILITY") "folded")))
+
+(defun start/org-revert-restore-folds ()
+  "Restore the folds recorded before a revert and fold newly completed entries."
+  (let ((snap start/org-revert--snapshot))
+    (setq start/org-revert--snapshot nil)
+    (when (and snap (start/org-revert--applies-p))
+      (unwind-protect
+          (unless (equal (buffer-hash) (plist-get snap :hash))
+            (with-demoted-errors "Fold restore after revert: %S"
+              (save-restriction
+                (widen)
+                (start/org-revert--apply snap))))
+        ;; Release the markers recorded by the snapshot.
+        (dolist (spot (cons (plist-get snap :point)
+                            (mapcan #'cdr (plist-get snap :windows))))
+          (set-marker (car spot) nil))))))
+
+(defun start/org-revert--apply (snap)
+  "Apply snapshot SNAP to the reverted buffer."
+  (let* ((state (plist-get snap :state))
+         (headings (start/org-revert--headings))
+         (ranges (start/org-revert--ranges headings))
+         stack folded completed)
+    (when headings
+      ;; Desired visibility of each range, in buffer order.
+      (cl-loop
+       for (key todo beg level title) in headings
+       for (line body _eol) in ranges
+       for old = (gethash key state)
+       do (while (and stack (>= (caar stack) level)) (pop stack))
+       (let* ((parent (cdar stack))
+              (line-hidden (if old (nth 1 old)
+                             (and parent (or (car parent) (cdr parent)))))
+              (body-folded (if old (nth 2 old)
+                             (start/org-revert--new-heading-folded-p todo title beg))))
+         (when (and old
+                    (member (car old) org-not-done-keywords)
+                    (my/org-should-collapse-state-p todo))
+           (push (copy-marker beg) completed))
+         (push (cons level (cons line-hidden body-folded)) stack)
+         (when (and line line-hidden) (push line folded))
+         (when (and body-folded (< (car body) (cdr body))) (push body folded))))
+      ;; Merge adjacent ranges into runs, compare with what is folded now,
+      ;; and only touch the buffer if they differ.
+      (let* ((region-beg (or (car (nth 0 (car ranges))) (nth 2 (car headings))))
+             (region-end (cdr (nth 1 (car (last ranges)))))
+             (merge (lambda (runs)
+                      (let (out)
+                        (dolist (r runs (nreverse out))
+                          (if (and out (>= (cdar out) (car r)))
+                              (setcdr (car out) (max (cdar out) (cdr r)))
+                            (push (cons (car r) (cdr r)) out))))))
+             (want (funcall merge (sort folded (lambda (a b) (< (car a) (car b))))))
+             (have (funcall merge (start/org-sort--fold-runs region-beg region-end))))
+        (unless (equal want have)
+          (org-fold-region region-beg region-end nil 'outline)
+          (dolist (run want)
+            (org-fold-region (car run) (cdr run) t 'outline))))
+      ;; Entries completed elsewhere fold the way a manual completion does.
+      (dolist (m completed)
+        (save-excursion
+          (goto-char m)
+          (my/org-collapse-heading))
+        (set-marker m nil)))
+    ;; Point and window positions.
+    ;; A delicate revert keeps markers in place. After the delete+insert
+    ;; fallback they all collapse to one spot, so use a marker only while it
+    ;; is still under the heading it started in.
+    (cl-flet ((pos (spot)
+                (let ((m (marker-position (car spot))))
+                  (if (equal (car (start/org-revert--pos-loc m headings))
+                             (car (cdr spot)))
+                      m
+                    (or (start/org-revert--loc-pos (cdr spot) headings) m)))))
+      (when-let* ((p (pos (plist-get snap :point))))
+        (goto-char p))
+      (pcase-dolist (`(,win ,pt ,start) (plist-get snap :windows))
+        (when (and (window-live-p win) (eq (window-buffer win) (current-buffer)))
+          (when-let* ((s (pos start))) (set-window-start win s t))
+          (when-let* ((p (pos pt))) (set-window-point win p)))))))
+
+(add-hook 'before-revert-hook #'start/org-revert-snapshot)
+;; Run after `start/org-after-revert-refold' has re-hidden the drawers.
+(add-hook 'after-revert-hook #'start/org-revert-restore-folds 90)
 
 (add-hook 'after-save-hook
           (lambda ()
@@ -2310,20 +2508,27 @@ repeating task is back to TODO by then and stays open."
       (run-at-time 0 nil #'my/org-collapse-at-marker
                    (save-excursion (org-back-to-heading t) (point-marker)))))
 
+  (defun my/org-collapse-heading ()
+    "Fold the heading at point if it is in a collapse state.
+Otherwise (a repeater that went back to TODO) keep it open and only tuck
+its new LOGBOOK/LAST_REPEAT drawers away. Shared by marking an entry
+DONE here and by `start/org-revert-restore-folds' for external edits."
+    (save-excursion
+      (org-back-to-heading t)
+      (if (my/org-should-collapse-state-p (org-get-todo-state))
+          (progn
+            ;; Hide the drawer first, then the subtree
+            (org-cycle-hide-drawers 'all)
+            (outline-hide-subtree))
+        (my/org-hide-drawers-subtree))))
+
   (defun my/org-collapse-at-marker (m)
     "Fold the heading at marker M if it is still in a collapse state."
     (when (buffer-live-p (marker-buffer m))
       (with-current-buffer (marker-buffer m)
         (save-excursion
           (goto-char m)
-          (if (my/org-should-collapse-state-p (org-get-todo-state))
-              (progn
-                ;; Hide the drawer first, then the subtree
-                (org-cycle-hide-drawers 'all)
-                (outline-hide-subtree))
-            ;; Repeated back to TODO: keep it open, just tuck the
-            ;; new LOGBOOK/LAST_REPEAT drawers away.
-            (my/org-hide-drawers-subtree)))))
+          (my/org-collapse-heading))))
     (set-marker m nil))
   ;; Launch: Auto-collapse when opening a file
   (add-hook 'find-file-hook #'my/org-hide-done-entries-dynamic)
