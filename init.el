@@ -3140,6 +3140,9 @@ if it's already there. Never adds an item to either list."
   "Voice settings and their allowed values. Keys without values take free text;
 VOICE_KEYWORD completes from the buffer's TODO keywords.")
 
+(defconst start/voice-local-keys '("VOICE_NAME" "VOICE_PICK" "VOICE_DEFAULT")
+  "Voice settings that apply only to the heading they are on, never to its subtree.")
+
 (defvar start/voice-files (list start/org-tasks-file start/org-shopping-file)
   "Org files the voice engine reads. Keep in sync with `files' in .voice.toml.")
 
@@ -3170,7 +3173,17 @@ VOICE_KEYWORD completes from the buffer's TODO keywords.")
 
 (defun start/voice--effective (key)
   "Effective value of KEY at point as (VALUE SOURCE MARKER), or nil if unset.
-SOURCE is \"here\", \"from <title>\", \"file default\" or \"engine default\"."
+SOURCE is \"here\", \"from <title>\", \"file default\" or \"engine default\".
+Keys in `start/voice-local-keys' are read from the heading at point only."
+  (if (member key start/voice-local-keys)
+      (save-excursion
+        (org-back-to-heading t)
+        (let ((v (org-entry-get nil key)))
+          (and v (list v "here" (point-marker)))))
+    (start/voice--inherited key)))
+
+(defun start/voice--inherited (key)
+  "Effective value of inheritable KEY at point; see `start/voice--effective'."
   (or (save-excursion
         (org-back-to-heading t)
         (let ((start (point)))

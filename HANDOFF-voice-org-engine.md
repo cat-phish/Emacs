@@ -11,7 +11,7 @@ The user's answers to **Decisions for the user** are recorded in §0. Implement 
 
 ## 0. Decisions (recorded 2026-11-20)
 1. **Rules live in property drawers (option A)** and are inherited by the subtree. `VOICE_LINK` values are `id:<ID>`.
-2. **Setting names and values stay as proposed** in §3.
+2. **Setting names and values stay as proposed** in §3. `VOICE_NAME`, `VOICE_PICK` and `VOICE_DEFAULT` apply only to the heading they are on. All other settings are inherited by the subtree.
 3. **`VOICE_DEADLINE` defaults to `optional`** for keyword headings and `never` for checklists. Sections that should ask (School, for example) opt in with `ask`.
 4. **Duplicate names** resolve as full spoken path, then the `VOICE_DEFAULT` target, then a short question.
 5. **Engine-wide settings live in a hidden `~/org/main/.voice.toml`** (server: `/drives/local/org/main/.voice.toml`), read with stdlib `tomllib`. They are not in an org header. HA's shell command points at this file. Per-file defaults still use each file's `#+PROPERTY:` lines.
@@ -135,6 +135,13 @@ Note: the live `Shopping.org` has its grocery items directly under `* Grocery`, 
 | `VOICE_DEFAULT` | `t` | "plain capture goes to Todos" |
 | `VOICE_LINK` | a pointer to another heading | the hardcoded Bar Stock → Grocery rule |
 | `VOICE` | `off` | per-heading exclusion without renaming |
+
+**Inheritance.** The engine looks settings up when it reads the file and copies nothing into new headings. For a heading, it walks up through the ancestors and the nearest heading that sets the key wins. Then it uses the file's `#+PROPERTY:` line, and then the engine default. New subheadings, including ones made by voice or Orgzly, inherit at once.
+
+**Exceptions:** `VOICE_NAME`, `VOICE_PICK` and `VOICE_DEFAULT` are never inherited:
+- a class must not answer to School's aliases;
+- `VOICE_PICK` on School must not make each class ask for a child;
+- `VOICE_DEFAULT` on Todos must not make every child of Todos a default.
 
 **Defaults when a heading has no settings:**
 - `VOICE_TYPE` is guessed from content: checkbox items mean checklist, otherwise heading.
