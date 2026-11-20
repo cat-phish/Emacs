@@ -1932,6 +1932,15 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
     ("CANCELED"   . (:foreground "#1f2328" :background "#e06c75" :weight bold)))
   "TODO keyword faces shared by `org-todo-keyword-faces' and `org-modern-todo-faces'.")
 
+(defun start/org-refile-target-not-done-p ()
+  "Refile target filter: leave out DONE/CANCELED headings."
+  (not (org-entry-is-done-p)))
+
+(defun start/org-save-after-refile (&rest _)
+  "Save Org buffers after a refile, so the moved entry is written to both files."
+  (org-save-all-org-buffers))
+(advice-add 'org-refile :after #'start/org-save-after-refile)
+
 (use-package org
   :ensure nil
   :hook ((org-mode . org-indent-mode)
@@ -2002,11 +2011,16 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
   (org-agenda-restore-windows-after-quit t)
   (org-agenda-start-with-log-mod t)
   (org-agenda-files (list start/org-tasks-file start/org-projects-file))
+  ;; Refile (SPC o r): the current file 3 levels deep, the main files'
+  ;; top-level headings, shown as Vertico paths like Tasks.org/Todos/General.
   (org-refile-targets
-   '(("Archive.org" :maxlevel . 1)
-	 ("Tasks.org" :maxlevel . 1)
-	 ("Projects.org" :maxlevel . 1)))
-  (advice-add 'org-refile :after 'org-save-all-org-buffers)
+   `((nil :maxlevel . 3)
+     (,start/org-tasks-file :maxlevel . 1)
+     (,start/org-projects-file :maxlevel . 1)
+     (,(expand-file-name "Archive.org" start/org-main-dir) :maxlevel . 1)))
+  (org-refile-use-outline-path 'file)
+  (org-outline-path-complete-in-steps nil)
+  (org-refile-target-verify-function #'start/org-refile-target-not-done-p)
   (org-log-done 'time)
   (org-log-into-drawer t)
   (org-todo-repeat-to-state t) ;; Repeaters keep their keyword (CHORE stays CHORE, not TODO)
