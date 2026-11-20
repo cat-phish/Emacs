@@ -617,6 +617,23 @@ most check-offs happen in Orgzly, which Emacs never sees, so it belongs in a
 server-side job.
 
 
+## Voice Rules
+
+Editing helper for the `VOICE_*` properties read by the Home Assistant voice
+engine (see `HANDOFF-voice-org-engine.md`). Rules live in property drawers and
+apply to the whole subtree; per-file defaults come from `#+PROPERTY:` lines, and
+engine-wide settings live in `~/org/main/.voice.toml`, outside Emacs.
+
+-   `SPC o v` opens a menu for the heading at point. It shows each setting's
+    effective value and where it comes from (this heading, an ancestor, a file
+    default or the engine default), and whether voice can reach the heading.
+-   `s` set, `c` clear, `n` add a spoken name, `l` link to another heading (gives
+    the target an `:ID:` if needed and stores `id:...`), `o` toggle `:VOICE: off`.
+-   `j` jumps to the heading that sets a value, `g` follows `VOICE_LINK`, `d`
+    lists the heading's spoken names and flags titles shared with other headings.
+-   `C-c C-x p` also completes the allowed values, through `org-global-properties`.
+
+
 ## Evil-Org-Mode
 
 

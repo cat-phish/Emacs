@@ -862,6 +862,7 @@ Note: The Leader key is what you will press when you want to access your keybind
     "o o" '((lambda () (interactive) (org-agenda nil "d")) :wk "Overview (Daily)")
     "o c" '(org-capture :wk "Capture")
     "o l" '(org-store-link :wk "Store link")
+    "o v" '(start/voice-menu :wk "Voice rules")
 
     "n" '(:ignore t :wk "notes (roam)")
     "n f" '(org-roam-node-find :wk "Find node")
@@ -3779,6 +3780,241 @@ if it's already there. Never adds an item to either list."
   "Open the shopping lists file."
   (interactive)
   (find-file start/org-shopping-file))
+#+end_src
+** Voice Rules
+Editing helper for the =VOICE_*= properties read by the Home Assistant voice
+engine (see =HANDOFF-voice-org-engine.md=). Rules live in property drawers and
+apply to the whole subtree; per-file defaults come from =#+PROPERTY:= lines, and
+engine-wide settings live in =~/org/main/.voice.toml=, outside Emacs.
+
+- =SPC o v= opens a menu for the heading at point. It shows each setting's
+  effective value and where it comes from (this heading, an ancestor, a file
+  default or the engine default), and whether voice can reach the heading.
+- =s= set, =c= clear, =n= add a spoken name, =l= link to another heading (gives
+  the target an =:ID:= if needed and stores =id:...=), =o= toggle =:VOICE: off=.
+- =j= jumps to the heading that sets a value, =g= follows =VOICE_LINK=, =d=
+  lists the heading's spoken names and flags titles shared with other headings.
+- =C-c C-x p= also completes the allowed values, through =org-global-properties=.
+
+#+begin_src emacs-lisp
+(require 'transient)
+
+(defconst start/voice-properties
+  '(("VOICE_NAME") ("VOICE_TYPE" "checklist" "heading") ("VOICE_KEYWORD")
+    ("VOICE_DEADLINE" "ask" "optional" "never") ("VOICE_PICK" "child")
+    ("VOICE_PLACE" "top" "bottom") ("VOICE_REACTIVATE" "t") ("VOICE_DEFAULT" "t")
+    ("VOICE_LINK") ("VOICE" "off"))
+  "Voice settings and their allowed values. Keys without values take free text;
+VOICE_KEYWORD completes from the buffer's TODO keywords.")
+
+(defvar start/voice-files (list start/org-tasks-file start/org-shopping-file)
+  "Org files the voice engine reads. Keep in sync with `files' in .voice.toml.")
+
+(with-eval-after-load 'org
+  (dolist (p start/voice-properties)
+    (when (cdr p)
+      (setf (alist-get (concat (car p) "_ALL") org-global-properties nil nil #'equal)
+            (string-join (cdr p) " ")))))
+
+(defvar start/voice--marker nil "Heading the voice menu was opened on.")
+
+(defun start/voice--title ()
+  "Spoken title of the heading at point: no keyword, priority, tags, cookie or trailing colon."
+  (let ((h (org-get-heading t t t t)))
+    (setq h (replace-regexp-in-string "\\[[0-9]*\\(?:%\\|/[0-9]*\\)\\]" "" h))
+    (string-trim (replace-regexp-in-string ":[ \t]*\\'" "" (string-trim h)))))
+
+(defun start/voice--path ()
+  "Outline path of the heading at point, joined with ›."
+  (string-join (append (org-get-outline-path) (list (start/voice--title))) " › "))
+
+(defun start/voice--checklist-p ()
+  "Non-nil if the entry at point holds checkbox items."
+  (save-excursion
+    (org-back-to-heading t)
+    (re-search-forward "^[ \t]*\\(?:[-+*]\\|[0-9]+[.)]\\) \\[[ X-]\\]"
+                       (save-excursion (outline-next-heading) (point)) t)))
+
+(defun start/voice--effective (key)
+  "Effective value of KEY at point as (VALUE SOURCE MARKER), or nil if unset.
+SOURCE is \"here\", \"from <title>\", \"file default\" or \"engine default\"."
+  (or (save-excursion
+        (org-back-to-heading t)
+        (let ((start (point)))
+          (cl-loop do (let ((v (org-entry-get nil key)))
+                        (when v
+                          (cl-return (list v (if (= (point) start) "here"
+                                               (concat "from " (start/voice--title)))
+                                           (point-marker)))))
+                   while (org-up-heading-safe))))
+      (let ((v (cdr (assoc key org-keyword-properties))))
+        (and v (list v "file default" nil)))
+      (let ((v (pcase key
+                 ("VOICE_TYPE" (if (start/voice--checklist-p) "checklist" "heading"))
+                 ("VOICE_PLACE" "bottom")
+                 ("VOICE_KEYWORD" "TODO")
+                 ("VOICE_DEADLINE"
+                  (if (equal (car (start/voice--effective "VOICE_TYPE")) "checklist")
+                      "never" "optional")))))
+        (and v (list v "engine default" nil)))))
+
+(defun start/voice--excluded ()
+  "Title of the heading that hides point from voice (`#' title or :VOICE: off), or nil."
+  (save-excursion
+    (org-back-to-heading t)
+    (cl-loop do (when (or (string-prefix-p "#" (org-get-heading t t t t))
+                          (equal (org-entry-get nil "VOICE") "off"))
+                  (cl-return (start/voice--title)))
+             while (org-up-heading-safe))))
+
+(defun start/voice--header ()
+  "Menu header for the heading the menu was opened on."
+  (org-with-point-at start/voice--marker
+    (let ((ex (start/voice--excluded)))
+      (concat
+       (propertize (start/voice--path) 'face 'transient-heading)
+       (if ex (propertize (format "   [excluded by %s]" ex) 'face 'error)
+         (propertize "   [reachable]" 'face 'success))
+       "\n"
+       (mapconcat
+        (lambda (p)
+          (let ((e (start/voice--effective (car p))))
+            (format "  %-17s %-28s %s" (car p) (or (car e) "—")
+                    (propertize (or (cadr e) "") 'face 'shadow))))
+        start/voice-properties "\n")
+       "\n"))))
+
+(defun start/voice--headings ()
+  "Alist of (\"File › path\" . marker) for every heading in `start/voice-files'."
+  (cl-loop for f in start/voice-files
+           when (file-exists-p f)
+           append (with-current-buffer (find-file-noselect f)
+                    (org-with-wide-buffer
+                     (org-map-entries
+                      (lambda ()
+                        (cons (concat (file-name-base f) " › " (start/voice--path))
+                              (point-marker)))
+                      nil 'file)))))
+
+(defun start/voice--pick-link ()
+  "Pick a heading in the voice files and return \"id:<ID>\", creating the ID if needed."
+  (let* ((cands (start/voice--headings))
+         (m (cdr (assoc (completing-read "Link to heading: " cands nil t) cands))))
+    (unless m (user-error "No such heading"))
+    (concat "id:" (org-with-point-at m (org-id-get-create)))))
+
+(defun start/voice--read-value (key)
+  "Read a value for KEY with completion where it has allowed values."
+  (let ((vals (cdr (assoc key start/voice-properties)))
+        (cur (org-entry-get nil key)))
+    (cond ((equal key "VOICE_LINK") (start/voice--pick-link))
+          ((equal key "VOICE_KEYWORD")
+           (completing-read (format "%s: " key) org-todo-keywords-1 nil t nil nil cur))
+          (vals (completing-read (format "%s: " key) vals nil t nil nil cur))
+          (t (read-string (format "%s: " key) cur)))))
+
+(defun start/voice-set (key value)
+  "Set voice setting KEY to VALUE on the heading at point."
+  (interactive
+   (let ((key (completing-read "Voice setting: " (mapcar #'car start/voice-properties) nil t)))
+     (list key (start/voice--read-value key))))
+  (org-set-property key value))
+
+(defun start/voice-clear (key)
+  "Remove voice setting KEY from the heading at point."
+  (interactive
+   (let ((keys (cl-loop for (k . _) in (org-entry-properties nil 'standard)
+                        when (assoc k start/voice-properties) collect k)))
+     (unless keys (user-error "No voice settings on this heading"))
+     (list (completing-read "Clear: " keys nil t))))
+  (org-delete-property key))
+
+(defun start/voice-add-name (name)
+  "Add NAME to the spoken aliases (VOICE_NAME) of the heading at point."
+  (interactive "sAdd spoken name: ")
+  (let ((cur (org-entry-get nil "VOICE_NAME")))
+    (org-set-property "VOICE_NAME" (if cur (concat cur ", " name) name))))
+
+(defun start/voice-set-link ()
+  "Set VOICE_LINK on the heading at point to another heading's id: link."
+  (interactive)
+  (org-set-property "VOICE_LINK" (start/voice--pick-link)))
+
+(defun start/voice-toggle-off ()
+  "Toggle :VOICE: off on the heading at point."
+  (interactive)
+  (if (equal (org-entry-get nil "VOICE") "off")
+      (org-delete-property "VOICE")
+    (org-set-property "VOICE" "off")))
+
+(defun start/voice-jump-source (key)
+  "Jump to the heading that sets the effective value of KEY."
+  (interactive
+   (list (completing-read "Jump to source of: " (mapcar #'car start/voice-properties) nil t)))
+  (let ((m (nth 2 (start/voice--effective key))))
+    (unless m (user-error "%s is not set on any heading" key))
+    (org-goto-marker-or-bmk m)))
+
+(defun start/voice-follow-link ()
+  "Go to the heading named by the effective VOICE_LINK."
+  (interactive)
+  (let ((v (car (start/voice--effective "VOICE_LINK"))))
+    (unless (and v (string-prefix-p "id:" v)) (user-error "No VOICE_LINK here"))
+    (org-id-goto (substring v 3))))
+
+(defun start/voice-describe ()
+  "Show the spoken names of the heading at point and any titles it shares.
+TODO: replace with the engine's `describe' output once it exists, so both sides agree."
+  (interactive)
+  (let* ((title (start/voice--title))
+         (aliases (let ((v (org-entry-get nil "VOICE_NAME")))
+                    (and v (split-string v "," t "[ \t]+"))))
+         (parent (save-excursion (and (org-up-heading-safe) (start/voice--title))))
+         (here (save-excursion (org-back-to-heading t) (point-marker)))
+         (dups (cl-loop for (name . m) in (start/voice--headings)
+                        unless (and (eq (marker-buffer m) (marker-buffer here))
+                                    (= m here))
+                        when (string-equal-ignore-case
+                              (org-with-point-at m (start/voice--title)) title)
+                        collect name))
+         (path (start/voice--path))
+         (type (car (start/voice--effective "VOICE_TYPE")))
+         (ex (start/voice--excluded)))
+    (with-help-window "*Voice*"
+      (princ (format "Path:   %s\n" path))
+      (princ (format "Names:  %s\n"
+                     (string-join (delete-dups
+                                   (delq nil (append (list (downcase title)
+                                                           (and parent (downcase (concat parent " " title))))
+                                                     (mapcar #'downcase aliases))))
+                                  ", ")))
+      (princ (format "Type:   %s\n" type))
+      (when ex (princ (format "Hidden: by %s\n" ex)))
+      (when dups
+        (princ "\nSame title elsewhere (say the parent too, or the default target wins):\n")
+        (dolist (d dups) (princ (format "  %s\n" d)))))))
+
+(transient-define-prefix start/voice--transient ()
+  "Voice rules for the heading at point."
+  [:description start/voice--header
+   ["Edit"
+    ("s" "Set setting" start/voice-set)
+    ("c" "Clear setting" start/voice-clear)
+    ("n" "Add spoken name" start/voice-add-name)
+    ("l" "Link to heading" start/voice-set-link)
+    ("o" "Toggle VOICE off" start/voice-toggle-off)]
+   ["Go"
+    ("j" "Jump to setting source" start/voice-jump-source)
+    ("g" "Follow VOICE_LINK" start/voice-follow-link)
+    ("d" "Spoken names" start/voice-describe)]])
+
+(defun start/voice-menu ()
+  "Open the voice rules menu for the heading at point."
+  (interactive)
+  (unless (derived-mode-p 'org-mode) (user-error "Not in an Org buffer"))
+  (when (org-before-first-heading-p) (user-error "Not on a heading"))
+  (setq start/voice--marker (save-excursion (org-back-to-heading t) (point-marker)))
+  (start/voice--transient))
 #+end_src
 ** Evil-Org-Mode
 #+begin_src emacs-lisp
