@@ -5,9 +5,9 @@ You're a Claude agent on the user's machine with access to their Emacs config an
 
 - what the voice system does today;
 - the redesign we've agreed on so far;
-- **the two configuration options (A and B)**, for the user to choose between.
+- the two configuration options (A and B) that were considered; the user chose A.
 
-The user's answers to **Decisions for the user** are recorded in §0. Implement in the order given under **Suggested order**.
+The user's decisions, and the settings already added to the live org files, are recorded in §0. The Emacs side is done; what remains is the server-side engine. Implement it in the order given under **Suggested order**.
 
 ## 0. Decisions (recorded 2026-11-20)
 1. **Rules live in property drawers (option A)** and are inherited by the subtree. `VOICE_LINK` values are `id:<ID>`.
@@ -19,6 +19,28 @@ The user's answers to **Decisions for the user** are recorded in §0. Implement 
 7. **Runtime: keep `shell_command`**, standard library only. The FastAPI service stays optional for later.
 
 Note: the live `Shopping.org` has its grocery items directly under `* Grocery`, with no `General` child, so examples below that say "Grocery › General" mean `* Grocery`.
+
+### Settings already in the live files (added 2026-11-20)
+The engine can read these as they are. Only the server side is left (§7 steps 1–4).
+
+| Where | Settings |
+|---|---|
+| `Tasks.org` `* Todos` | `VOICE_DEFAULT t` |
+| `Tasks.org` `* School` | `VOICE_PICK child`, `VOICE_NAME assignment, homework`, `VOICE_KEYWORD ASSIGNMENT`, `VOICE_DEADLINE ask` |
+| `Tasks.org` `** CPT_S 317` / `322` / `415` | `VOICE_NAME 317` / `322` / `415` |
+| `Tasks.org` `** TA CPT_S 122` | `VOICE_NAME TA 122, 122` |
+| `Tasks.org` `* Projects` | `VOICE_PICK child` |
+| `Tasks.org` `* Backlog`, `* System` | `VOICE_TYPE checklist` (Backlog is empty, so it can't be guessed from its content) |
+| `Tasks.org` `** Home-Lab`, `** Neovim` | `VOICE_NAME home lab`, `VOICE_NAME neo vim` |
+| `Shopping.org` file header | `#+PROPERTY: VOICE_PLACE top`, `VOICE_TYPE checklist`, `VOICE_REACTIVATE t` |
+| `Shopping.org` `* Grocery` | given `:ID: a88f6bf7-536d-4467-a0a0-b6debec2eac0` |
+| `Shopping.org` `** Stock` (under Bar) | `VOICE_LINK id:a88f6bf7-536d-4467-a0a0-b6debec2eac0` (points to `* Grocery`) |
+| `~/org/main/.voice.toml` | created with the §4 example (`files`, `filler`, `[match] fuzzy_cutoff`) |
+
+Class names beyond the course numbers (for example "data structures") are not set; the user adds them with `SPC o v n`.
+
+### Open question for the engine: children that aren't choices
+`VOICE_PICK child` on School would offer `** Repeaters` as a class, and on Projects it would offer `PLANNING Ideas`. `:VOICE: off` would hide them, but it also blocks voice from completing their repeating tasks. **Proposed:** the pick question skips a child that sets `VOICE_PICK_SKIP t` (a new, non-inherited setting), and the child stays reachable by name. Confirm with the user before building it, and add the key to `start/voice-properties` in `init.org` once it's agreed.
 
 ---
 
@@ -82,9 +104,9 @@ Note: the live `Shopping.org` has its grocery items directly under `* Grocery`, 
 - **Exclusions.** Headings whose title starts with `#`, and everything under them, are never read or written.
 - **Folding** is done with `:VISIBILITY: folded` properties. It has no effect on matching.
 
-### Known Emacs-side work already handed off separately
-- **Folding after reverts.** Fold entries that became DONE when the buffer reverts from disk, without disturbing manual unfolds.
-- **Auto-revert.** `global-auto-revert-mode` must stay on. If Emacs saves a stale buffer, it erases voice edits.
+### Emacs-side sync work (done)
+- **Folding after reverts.** Entries that become DONE fold when the buffer reverts from disk, without disturbing manual unfolds (commit 0a19ad4).
+- **Auto-revert.** `global-auto-revert-mode` stays on. A buffer with unsaved changes merges the outside edits instead of overwriting them (commit 7f49180), so a stale Emacs buffer no longer erases voice edits.
 
 ---
 
@@ -250,7 +272,7 @@ Rules and aliases in drawers (as in A), cross-heading links stored as `id:` valu
 ## 7. Suggested order
 1. Merge the two scripts into one engine with the same behavior (§1). The user should notice no change.
 2. Add generic target lookup and the verb grammar, then reduce HA to the verb triggers and the follow-up script.
-3. Add rule settings from drawers and engine settings from `.voice.toml`, replacing the hardcoded names one section at a time.
+3. Add rule settings from drawers and engine settings from `.voice.toml`, replacing the hardcoded names one section at a time. The settings and `.voice.toml` are already in the live files (§0); compare them against today's hardcoded aliases and report any that are missing.
 4. Add `describe`, dry-run and the test file.
 5. Build the Emacs helper. Done in `init.org`; swap its spoken-name view for `describe` output after step 4.
 6. Optional: the service and the AI fallback.
@@ -258,7 +280,7 @@ Rules and aliases in drawers (as in A), cross-heading links stored as `id:` valu
 Every step must keep the behavior in §1 unless the user changes it, and every step should come with a test run against copies of the org files, showing the diffs.
 
 ## 8. Decisions for the user
-All resolved; see §0. The former question "which `#+PROPERTY:` file is the main one?" no longer applies: engine-wide settings live in `.voice.toml`, and each file's `#+PROPERTY:` lines hold only that file's defaults.
+Resolved, see §0, except for the open question there about children the pick question should skip. Also note that the Emacs menu's spoken-name check (`SPC o v d`) only compares titles, not `VOICE_NAME` aliases; the engine's `describe` should flag both. The former question "which `#+PROPERTY:` file is the main one?" no longer applies: engine-wide settings live in `.voice.toml`, and each file's `#+PROPERTY:` lines hold only that file's defaults.
 
 ---
 
