@@ -69,7 +69,7 @@ Built in this repo, not yet deployed:
 
 **Children that aren't choices** (the earlier open question) turned out not to matter: the pick question doesn't list choices, so School › Repeaters is only picked if someone says "repeaters". No `VOICE_PICK_SKIP` is needed.
 
-**Not checked on real hardware:** the HA YAML parses, but the templates and the follow-up script haven't run in HA. In particular, confirm that `assist_satellite.ask_question` without `answers` returns the heard text in `sentence`, and that the Echo listens after `script.voice_follow_up` asks.
+**HA pieces:** pieces 2 and 3 are the user's working "Tasks" automation and "Tasks follow-up" script, adapted. The script is unchanged apart from names (`script.voice_follow_up`, `shell_command.org_voice` with `verb: answer`), so its timing (wait for idle, then a second's delay), the one re-ask and the three-question limit are the ones already proven on the Echo. The automation keeps the old answer triggers ("it's due …", "it's for …", "no deadline"), for when the Echo asks and doesn't listen. Its other phrases are generalized: one trigger per verb. The new templates parse as YAML but haven't run in HA yet.
 
 ---
 
