@@ -3793,12 +3793,37 @@ Notes:
   (define-key corfu-map (kbd "TAB") nil)
   (define-key corfu-map (kbd "<tab>") nil)
 
-  ;; Disable arrow keys by binding them to normal line movement
-  (keymap-set corfu-map "<down>" #'next-line)
-  (keymap-set corfu-map "<up>" #'previous-line)
+  ;; Only C-n/C-p select candidates. The arrow keys close the popup and move
+  ;; the cursor. In insert state, evil-collection's corfu bindings (an evil
+  ;; keymap for corfu-map, which wins over corfu-map itself) bind <down>/<up>,
+  ;; C-j/C-k and M-j/M-k to corfu-next/previous, so override those there; nil
+  ;; lets C-j/C-k/M-j/M-k fall through to their usual insert-state commands.
+  (defun start/corfu-quit-and-next-line ()
+    "Close the Corfu popup and move down a line."
+    (interactive)
+    (corfu-quit)
+    (call-interactively #'next-line))
+  (defun start/corfu-quit-and-previous-line ()
+    "Close the Corfu popup and move up a line."
+    (interactive)
+    (corfu-quit)
+    (call-interactively #'previous-line))
+  (keymap-set corfu-map "<down>" #'start/corfu-quit-and-next-line)
+  (keymap-set corfu-map "<up>" #'start/corfu-quit-and-previous-line)
+  (defun start/corfu-evil-keys (&rest _)
+    "Override evil-collection's insert-state candidate keys in corfu-map."
+    (evil-define-key 'insert corfu-map
+      (kbd "<down>") #'start/corfu-quit-and-next-line
+      (kbd "<up>") #'start/corfu-quit-and-previous-line
+      (kbd "C-j") nil (kbd "C-k") nil
+      (kbd "M-j") nil (kbd "M-k") nil))
+  ;; evil-collection sets its bindings when corfu loads, which may be after
+  ;; this; reapply ours after its setup either way.
+  (advice-add 'evil-collection-corfu-setup :after #'start/corfu-evil-keys)
+  (with-eval-after-load 'evil (start/corfu-evil-keys))
   (keymap-set corfu-map "M-n" #'ignore)
   (keymap-set corfu-map "M-p" #'ignore)
-  sh-test
+
   ;; C-n/C-p for Corfu navigation
   (keymap-set corfu-map "C-n" #'corfu-next)
   (keymap-set corfu-map "C-p" #'corfu-previous)
