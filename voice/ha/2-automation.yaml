@@ -1,0 +1,87 @@
+# PIECE 2 of 3: one automation. In Settings > Automations, create a new
+# automation, open the menu > "Edit in YAML", and paste this whole file.
+# It replaces the old shopping-list and tasks automations: disable those
+# (don't delete them yet) so they can't win the same sentences.
+alias: Voice - Org files
+description: One trigger per verb; the engine finds the target in the free text.
+mode: queued
+triggers:
+  - trigger: conversation
+    id: capture
+    command:
+      - "capture {text}"
+      - "add {text}"
+  - trigger: conversation
+    id: done
+    command:
+      - "check off {text}"
+      - "done {text}"
+      - "I got {text}"
+  - trigger: conversation
+    id: paid
+    command:
+      - "I paid {text}"
+      - "I've paid {text}"
+  - trigger: conversation
+    id: out
+    command:
+      - "{place} is out of {text}"
+      - "{place} is all out of {text}"
+      - "{place}'s out of {text}"
+      - "we're out of {text}"
+      - "we are out of {text}"
+  - trigger: conversation
+    id: read
+    command:
+      - "what's on {text}"
+      - "what is on {text}"
+      - "read {text}"
+  - trigger: conversation
+    id: read_default
+    command:
+      - "what do I have to do"
+      - "what's on my plate"
+  - trigger: conversation
+    id: cancel
+    command:
+      - "scratch that"
+      - "never mind"
+  - trigger: conversation
+    id: undo
+    command:
+      - "undo that"
+actions:
+  - variables:
+      verb: >-
+        {{ {'read_default': 'read'}.get(trigger.id, trigger.id) }}
+      text: >-
+        {% set s = trigger.slots | default({}) %}
+        {% if trigger.id == 'out' %}
+          {{ (s.place ~ ' is out of ' if s.place is defined else "we're out of ") ~ s.text }}
+        {% else %}
+          {{ s.text | default('') }}
+        {% endif %}
+  - action: shell_command.org_voice
+    data:
+      verb: "{{ verb }}"
+      text: "{{ text | trim }}"
+    response_variable: result
+  - variables:
+      reply: >-
+        {{ result.stdout | from_json if result.returncode == 0 and result.stdout
+           else {'say': "Sorry, the voice script didn't answer.", 'ask': false} }}
+  - choose:
+      - conditions: "{{ reply.ask }}"
+        sequence:
+          # Finish this conversation silently; the script asks the question and listens.
+          - action: script.turn_on
+            target:
+              entity_id: script.voice_follow_up
+            data:
+              variables:
+                question: "{{ reply.say }}"
+                attempt: 1
+                depth: 1
+          - set_conversation_response: ""
+    default:
+      - set_conversation_response: "{{ reply.say }}"

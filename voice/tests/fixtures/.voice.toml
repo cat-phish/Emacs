@@ -1,0 +1,6 @@
+files  = ["Tasks.org", "Shopping.org"]
+filler = ["the", "my", "our", "some", "please"]
+
+[match]
+item_cutoff = 0.88
+name_cutoff = 0.85

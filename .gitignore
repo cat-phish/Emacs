@@ -127,3 +127,6 @@ TODO
 # Miscellaneous
 *.log
 .DS_Store
+
+# Python bytecode from voice/
+__pycache__/

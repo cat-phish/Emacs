@@ -1,0 +1,78 @@
+* Inbox
+** TODO water the plants
+* Todos
+:PROPERTIES:
+:ID:       11111111-0000-4000-8000-000000000001
+:VOICE_DEFAULT: t
+:VOICE_NAME: to do, tasks
+:END:
+** Repeaters
+*** TODO Water the garden
+DEADLINE: <2026-11-22 Sun +1w>
+** TODO take out the trash
+** TODO Change bank password
+DEADLINE: <2026-11-24 Tue>
+** CHORE Sharpen knives
+* Bills
+** Repeaters
+*** BILL Power ($70) - [[https://power.example.com][Pay]]
+DEADLINE: <2026-11-26 Thu +1m>
+** Dec
+*** BILL Internet ($50)
+DEADLINE: <2026-12-08 Tue>
+* #Future-Bills
+** BILL Secret bill
+DEADLINE: <2026-11-21 Sat>
+* School
+:PROPERTIES:
+:VOICE_PICK: child
+:VOICE_NAME: assignment, homework
+:VOICE_KEYWORD: ASSIGNMENT
+:VOICE_DEADLINE: ask
+:END:
+** CPT_S 317
+:PROPERTIES:
+:VOICE_NAME: 317
+:END:
+** CPT_S 322
+:PROPERTIES:
+:VOICE_NAME: 322
+:END:
+*** ASSIGNMENT Quiz 3
+DEADLINE: <2026-11-23 Mon>
+** TA CPT_S 122
+:PROPERTIES:
+:VOICE_NAME: TA 122, 122
+:END:
+* Projects
+:PROPERTIES:
+:VOICE_PICK: child
+:END:
+** ACTIVE Garden-Planner
+*** Backlog
+:PROPERTIES:
+:VOICE_TYPE: checklist
+:END:
+- [ ] seed calendar
+** HOLD Bird Feeder
+* Backlog
+:PROPERTIES:
+:VOICE_TYPE: checklist
+:END:
+* System
+:PROPERTIES:
+:VOICE_TYPE: checklist
+:END:
+** General [0/1]
+- [ ] back up photos
+** Home-Lab [0/1]
+:PROPERTIES:
+:VOICE_NAME: home lab, homelab
+:END:
+- [ ] update router
+- [ ]
+** Secret
+:PROPERTIES:
+:VOICE: off
+:END:
+- [ ] hidden thing

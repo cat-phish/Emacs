@@ -1,0 +1,8 @@
+# PIECE 1 of 3: add to configuration.yaml (not the automation or script editor).
+# Restart Home Assistant after adding it.
+#
+# Double quotes are stripped from the text so an apostrophe ("we're out of")
+# can't break the quoting. The engine prints JSON {"say": ..., "ask": ...}.
+shell_command:
+  org_voice: >-
+    python3 /config/shell/org_voice.py "{{ verb }}" "{{ text | default('') | replace('"', '') }}"

@@ -1,0 +1,35 @@
+#+PROPERTY: VOICE_PLACE top
+#+PROPERTY: VOICE_TYPE checklist
+#+PROPERTY: VOICE_REACTIVATE t
+
+* Grocery
+:PROPERTIES:
+:ID:       22222222-0000-4000-8000-000000000001
+:VOICE_NAME: shopping, groceries
+:END:
+- [ ]
+- [ ] bread
+- [X] limes
+- [X] mac & cheese
+- [X] mayo (dukes)
+** Costco
+- [ ]
+- [ ] eggs
+- [ ] butter
+** General
+- [ ] tea
+* Bar
+** Stock
+:PROPERTIES:
+:VOICE_LINK: id:22222222-0000-4000-8000-000000000001
+:END:
+*** Well
+- [X] Bourbon
+- [X] Limes
+*** Mixers
+- [X] Tonic (Fever Tree)
+- [ ] Coke
+** Wishlist
+- [ ] Creme de Violet
+* House
+- [ ] dish soap
