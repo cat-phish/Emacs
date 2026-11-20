@@ -96,7 +96,7 @@ Note: the live `Shopping.org` has its grocery items directly under `* Grocery`, 
 ## 3. Agreed redesign (the user has approved these points)
 1. **One engine for both files.** A single program reads `Tasks.org` and `Shopping.org` (and any others) with one grammar and one undo.
 2. **Every heading is reachable by voice, unless excluded.** Exclusion is a `#` title or `:VOICE: off`; either covers the whole subtree.
-3. **The org file describes its own voice rules.** Rules are attached to headings and inherited by everything beneath. **Where those rules are stored is the open decision (option A or B).**
+3. **The org file describes its own voice rules.** Rules are attached to headings and inherited by everything beneath. They are stored in property drawers (option A, decision 1).
 4. **A few verbs instead of per-feature phrases.** HA needs only one trigger per verb, with the rest as free text:
 
    | Verb phrases | Action |
@@ -157,9 +157,9 @@ Note: the live `Shopping.org` has its grocery items directly under `* Grocery`, 
 
 ---
 
-## 4. The open decision: where the rules live
+## 4. Where the rules live (decided: option A)
 
-### Option A: in property drawers on the headings (the user is leaning this way)
+### Option A: in property drawers on the headings (chosen)
 ```org
 * School
 :PROPERTIES:
@@ -226,12 +226,12 @@ filler = ["the", "my", "our", "some", "please"]
   - The comments naming each ID go stale.
 
 ### A hybrid, if the user wants one
-Rules and aliases in drawers (as in A), cross-heading links stored as `id:` values in drawers, and only engine-wide settings in a small config file (as in B). The user has said they like A. Present the hybrid only as the alternative for engine-wide settings.
+Rules and aliases in drawers (as in A), cross-heading links stored as `id:` values in drawers, and only engine-wide settings in a small config file (as in B). Not chosen: option A was picked, with engine-wide settings in `.voice.toml` (decision 5).
 
 ---
 
-## 5. Emacs helper (needed for option A or the hybrid)
-- **Value completion.** `#+PROPERTY: VOICE_*_ALL …` lines, or `org-global-properties` in the config, so `org-set-property` offers the allowed values.
+## 5. Emacs helper (built: `** Voice Rules` in `init.org`, `SPC o v`)
+- **Value completion.** Done through `org-global-properties` in the config, so `org-set-property` offers the allowed values.
 - **A "Voice" command or menu (for example a transient) for the heading at point:**
   - show its effective `VOICE_*` settings, marking which ones are inherited and from where;
   - set or clear a setting through `org-set-property`;
@@ -258,13 +258,9 @@ Rules and aliases in drawers (as in A), cross-heading links stored as `id:` valu
 Every step must keep the behavior in §1 unless the user changes it, and every step should come with a test run against copies of the org files, showing the diffs.
 
 ## 8. Decisions for the user
-1. **Where do the rules live?** Option A (drawers, with engine settings in `#+PROPERTY:` headers), option B (a config file keyed by ID), or the hybrid?
-2. **Setting names and values.** Are the `VOICE_*` names and values in §3 right, or should they change?
-3. **Defaults.** Are the defaults in §3 right? In particular, should every keyword heading ask for a deadline by default?
-4. **Duplicate names.** Is the order full path → default target → ask right?
-5. **Which `#+PROPERTY:` file is the main one?** `Tasks.org`?
-6. **Emacs helper scope.** A minimal command, or a full menu?
-7. **The service.** Keep `shell_command` for now, or move to a FastAPI container as part of step 1?
+All resolved; see §0. The former question "which `#+PROPERTY:` file is the main one?" no longer applies: engine-wide settings live in `.voice.toml`, and each file's `#+PROPERTY:` lines hold only that file's defaults.
+
+---
 
 ## 9. Constraints
 - **Test on copies.** Never test against the live synced files.
