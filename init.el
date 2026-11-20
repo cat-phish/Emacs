@@ -801,30 +801,23 @@ Falls back to the default browser when firefox isn't on PATH."
       (forward-line -2)
       (move-to-column col))))
 
-(defun my/evil-org-delete-heading-dwim (count)
-  "Delete subtree if heading is folded (linewise); otherwise delete line normally."
-  (interactive "p")
-  (cond
-   ;; CASE 1: Folded Heading -> Delete Subtree Linewise
-   ((and (org-at-heading-p)
-         (or (and (fboundp 'org-fold-folded-p)
-                  (org-fold-folded-p))
-             (outline-invisible-p (line-end-position))))
-    (let ((beg (line-beginning-position))
-          (end (save-excursion
-                 ;; 't t' forces it to move to the start of the NEXT heading
-                 (org-end-of-subtree t t)
-                 (point))))
-      ;; If at End of Buffer, ensure we claim the final newline so no gap remains
-      (when (eobp) (setq end (point-max)))
-
-      (evil-delete beg end 'line)))
-   ;; CASE 2: Everything else -> Standard Evil Line Delete
-   (t
-    (evil-delete (line-beginning-position)
-                 (line-beginning-position (1+ count))
-                 'line
-                 ?\"))))
+(defun start/org-evil-delete-folded-subtree (args)
+  "Filter-args for `evil-delete': extend a linewise delete over a folded subtree."
+  (pcase-let ((`(,beg ,end ,type . ,rest) args))
+    (when (and (derived-mode-p 'org-mode)
+               (eq type 'line)
+               (eq evil-this-operator 'evil-delete)
+               beg end)
+      (save-excursion
+        (goto-char beg)
+        (when (and (org-at-heading-p)
+                   (org-fold-folded-p (line-end-position) 'outline))
+          ;; `t t': through invisible text, to the start of the next heading.
+          (org-end-of-subtree t t)
+          (setq end (max end (point))))))
+    `(,beg ,end ,type . ,rest)))
+(with-eval-after-load 'evil
+  (advice-add 'evil-delete :filter-args #'start/org-evil-delete-folded-subtree))
 
 ;; (ref:insert-item-below)
 (defun my/org-smart-insert-item-below ()
@@ -3204,19 +3197,6 @@ if it's already there. Never adds an item to either list."
       (mouse-set-point event) ; Move the cursor to where you double-clicked
       (my/org-return-dwim)))
   )
-
-;; DELETE CONTENTS OF FOLDED HEADINGS WITH DELETE LINE
-(with-eval-after-load 'evil-org
-  ;; Use 'evil-define-minor-mode-key' or standard 'evil-define-key'
-  ;; but avoid shadowing the base 'd' operator.
-
-  ;; 1. Remap the 'evil-delete-line' (which is what dd usually calls)
-  ;; This is the "cleanest" way to intercept 'dd' without breaking 'dw'
-  (evil-define-key 'normal org-mode-map (kbd "dd") #'my/evil-org-delete-heading-dwim)
-
-  ;; 2. Ensure 'd' is still recognized as the operator for everything else
-  ;; If 'dw' still fails, add this to force the operator to stay active:
-  (evil-define-key 'normal org-mode-map (kbd "d") 'evil-delete))
 
 ;; Fix Evil bindings in org-agenda (especially with org-super-agenda)
 (with-eval-after-load 'org-agenda

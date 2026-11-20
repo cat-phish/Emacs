@@ -361,8 +361,13 @@ heading with it's contents.
 
 ## Smart Delete Line/Heading with Contents
 
-This function acts like the normal delete line, unless it is a folded
-heading, in which case it will delete the heading and it's contents.
+`dd` on a folded heading deletes the heading and everything folded under it,
+like deleting the one line you can see. On any other line it is a plain line
+delete. Evil's linewise range stops at the heading's newline, where Org's fold
+begins, so without this the body (a `DEADLINE:` line, notes, children) was
+left behind under the previous entry. This hooks `evil-delete` itself, so
+counts and other linewise deletes (`dj`, `Vd`) that start on a folded heading
+take the subtree too; `cc` and `yy` are unchanged.
 
 
 ## Heading/List Insertion
