@@ -1482,7 +1482,11 @@ Separate keys with commas; prefix with `.' to reverse, e.g. state,.priority,dead
               ;; keeps text typed at the end of the heading outside the overlay.
               (let ((ov (make-overlay ov-start ov-end nil t nil)))
                 (overlay-put ov 'invisible t)
-                (overlay-put ov 'my-stealth-drawer t))))))))
+                (overlay-put ov 'my-stealth-drawer t)
+                ;; Refontify the line before the drawer so the expanded-heading
+                ;; indicator moves onto this overlay (see "Expanded Heading
+                ;; Indicator").
+                (font-lock-flush ov-start (1+ ov-start)))))))))
 
   (defun my/show-drawers-completely (beg end)
     "Remove the stealth overlays to reveal the drawers."
@@ -2596,38 +2600,38 @@ the current heading."
            (not (and (org-at-heading-p) (<= (org-current-level) level)))))))
 
 (defun start/org--expanded-indicator-matcher (limit)
-  "Font-lock matcher: match the last visible char of an open heading with content."
+  "Font-lock matcher: match the newline of an open heading with content.
+For a heading whose newline starts a hidden drawer, set or clear the drawer
+overlay's `after-string' instead, and keep looking."
   (let (found)
     (while (and (not found) (re-search-forward org-outline-regexp-bol limit t))
       (let* ((bol (match-beginning 0))
              (eol (line-end-position))
-             (pos eol))
-        (while (and (> pos bol) (invisible-p (1- pos)))
-          (setq pos (1- pos)))
-        (when (and (> pos bol)
-                   (< eol (point-max))
-                   (not (org-fold-folded-p eol 'outline))
-                   (save-excursion (goto-char bol) (start/org--heading-has-visible-content-p)))
-          (set-match-data (list (1- pos) pos))
-          (setq found t))
+             (show (and (< eol (point-max))
+                        (not (org-fold-folded-p eol 'outline))
+                        (save-excursion (goto-char bol)
+                                        (start/org--heading-has-visible-content-p))))
+             (drawer (seq-find (lambda (ov) (and (overlay-get ov 'my-stealth-drawer)
+                                                 (= (overlay-start ov) eol)))
+                               (overlays-at eol))))
+        (cond
+         (drawer
+          (overlay-put drawer 'after-string
+                       (and show (propertize start/org-expanded-indicator
+                                             'face 'org-ellipsis 'cursor t))))
+         ((and show (not (invisible-p eol)))
+          (set-match-data (list eol (1+ eol)))
+          (setq found t)))
         (goto-char eol)))
     found))
 
-(defun start/org--expanded-indicator-display ()
-  "Display spec for the matched char: what it already shows, plus the indicator.
-Keeps an existing display string, e.g. the end of org-modern's progress bar on
-the ] of a [1/4] cookie."
-  (let* ((old (get-text-property (match-beginning 0) 'display))
-         (base (if (stringp old) old (match-string 0))))
-    (list 'face nil
-          'display (if (string-suffix-p start/org-expanded-indicator base)
-                       base
-                     (concat base (propertize start/org-expanded-indicator
-                                              'face 'org-ellipsis))))))
-
 (defun start/org-expanded-indicator-setup ()
   (font-lock-add-keywords
-   nil '((start/org--expanded-indicator-matcher (0 (start/org--expanded-indicator-display) append)))
+   nil `((start/org--expanded-indicator-matcher
+          (0 '(face nil display ,(concat (propertize start/org-expanded-indicator
+                                                     'face 'org-ellipsis)
+                                         "\n"))
+             append)))
    'append)
   (add-to-list (make-local-variable 'font-lock-extra-managed-props) 'display))
 (add-hook 'org-mode-hook #'start/org-expanded-indicator-setup 90)

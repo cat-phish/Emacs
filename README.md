@@ -570,9 +570,15 @@ individually via the org-modern customization group.
 
 Folded headings end with `org-ellipsis` (" ▾"). This puts " ▸" at the end of
 open headings that have something visible under them, so the end of the line
-shows the state either way. It's drawn on the heading's last visible character
-(as part of fontification, like org-modern's stars), since the newline after a
-heading can be inside the hidden-drawer overlay.
+shows the state either way.
+
+It's drawn on the heading's newline (a `display` of " ▸\n", set during
+fontification), not on the last character: Emacs draws the cursor after a
+display string on the character before point, so in insert state at the end of
+the heading the cursor showed after the ▸, away from where text goes. When a
+hidden drawer's overlay starts at that newline, the newline is invisible, so the
+indicator is the overlay's `after-string` instead, with a `cursor` property to
+keep the cursor before it.
 
 
 ## Org-Table-Sticky-Header
