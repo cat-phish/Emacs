@@ -7,7 +7,7 @@ You're a Claude agent on the user's machine with access to their Emacs config an
 - the redesign we've agreed on so far;
 - the two configuration options (A and B) that were considered; the user chose A.
 
-The user's decisions, and the settings already added to the live org files, are recorded in §0. The Emacs side is done; what remains is the server-side engine. Implement it in the order given under **Suggested order**.
+The user's decisions, and the settings already added to the live org files, are recorded in §0. **Status:** §7 steps 1–5 are built in `voice/` in this repo and tested on copies (§0, "Engine status"). What remains is deploying it to the server and checking it on the Echo.
 
 ## 0. Decisions (recorded 2026-11-20)
 1. **Rules live in property drawers (option A)** and are inherited by the subtree. `VOICE_LINK` values are `id:<ID>`.
@@ -15,7 +15,7 @@ The user's decisions, and the settings already added to the live org files, are 
 3. **`VOICE_DEADLINE` defaults to `optional`** for keyword headings and `never` for checklists. Sections that should ask (School, for example) opt in with `ask`.
 4. **Duplicate names** resolve as full spoken path, then the `VOICE_DEFAULT` target, then a short question.
 5. **Engine-wide settings live in a hidden `~/org/main/.voice.toml`** (server: `/drives/local/org/main/.voice.toml`), read with stdlib `tomllib`. They are not in an org header. HA's shell command points at this file. Per-file defaults still use each file's `#+PROPERTY:` lines.
-6. **Emacs helper: the full menu.** It is built in `init.org` (`** Voice Rules`, `SPC o v`). Its spoken-name view is a stand-in until the engine has `describe`.
+6. **Emacs helper: the full menu.** It is built in `init.org` (`** Voice Rules`, `SPC o v`). Its spoken-name view (`d`) runs the engine's `describe`, and falls back to an Emacs-side approximation when the engine can't run.
 7. **Runtime: keep `shell_command`**, standard library only. The FastAPI service stays optional for later.
 
 Note: the live `Shopping.org` has its grocery items directly under `* Grocery`, with no `General` child, so examples below that say "Grocery › General" mean `* Grocery`.
@@ -25,22 +25,51 @@ The engine can read these as they are. Only the server side is left (§7 steps 1
 
 | Where | Settings |
 |---|---|
-| `Tasks.org` `* Todos` | `VOICE_DEFAULT t` |
+| `Tasks.org` `* Todos` | `VOICE_DEFAULT t`, `VOICE_NAME to do, tasks` |
 | `Tasks.org` `* School` | `VOICE_PICK child`, `VOICE_NAME assignment, homework`, `VOICE_KEYWORD ASSIGNMENT`, `VOICE_DEADLINE ask` |
 | `Tasks.org` `** CPT_S 317` / `322` / `415` | `VOICE_NAME 317` / `322` / `415` |
 | `Tasks.org` `** TA CPT_S 122` | `VOICE_NAME TA 122, 122` |
 | `Tasks.org` `* Projects` | `VOICE_PICK child` |
-| `Tasks.org` `* Backlog`, `* System` | `VOICE_TYPE checklist` (Backlog is empty, so it can't be guessed from its content) |
-| `Tasks.org` `** Home-Lab`, `** Neovim` | `VOICE_NAME home lab`, `VOICE_NAME neo vim` |
+| `Tasks.org` `** Misc` (under School) | `VOICE_NAME misc, miscellaneous` |
+| `Tasks.org` `* Backlog`, `* System`, each project's `*** Backlog` | `VOICE_TYPE checklist` (Backlog is empty, so it can't be guessed from its content) |
+| `Tasks.org` `** Home-Lab`, `** Neovim` | `VOICE_NAME home lab, homelab`, `VOICE_NAME neo vim` |
 | `Shopping.org` file header | `#+PROPERTY: VOICE_PLACE top`, `VOICE_TYPE checklist`, `VOICE_REACTIVATE t` |
-| `Shopping.org` `* Grocery` | given `:ID: a88f6bf7-536d-4467-a0a0-b6debec2eac0` |
+| `Shopping.org` `* Grocery` | given `:ID: a88f6bf7-536d-4467-a0a0-b6debec2eac0`; `VOICE_NAME shopping, groceries` |
 | `Shopping.org` `** Stock` (under Bar) | `VOICE_LINK id:a88f6bf7-536d-4467-a0a0-b6debec2eac0` (points to `* Grocery`) |
-| `~/org/main/.voice.toml` | created with the §4 example (`files`, `filler`, `[match] fuzzy_cutoff`) |
+| `~/org/main/.voice.toml` | `files`, `filler`, `keywords`, `[match] item_cutoff` and `name_cutoff` |
 
-Class names beyond the course numbers (for example "data structures") are not set; the user adds them with `SPC o v n`.
+The aliases replace the old scripts' hardcoded `WORD_ALIASES` (`neovim`, `miscellaneous`, `homelab`, `todos`/`tasks`) and `DEFAULT_NAMES` (`shopping`, `groceries`). Class names beyond the course numbers (for example "data structures") are not set; the user adds them with `SPC o v n`.
 
-### Open question for the engine: children that aren't choices
-`VOICE_PICK child` on School would offer `** Repeaters` as a class, and on Projects it would offer `PLANNING Ideas`. `:VOICE: off` would hide them, but it also blocks voice from completing their repeating tasks. **Proposed:** the pick question skips a child that sets `VOICE_PICK_SKIP t` (a new, non-inherited setting), and the child stays reachable by name. Confirm with the user before building it, and add the key to `start/voice-properties` in `init.org` once it's agreed.
+### Engine status (2026-11-20)
+Built in this repo, not yet deployed:
+
+| File | What it is |
+|---|---|
+| `voice/org_voice.py` | The engine: one grammar, one undo, rules from the drawers. Replaces `shopping_list.py` and `tasks.py` (kept in `voice/` as the baseline). |
+| `voice/tests/` | 44 phrase tests on made-up fixture files (the repo is public, so no real data): `python3 -m unittest discover -s voice/tests`. `--show` prints failures with replies and diffs. |
+| `voice/ha/1-configuration.yaml`, `2-automation.yaml`, `3-script.yaml` | The three HA pieces, labelled. `script.voice_follow_up` replaces `script.tasks_follow_up`. |
+
+**Deploying:**
+1. Copy `voice/org_voice.py` to `/config/shell/` in the HA container. Leave the old scripts there for rollback.
+2. On the server, try it without writing: `python3 /config/shell/org_voice.py --dry-run capture "lab five for 322"` prints the reply and the diff. `python3 /config/shell/org_voice.py describe` lists every reachable heading and its names.
+3. Add piece 1 to `configuration.yaml` and restart HA. Create the script (piece 3), then the automation (piece 2). Disable the old automations, but don't delete them yet.
+
+**The old scripts are already broken on the live files.** `shopping_list.py` still looks for `Grocery › General`, so "add X to the shopping list" and every "the bar is out of X" fail with "I couldn't find Grocery > General". Compared on copies of the live files at the same time, the engine gives identical file changes for 27 of 30 old phrases. The other 3 are these broken ones, which the engine handles.
+
+**Behavior that changed (all by decision or design):**
+- Plain captures no longer ask "When's it due?". Only School does (`VOICE_DEADLINE ask`, decision 3).
+- The pick question is "Which one?" rather than "Which class?", because the engine doesn't know what a heading's children are called. If that's too vague, a `VOICE_PICK_ASK` setting with the question text would fix it.
+- "Add X" with no list name goes to the default target (Todos), the same as "capture X". Shopping needs a list name: "to the shopping list", "to costco".
+- Spoken keywords come from `keywords` in `.voice.toml` (todo, chore). The old inbox-only words (next, review, meeting, bill, assignment) aren't keywords any more; add them there if wanted.
+- Adding to a combined list (Bar › Stock, System) asks "Which list should X go on?" as a real follow-up, instead of reading out the sub-lists.
+- "Done X" now also completes TODO headings, not only checkboxes. Two headings with the same title ask "Inbox or Todos?".
+- "We're out of X" (no place) searches the linked lists (Bar › Stock). If X isn't there, it unchecks X wherever it's checked off. It never adds.
+- Spoken lists are limited to 15 items (shopping used to read 20).
+- A place can be named at either end of any sentence, so "capture fix the bug in emacs" now adds a checkbox to System › Emacs. Only headings without a TODO keyword, children of a `VOICE_PICK` heading, and headings with a `VOICE_NAME` count as places.
+
+**Children that aren't choices** (the earlier open question) turned out not to matter: the pick question doesn't list choices, so School › Repeaters is only picked if someone says "repeaters". No `VOICE_PICK_SKIP` is needed.
+
+**Not checked on real hardware:** the HA YAML parses, but the templates and the follow-up script haven't run in HA. In particular, confirm that `assist_satellite.ask_question` without `answers` returns the heard text in `sentence`, and that the Echo listens after `script.voice_follow_up` asks.
 
 ---
 
@@ -272,15 +301,17 @@ Rules and aliases in drawers (as in A), cross-heading links stored as `id:` valu
 ## 7. Suggested order
 1. Merge the two scripts into one engine with the same behavior (§1). The user should notice no change.
 2. Add generic target lookup and the verb grammar, then reduce HA to the verb triggers and the follow-up script.
-3. Add rule settings from drawers and engine settings from `.voice.toml`, replacing the hardcoded names one section at a time. The settings and `.voice.toml` are already in the live files (§0); compare them against today's hardcoded aliases and report any that are missing.
+3. Add rule settings from drawers and engine settings from `.voice.toml`, replacing the hardcoded names one section at a time.
 4. Add `describe`, dry-run and the test file.
-5. Build the Emacs helper. Done in `init.org`; swap its spoken-name view for `describe` output after step 4.
+5. Build the Emacs helper, and swap its spoken-name view for `describe` output after step 4.
+
+Steps 1–5 are built (§0, "Engine status"). The engine was written in one pass rather than step by step, because the user deploys it all at once; the comparison with the old scripts stands in for step 1's "no change".
 6. Optional: the service and the AI fallback.
 
 Every step must keep the behavior in §1 unless the user changes it, and every step should come with a test run against copies of the org files, showing the diffs.
 
 ## 8. Decisions for the user
-Resolved, see §0, except for the open question there about children the pick question should skip. Also note that the Emacs menu's spoken-name check (`SPC o v d`) only compares titles, not `VOICE_NAME` aliases; the engine's `describe` should flag both. The former question "which `#+PROPERTY:` file is the main one?" no longer applies: engine-wide settings live in `.voice.toml`, and each file's `#+PROPERTY:` lines hold only that file's defaults.
+All resolved; see §0. The behavior changes listed under "Engine status" are worth confirming with the user after the first days of use. The former question "which `#+PROPERTY:` file is the main one?" no longer applies: engine-wide settings live in `.voice.toml`, and each file's `#+PROPERTY:` lines hold only that file's defaults.
 
 ---
 
