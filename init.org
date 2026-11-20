@@ -2336,7 +2336,7 @@ Returns t if active TODOs were found, nil otherwise."
   ;; Overlays don't travel with deleted/re-inserted text, so after an undo the
   ;; old stealth overlays sit at the wrong spans and the drawers show again.
   (defun my/org-rehide-drawers-in (beg end)
-    "If drawers between BEG and END were hidden, clear stale overlays and re-hide them."
+    "Re-hide drawers between BEG and END if they were hidden there, or elsewhere in the buffer."
     (save-excursion
       ;; Snap to whole entries so a drawer is never half inside the range.
       (let* ((beg (progn (goto-char beg)
@@ -2350,9 +2350,17 @@ Returns t if active TODOs were found, nil otherwise."
                                                 (>= (overlay-start ov) beg)
                                                 (< (overlay-start ov) end)))
                               (overlays-in beg end))))
-        (when ovs
+        ;; Also when the undo brought back drawers that had no overlay
+        ;; left (e.g. undoing a `dd' that deleted a heading with its
+        ;; drawer), as long as drawers are hidden elsewhere in the buffer.
+        (when (or ovs (my/org-buffer-has-hidden-drawers-p))
           (mapc #'delete-overlay ovs)
           (my/hide-drawers-completely beg end)))))
+
+  (defun my/org-buffer-has-hidden-drawers-p ()
+    "Non-nil if any drawer in the buffer is hidden by a stealth overlay."
+    (seq-some (lambda (ov) (overlay-get ov 'my-stealth-drawer))
+              (overlays-in (point-min) (point-max))))
 
   (defvar-local my/org--undo-changed nil
     "(BEG . END) span touched by the undo in progress.")
@@ -2389,6 +2397,82 @@ Returns t if active TODOs were found, nil otherwise."
     (set-marker b nil)
     (set-marker e nil))
   (advice-add 'primitive-undo :around #'my/org-rehide-drawers-after-undo)
+
+  ;; `dd' on a heading whose drawer is hidden: the heading and its drawer
+  ;; look like one line, so delete them together. Evil's linewise range ends
+  ;; at the heading's newline, which is where the hidden drawer's overlay
+  ;; starts, so it used to delete just the heading and leave the drawer
+  ;; (with its :ID:) stranded under the previous entry. Only for `d', not
+  ;; `c' (retyping a heading keeps its drawer) or `y' (no duplicate IDs).
+  (defun my/org-evil-delete-with-hidden-drawers (args)
+    "Filter-args for `evil-delete': extend a linewise delete over hidden drawers."
+    (pcase-let ((`(,beg ,end ,type . ,rest) args))
+      (when (and (derived-mode-p 'org-mode)
+                 (eq type 'line)
+                 (eq evil-this-operator 'evil-delete)
+                 end (> end (point-min)))
+        (let (ov)
+          (while (setq ov (seq-find (lambda (o) (and (overlay-get o 'my-stealth-drawer)
+                                                     (= (overlay-start o) (1- end))))
+                                    (overlays-at (1- end))))
+            (setq end (min (point-max) (1+ (overlay-end ov)))))))
+      `(,beg ,end ,type . ,rest)))
+  (with-eval-after-load 'evil
+    (advice-add 'evil-delete :filter-args #'my/org-evil-delete-with-hidden-drawers))
+
+  ;; `cc' on such a heading: change only the heading line's text and keep
+  ;; its drawer attached. A linewise change would delete the heading's
+  ;; newline (the start of the hidden drawer) and reopen a line elsewhere,
+  ;; losing the stars and leaving the drawer under the new line.
+  (defun my/org-evil-change-keep-hidden-drawer (args)
+    "Filter-args for `evil-change': on a heading line followed by a hidden
+drawer, change the line's text instead of the whole line."
+    (pcase-let ((`(,beg ,end ,type . ,rest) args))
+      (if (and (derived-mode-p 'org-mode)
+               (eq type 'line)
+               end (> end beg)
+               (seq-find (lambda (o) (and (overlay-get o 'my-stealth-drawer)
+                                          (= (overlay-start o) (1- end))))
+                         (overlays-at (1- end))))
+          `(,beg ,(1- end) exclusive . ,rest)
+        args)))
+  (with-eval-after-load 'evil
+    (advice-add 'evil-change :filter-args #'my/org-evil-change-keep-hidden-drawer))
+
+  ;; Any other edit that breaks a hidden drawer's shape (deleting the heading
+  ;; line some other way, cutting into the drawer) leaves an overlay that no
+  ;; longer starts at the heading's newline: it shows as a blank line with a
+  ;; stray expanded-heading " ▸". Re-hide around such overlays so they match
+  ;; the text again; a drawer that's no longer whole stays visible.
+  (defun my/org-stealth-drawer-intact-p (ov)
+    "Non-nil if OV still covers \"\\n:DRAWER: ... :END:\" exactly."
+    (let ((s (overlay-start ov)) (e (overlay-end ov)))
+      (and s (< s e)
+           (save-excursion
+             (goto-char s)
+             (looking-at (if (= s (point-min))
+                             "[ \t]*:\\(?:PROPERTIES\\|LOGBOOK\\):[ \t]*$"
+                           "\n[ \t]*:\\(?:PROPERTIES\\|LOGBOOK\\):[ \t]*$")))
+           (save-excursion
+             (goto-char e)
+             (and (eolp) (progn (forward-line 0) (looking-at "[ \t]*:END:[ \t]*$")))))))
+
+  (defun my/org-repair-stealth-drawers (beg end _len)
+    "After-change: re-hide around hidden-drawer overlays the change broke."
+    (let ((broken (seq-filter (lambda (ov) (and (overlay-get ov 'my-stealth-drawer)
+                                                (not (my/org-stealth-drawer-intact-p ov))))
+                              (overlays-in (max (point-min) (1- beg))
+                                           (min (point-max) (1+ end))))))
+      (dolist (ov broken)
+        (let ((s (overlay-start ov)) (e (overlay-end ov)))
+          (delete-overlay ov)
+          ;; Hides the span again only where it still holds a whole drawer.
+          (save-excursion
+            (my/hide-drawers-completely
+             (progn (goto-char s) (line-beginning-position))
+             (progn (goto-char (min (point-max) (1+ e))) (line-end-position))))))))
+  (add-hook 'org-mode-hook
+            (lambda () (add-hook 'after-change-functions #'my/org-repair-stealth-drawers nil t)))
 
   (defun my/org-rehide-drawers-after-sort (orig &rest args)
     "Around `org-sort-entries': re-hide drawers in the range that was sorted.
