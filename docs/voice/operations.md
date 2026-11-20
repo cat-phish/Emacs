@@ -23,7 +23,9 @@ The config comes as three separate pieces. Each goes in a different place, and p
 
 Add the script before the automation, because the automation calls it.
 
-The pieces are based on the old *Tasks* automation and *Tasks follow-up* script, which already worked on the Echo. The follow-up script's timing has been kept: it waits for the satellite to go idle, then pauses for a second before asking.
+The pieces are based on the old *Tasks* automation and *Tasks follow-up* script, which already worked on the Echo Dot. The follow-up script's timing has been kept: it waits for the satellite to go idle, then pauses for a second before asking.
+
+**Nothing is tied to one device.** The automation looks up the voice satellite that heard the command (`device_entities(trigger.device_id)`) and passes it to the script, so a question is asked on the same device. A command from the phone app or typed text has no satellite, so the question comes back as the reply instead. A new satellite needs no changes.
 
 **Rolling back:** disable *Voice - Org files* and re-enable the old automations. The old `shell_command.tasks`, `tasks.py` and `shopping_list.py` are untouched. Note that the old shopping script fails on the current `Shopping.org`: it still looks for `Grocery › General`.
 
@@ -67,17 +69,18 @@ VOICE_CONFIG=/tmp/voice-try/.voice.toml VOICE_STATE_DIR=/tmp/voice-try \
 
 ## Troubleshooting
 
-**Where to look.** Open the automation's trace in Home Assistant (Settings › Automations › *Voice - Org files* › Traces). The `shell_command` step shows `stdout` (the reply) and `stderr`, where the engine logs `voice: <verb> '<text>'` for every call and `voice answer heard: '…'` for answers. That's how you tell what Whisper actually heard.
+**Where to look.** Open the automation's trace in Home Assistant (Settings › Automations › *Voice - Org files* › Traces). The `shell_command` step shows `stdout` (the reply) and `stderr`, where the engine logs `voice: <verb> '<text>'` for every call and `voice answer heard: '…'` for answers. That's how you tell what speech to text actually heard.
 
 | Symptom | Likely cause |
 |---|---|
 | "Sorry, something went wrong updating your lists." | The engine crashed. The traceback is in `stderr`. Reproduce it with `--dry-run` and the same text. |
 | "Sorry, I couldn't update your lists." | The shell command didn't run or printed nothing. Check the path in `configuration.yaml` and that HA was restarted after adding it. |
-| It went to Todos instead of the list you named | The name didn't match. Check `describe` for that list's names, and look in the trace for what Whisper heard. Add the misheard form with `SPC o v n`. |
+| It went to Todos instead of the list you named | The name didn't match. Check `describe` for that list's names, and look in the trace for what speech to text heard. Add the misheard form with `SPC o v n`. |
 | "System or Grocery?" every time | Two places share that name. Say the parent too ("system general"), or set `VOICE_DEFAULT` on the one you mean. |
 | "Which one?" when you named a class | The class's number isn't in its `VOICE_NAME`, or two classes share it. |
 | A new TODO keyword isn't recognised | Add it to `todo_keywords` in `.voice.toml`. |
-| The Echo asks and never listens | Answer as a new command within 10 minutes: "it's due Friday", "it's for 322". |
+| A satellite asks and never listens | Answer as a new command within 10 minutes: "it's due Friday", "it's for 322". |
+| A question was asked on the wrong device, or not at all | The automation couldn't find a satellite entity on the device that heard the command. Check that the device has an `assist_satellite.*` entity. |
 | "X has changed since then, so I won't undo it." | The file changed after the voice edit (in Emacs, Orgzly or another voice command). Undo by hand. |
 | Emacs shows an old version of the file | Make sure `global-auto-revert-mode` is on. Emacs merges voice edits into buffers with unsaved changes. If you and voice edited the same lines, the buffer shows `smerge-mode` conflict markers and won't save until you resolve them (see *Merge External Edits Into Unsaved Org Buffers* in `init.org`). |
 

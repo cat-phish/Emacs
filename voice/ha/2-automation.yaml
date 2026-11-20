@@ -22,7 +22,9 @@ triggers:
   - trigger: conversation
     id: answer
     command:
-      # Answers said as a new command, for when the Echo asks and doesn't listen.
+      # Answers said as a new command: from a device that can't be asked a
+      # question (the phone app, typed text), or when a satellite asks and
+      # doesn't listen.
       - '[it''s|it is|its] due {text}'
       - (no deadline|no due date)
       - '[it''s|it is|its] for {text}'
@@ -68,6 +70,11 @@ triggers:
       - (scratch|cancel|forget) that
       - never mind
 variables:
+  # The voice satellite that heard the command, if any. Follow-up questions are
+  # asked on it; without one (phone app, typed text) the question is the reply.
+  satellite: >-
+    {{ device_entities(trigger.device_id) | select('match', 'assist_satellite\\.')
+       | list | first | default('') if trigger.device_id else '' }}
   verb: >-
     {{ {'backlog_first': 'capture', 'read_default': 'read'}.get(trigger.id, trigger.id) }}
   text: >-
@@ -92,7 +99,7 @@ actions:
            else {'say': "Sorry, I couldn't update your lists.", 'ask': false} }}
   - if:
       - condition: template
-        value_template: "{{ reply.ask }}"
+        value_template: "{{ reply.ask and satellite != '' }}"
     then:
       # Finish this conversation silently; the script asks the question and listens.
       - set_conversation_response: ""
@@ -102,5 +109,6 @@ actions:
         data:
           variables:
             question: "{{ reply.say }}"
+            satellite: "{{ satellite }}"
     else:
       - set_conversation_response: "{{ reply.say }}"

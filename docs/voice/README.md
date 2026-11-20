@@ -1,8 +1,8 @@
 # Voice control for Org files
 
-Talk to the Echo Dot in the kitchen and your Org files change: things get added to the shopping list, tasks are captured and checked off, bills are marked paid. Emacs and Orgzly pick up the changes through Syncthing.
+Talk to Home Assistant and your Org files change: things get added to the shopping list, tasks are captured and checked off, bills are marked paid. Emacs and Orgzly pick up the changes through Syncthing.
 
-Everything runs locally on the Unraid server. Nothing goes to the cloud.
+It works from anything that talks to Home Assistant's Assist: a voice satellite, the phone app, or typed text. Everything runs locally on the Unraid server, and nothing goes to the cloud.
 
 | Page | Read it when you want to… |
 |---|---|
@@ -13,7 +13,7 @@ Everything runs locally on the Unraid server. Nothing goes to the cloud.
 ## How the pieces fit together
 
 ```
-Echo Dot ──► Whisper (speech to text) ──► Home Assistant automation
+Assist device ──► speech to text ──► Home Assistant automation
                                                │  verb + the rest of the sentence
                                                ▼
                                   shell_command.org_voice
@@ -25,14 +25,14 @@ Echo Dot ──► Whisper (speech to text) ──► Home Assistant automation
                      Tasks.org, Shopping.org  ──Syncthing──►  Emacs, Orgzly
                                    │
                                    ▼
-                     {"say": …, "ask": …} ──► Piper (text to speech) ──► Echo Dot
+                     {"say": …, "ask": …} ──► text to speech ──► Assist device
 ```
 
-1. **Speech.** The Echo Dot runs [echo-dot-assist](https://github.com/Gamer92000/echo-dot-assist) and appears in Home Assistant as `assist_satellite.echo_dot_3_e514bc_assist_satellite`. Whisper (`small-int8`) turns speech into text, and Piper speaks the reply. Both run in the same Docker Compose stack as Home Assistant.
+1. **Speech** is Home Assistant's Assist pipeline, and nothing here depends on which device or engines it uses. Today that's Whisper (`small-int8`) for speech to text and Piper for text to speech, in the same Docker Compose stack as Home Assistant. The main device is an Echo Dot running [echo-dot-assist](https://github.com/Gamer92000/echo-dot-assist).
 2. **Home Assistant** only decides the *verb*: capture, done, paid, out, read, answer, undo or cancel. The automation has one trigger per verb and passes the rest of the sentence through untouched.
 3. **The engine**, `voice/org_voice.py`, does everything else. It works out which heading the sentence names ("…to the Costco list", "system home lab…"), reads that heading's voice rules, edits the file and returns a short reply.
 4. **The rules live in the Org files**, in `VOICE_*` properties on the headings. Restructuring `Tasks.org` doesn't break voice commands, because the engine has no heading names built in. A new section works by voice as soon as it exists, and it inherits its parent's rules.
-5. **Follow-up questions** ("Which one?", "When's it due?") go through `script.voice_follow_up`, which asks on the Echo and sends the answer back to the engine.
+5. **Follow-up questions** ("Which one?", "When's it due?") are asked on the device that heard the command. On a voice satellite, `script.voice_follow_up` asks the question, listens, and sends the answer back to the engine. On a device without a satellite (the phone app, typed text), the question is the reply, and you answer it as a new command: "it's for 322", "it's due Friday".
 
 ## Where the files are
 
@@ -46,7 +46,11 @@ Echo Dot ──► Whisper (speech to text) ──► Home Assistant automation
 | Org files | — | `/mnt/user/drives/local/org/main/` (`/drives/local/org/main/` in the container) |
 | Old scripts (replaced) | `voice/shopping_list.py`, `voice/tasks.py` | `/config/shell/`, kept for rollback |
 
-The design history and the decisions behind it are in [`HANDOFF-voice-org-engine.md`](../../HANDOFF-voice-org-engine.md).
+## Why it's built this way
+
+- **The rules live in the Org files**, rather than in a config file keyed by `:ID:`. That way they move with renames, refiles and copies, show up in Emacs and Orgzly, and work for headings without an ID, including ones Orgzly or voice just created.
+- **Settings for the whole engine sit in `.voice.toml`**, not in an Org file header, so no Org file has to be the "main" one.
+- **Home Assistant runs the engine through `shell_command`**, using only the Python standard library, so nothing extra has to be installed in the container. A small web service would give locking and logs in one place, but it isn't needed yet.
 
 ## Ground rules the engine follows
 

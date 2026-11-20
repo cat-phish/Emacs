@@ -82,7 +82,7 @@ This keeps "capture take out the trash" from filing a new task *under* an existi
 - **A shopping-style list in `Tasks.org`:** set `VOICE_TYPE checklist`, `VOICE_REACTIVATE t` and, if new items should go first, `VOICE_PLACE top`.
 - **A new class:** add it under School. Give it `VOICE_NAME <number>` so "for three twenty two" works, plus a name ("data structures") if you like.
 - **Hide something from voice:** start its title with `#`, or set `VOICE off` (`SPC o v o`) to keep the title.
-- **Make "the X list" work for a name Whisper keeps mishearing:** add the misheard form to `VOICE_NAME`.
+- **Make "the X list" work for a name speech to text keeps mishearing:** add the misheard form to `VOICE_NAME`.
 - **A second stock list (the coffee shelf, say):** set `VOICE_LINK` on it, pointing at the shopping list it should restock.
 
 ## Engine settings: `.voice.toml`

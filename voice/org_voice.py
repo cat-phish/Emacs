@@ -24,7 +24,7 @@ Verbs (HA needs one trigger per verb; the rest of the sentence is free text):
 Where things go and how comes from VOICE_* properties on the Org headings
 (inherited by the subtree, except VOICE_NAME, VOICE_PICK and VOICE_DEFAULT),
 then the file's #+PROPERTY: lines, then the engine defaults. Engine-wide
-settings come from .voice.toml (VOICE_CONFIG). See HANDOFF-voice-org-engine.md.
+settings come from .voice.toml (VOICE_CONFIG). Documented in docs/voice/.
 
 Prints JSON {"say": "...", "ask": true|false} and always exits 0; "ask" means
 the reply is a question waiting for an answer. Standard library only.

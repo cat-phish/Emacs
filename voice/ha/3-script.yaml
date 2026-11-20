@@ -2,27 +2,27 @@
 # the menu > "Edit in YAML", and paste this whole file. The entity must end up
 # as script.voice_follow_up (the automation calls it by that name).
 #
-# This is the old "Tasks follow-up" script with only the names changed
-# (script.voice_follow_up, shell_command.org_voice with verb: answer).
-# Leave script.tasks_follow_up in place until this one works.
+# Based on the old "Tasks follow-up" script. The automation passes the
+# satellite that heard the command, so the question is asked on the same
+# device. Leave script.tasks_follow_up in place until this one works.
 #
-# One question per run (queued). It waits for the Echo to go idle first.
-# A question with no answer is asked once more, because the Echo sometimes
-# speaks and then doesn't listen; after that it stops quietly, and the
-# question stays open for 10 minutes so "it's due Friday" still works.
+# One question per run (queued). It waits for the satellite to go idle first.
+# A question with no answer is asked once more, because some satellites speak
+# and then don't listen; after that it stops quietly, and the question stays
+# open for 10 minutes so "it's due Friday" still works as a new command.
 # At most three questions in a row.
 alias: Voice follow-up
 mode: queued
 max: 5
 sequence:
   - wait_template: >-
-      {{ is_state('assist_satellite.echo_dot_3_e514bc_assist_satellite', 'idle') }}
+      {{ is_state(satellite, 'idle') }}
     timeout: "00:00:15"
   - delay: 1
   - action: assist_satellite.ask_question
     continue_on_error: true
     data:
-      entity_id: assist_satellite.echo_dot_3_e514bc_assist_satellite
+      entity_id: "{{ satellite }}"
       question: "{{ question }}"
       preannounce: false
     response_variable: answer
@@ -40,6 +40,7 @@ sequence:
             data:
               variables:
                 question: "{{ question }}"
+                satellite: "{{ satellite }}"
                 attempt: "{{ attempt | default(1) }}"
                 retried: true
       - stop: No answer from the satellite
@@ -63,6 +64,7 @@ sequence:
         data:
           variables:
             question: "{{ reply.say }}"
+            satellite: "{{ satellite }}"
             attempt: "{{ attempt + 1 }}"
     else:
       - if:
@@ -71,6 +73,6 @@ sequence:
         then:
           - action: assist_satellite.announce
             data:
-              entity_id: assist_satellite.echo_dot_3_e514bc_assist_satellite
+              entity_id: "{{ satellite }}"
               message: "{{ \"Sorry, I didn't catch that.\" if reply.ask else reply.say }}"
               preannounce: false

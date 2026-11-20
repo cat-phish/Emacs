@@ -79,6 +79,11 @@ Long lists stop after 15 items ("…and 12 more"), and bills after 10.
 
 Undo covers both files and refuses if a file has changed since (by Emacs, Orgzly or another voice command), so it never overwrites anything else.
 
-## When the Echo asks and doesn't listen
+## Answering as a new command
 
-The Echo sometimes speaks a question and then doesn't open the mic. The question is asked once more. If there's still no answer, it waits quietly for 10 minutes, and you can wake the Echo and answer it as a new command: "it's due Friday", "it's for three twenty two", "no deadline". At most three questions are asked in a row.
+A question stays open for 10 minutes, and you can answer it as a new command: "it's due Friday", "it's for three twenty two", "no deadline". You need this in two cases:
+
+- **On a device that can't be asked a question** (the phone app, typed text). The question comes back as the reply, and you answer it with one of those phrases.
+- **When a voice satellite speaks the question but doesn't listen.** Some satellites (the Echo Dot running echo-dot-assist, at least) do this now and then. The question is asked once more first. If there's still no answer, it waits quietly for you to answer as a new command.
+
+At most three questions are asked in a row.
