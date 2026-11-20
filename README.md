@@ -543,9 +543,8 @@ TODO keyword colors, shared by Org and Org-Modern so they only need to be set on
 gets filed without leaving the buffer you're in (`C-c C-c` saves, `C-c C-k` aborts).
 The popup opens in insert state; in normal state `RET` saves and `ESC` aborts.
 
--   `i` Inbox: pick `Inbox` itself or one of its subheadings (Coffee, Fitness, &hellip;),
-    or type a new name to create that subheading. Adds a `- [ ]` checkbox item to
-    that heading's list.
+-   `i` Inbox: adds a `** TODO` heading at the bottom of `* Inbox`. The Inbox holds
+    only level-2 keyword headings, the shape the voice scripts expect.
 -   `s` System: pick a section under `* System` (General, Nvim, Emacs, Home-Lab,
     &hellip;), or type a new name to create it. Adds a `- [ ]` checkbox item there.
 -   `a` Assignment: pick a class under `* School` (type a new name to create that

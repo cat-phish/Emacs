@@ -2096,7 +2096,7 @@ Sorting deletes and re-inserts the text, collapsing the stealth overlays."
   (org-agenda-start-with-log-mod t)
   (org-agenda-files (list start/org-tasks-file start/org-projects-file))
   ;; Refile (SPC o r): the current file 3 levels deep, the main files'
-  ;; top-level headings, shown as Vertico paths like Tasks.org/Todos/General.
+  ;; top-level headings, shown as Vertico paths like Tasks.org/Todos.
   (org-refile-targets
    `((nil :maxlevel . 3)
      (,start/org-tasks-file :maxlevel . 1)
@@ -2473,11 +2473,6 @@ the current heading."
                (insert (make-string (1+ level) ?*) " " name "\n")
                (forward-line -1))))))
 
-(defun start/org-capture-goto-inbox-section ()
-  "Capture target: Inbox, or a subheading of it picked with completion."
-  (start/org-capture-goto-inbox)
-  (start/org-capture--pick-child "Inbox section: " start/org-inbox-heading))
-
 (defun start/org-capture-goto-sysmgmt-section ()
   "Capture target: a section under the System heading, picked with completion."
   (widen)
@@ -2509,9 +2504,9 @@ the current heading."
     (kbd "<escape>") #'org-capture-kill)
   :custom
   (org-capture-templates
-   '(("i" "Inbox" checkitem
-      (file+function start/org-tasks-file start/org-capture-goto-inbox-section)
-      "- [ ] %?")
+   '(("i" "Inbox" entry
+      (file+function start/org-tasks-file start/org-capture-goto-inbox)
+      "* TODO %?")
      ("s" "System" checkitem
       (file+function start/org-tasks-file start/org-capture-goto-sysmgmt-section)
       "- [ ] %?")

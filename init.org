@@ -2674,7 +2674,7 @@ TODO keyword colors, shared by Org and Org-Modern so they only need to be set on
   (org-agenda-start-with-log-mod t)
   (org-agenda-files (list start/org-tasks-file start/org-projects-file))
   ;; Refile (SPC o r): the current file 3 levels deep, the main files'
-  ;; top-level headings, shown as Vertico paths like Tasks.org/Todos/General.
+  ;; top-level headings, shown as Vertico paths like Tasks.org/Todos.
   (org-refile-targets
    `((nil :maxlevel . 3)
      (,start/org-tasks-file :maxlevel . 1)
@@ -2999,9 +2999,8 @@ repeating task is back to TODO by then and stays open."
 =SPC o c= opens capture. Type a template key, fill in the prompts, and the entry
 gets filed without leaving the buffer you're in (=C-c C-c= saves, =C-c C-k= aborts).
 The popup opens in insert state; in normal state =RET= saves and =ESC= aborts.
-- =i= Inbox: pick =Inbox= itself or one of its subheadings (Coffee, Fitness, ...),
-  or type a new name to create that subheading. Adds a =- [ ]= checkbox item to
-  that heading's list.
+- =i= Inbox: adds a =** TODO= heading at the bottom of =* Inbox=. The Inbox holds
+  only level-2 keyword headings, the shape the voice scripts expect.
 - =s= System: pick a section under =* System= (General, Nvim, Emacs, Home-Lab,
   ...), or type a new name to create it. Adds a =- [ ]= checkbox item there.
 - =a= Assignment: pick a class under =* School= (type a new name to create that
@@ -3063,11 +3062,6 @@ the current heading."
                (insert (make-string (1+ level) ?*) " " name "\n")
                (forward-line -1))))))
 
-(defun start/org-capture-goto-inbox-section ()
-  "Capture target: Inbox, or a subheading of it picked with completion."
-  (start/org-capture-goto-inbox)
-  (start/org-capture--pick-child "Inbox section: " start/org-inbox-heading))
-
 (defun start/org-capture-goto-sysmgmt-section ()
   "Capture target: a section under the System heading, picked with completion."
   (widen)
@@ -3099,9 +3093,9 @@ the current heading."
     (kbd "<escape>") #'org-capture-kill)
   :custom
   (org-capture-templates
-   '(("i" "Inbox" checkitem
-      (file+function start/org-tasks-file start/org-capture-goto-inbox-section)
-      "- [ ] %?")
+   '(("i" "Inbox" entry
+      (file+function start/org-tasks-file start/org-capture-goto-inbox)
+      "* TODO %?")
      ("s" "System" checkitem
       (file+function start/org-tasks-file start/org-capture-goto-sysmgmt-section)
       "- [ ] %?")
