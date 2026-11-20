@@ -167,7 +167,7 @@
 (defconst start/org-school-heading "School"
   "Top-level heading in `start/org-tasks-file' whose children are classes.")
 
-(defconst start/org-sysmgmt-heading "#System-Mgmt"
+(defconst start/org-sysmgmt-heading "#System"
   "Top-level heading in `start/org-tasks-file' whose children are systems/devices.")
 
 (defvar-local start/scroll--line-numbers-orig nil)
@@ -2375,7 +2375,7 @@ the current heading."
   (start/org-capture--pick-child "Inbox section: " start/org-inbox-heading))
 
 (defun start/org-capture-goto-sysmgmt-section ()
-  "Capture target: a section under the #System-Mgmt heading, picked with completion."
+  "Capture target: a section under the #System heading, picked with completion."
   (widen)
   (let ((pos (org-find-exact-headline-in-buffer start/org-sysmgmt-heading nil t)))
     (unless pos
