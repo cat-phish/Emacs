@@ -167,7 +167,7 @@
 (defconst start/org-school-heading "School"
   "Top-level heading in `start/org-tasks-file' whose children are classes.")
 
-(defconst start/org-sysmgmt-heading "#System"
+(defconst start/org-sysmgmt-heading "System"
   "Top-level heading in `start/org-tasks-file' whose children are systems/devices.")
 
 (defvar-local start/scroll--line-numbers-orig nil)
@@ -2362,21 +2362,27 @@ repeating task is back to TODO by then and stays open."
   ;; 		  	(lambda ()
   ;; 		  	  (when (derived-mode-p 'org-mode)
   ;; 		  		(my/org-hide-matching-headings))))
-  ;; AUTO COLLAPSE HEADINGS STARTING WITH '#'
-  (defun my/org-hide-hash-headings ()
-	"Force hide all headings that start with '#' at any level."
-	(org-map-entries
+  ;; AUTO COLLAPSE HEADINGS ON OPEN
+  ;; Two ways to have a heading folded when its file opens, at any level:
+  ;;   #Name                folded, and hidden from capture pickers / voice
+  ;;                        scripts (bookkeeping like #Repeaters, #Archive)
+  ;;   :VISIBILITY: folded  (in the heading's property drawer) folded, but the
+  ;;                        title stays plain, so capture and automation still
+  ;;                        use it (e.g. System)
+  (defun my/org-autofold-headings ()
+    "Fold headings whose title starts with # or whose VISIBILITY is folded."
+    (org-map-entries
      (lambda ()
-       (let ((heading (org-get-heading t t t t)))  ; Get heading without tags, todo, etc.
-         ;; If a heading exists and begins with "#", collapse it
-         (when (and heading (string-prefix-p "#" heading))
+       (let ((heading (org-get-heading t t t t)))  ; without tags, todo, etc.
+         (when (or (and heading (string-prefix-p "#" heading))
+                   (equal (org-entry-get nil "VISIBILITY") "folded"))
            (outline-hide-subtree))))
      nil 'file))
 
   (add-hook 'find-file-hook
-			(lambda ()
+            (lambda ()
               (when (derived-mode-p 'org-mode)
-				(my/org-hide-hash-headings))))
+                (my/org-autofold-headings))))
 
   ;; RESET FOLDS TO LAUNCH LAYOUT
   ;; Re-runs the same steps that fold a file when it is opened.
@@ -2390,7 +2396,7 @@ repeating task is back to TODO by then and stays open."
         (org-cycle-set-startup-visibility)    ; #+STARTUP / org-startup-folded, drawers
         (my/org-hide-drawers-global)
         (my/org-hide-done-entries-dynamic)
-        (my/org-hide-hash-headings))
+        (my/org-autofold-headings))
       ;; Don't leave point inside hidden text.
       (when (invisible-p (point))
         (outline-previous-visible-heading 1))
@@ -2473,7 +2479,7 @@ the current heading."
   (start/org-capture--pick-child "Inbox section: " start/org-inbox-heading))
 
 (defun start/org-capture-goto-sysmgmt-section ()
-  "Capture target: a section under the #System heading, picked with completion."
+  "Capture target: a section under the System heading, picked with completion."
   (widen)
   (let ((pos (org-find-exact-headline-in-buffer start/org-sysmgmt-heading nil t)))
     (unless pos
