@@ -646,7 +646,7 @@ server-side job.
 ## Voice Rules
 
 Editing helper for the `VOICE_*` properties read by the Home Assistant voice
-engine (see `HANDOFF-voice-org-engine.md`). Rules live in property drawers and
+engine (`voice/org_voice.py`; documented in `docs/voice/`). Rules live in property drawers and
 apply to the whole subtree; per-file defaults come from `#+PROPERTY:` lines, and
 engine-wide settings live in `~/org/main/.voice.toml`, outside Emacs.
 

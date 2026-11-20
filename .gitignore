@@ -130,3 +130,5 @@ TODO
 
 # Python bytecode from voice/
 __pycache__/
+# Engine state when run from the repo without VOICE_STATE_DIR
+voice/.voice*

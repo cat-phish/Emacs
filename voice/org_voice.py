@@ -1610,15 +1610,20 @@ def main():
     args += ["", ""]
     verb, text = args[0].strip().lower(), args[1]
     print(f"voice: {verb} {text!r}", file=sys.stderr)
-    lock = open(os.path.join(STATE_DIR, ".voice.lock"), "w")
     try:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+        lock = open(os.path.join(STATE_DIR, ".voice.lock"), "w")
+    except OSError:   # read-only directory (a dry run from ~/.config/emacs): run unlocked
+        lock = None
+    try:
+        if lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
         out, changes = run(verb, text, dry_run=dry)
     except Exception as e:   # never crash the automation
         print(f"voice failed: {e!r}", file=sys.stderr)
         out, changes = {"say": "Sorry, something went wrong updating your lists.", "ask": False}, {}
     finally:
-        lock.close()
+        if lock:
+            lock.close()
     print(json.dumps(out))
     if dry:
         for path, (old, new) in changes.items():
