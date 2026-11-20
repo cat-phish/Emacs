@@ -515,6 +515,32 @@ Nothing happens when the file didn't change (a plain `SPC b r`). Folding only
 adds overlays, so the buffer is never marked modified.
 
 
+## Merge External Edits Into Unsaved Org Buffers
+
+Auto-revert won't touch a buffer with unsaved changes. So if Tasks.org has
+unsaved edits when a voice script changes the file, the buffer goes stale:
+the first keystroke asks whether to edit anyway, and the next save asks to
+overwrite the file, which would drop the voice edit.
+
+For Org buffers under `start/org-root`, Emacs keeps the text it last read or
+wrote (the base). When the file changes on disk while the buffer is modified,
+it runs `git merge-file` on base, buffer and disk:
+
+-   ****Clean merge:**** the merged text replaces the buffer, keeping folds, point
+    and windows. Entries completed by voice fold, using the same code as
+    "Fold Entries Completed Outside Emacs". Then it saves.
+-   ****Same lines edited on both sides:**** the conflict goes into the buffer with
+    `smerge-mode` (`smerge-keep-upper` keeps yours, `smerge-keep-lower` keeps the
+    disk version). Saving, including the idle auto-save, is blocked until no
+    conflict markers are left, so they never reach the file or the server.
+-   ****Only the modified flag is set, with no text changes**** (org-indent and
+    fontification can do this): it reverts normally.
+
+This runs from auto-revert and before every save, and it skips the "file
+changed on disk; really edit?" prompt. Without git it does nothing, and the
+old prompts come back.
+
+
 ## Trigger Syncthing Sync on Save
 
 Uses syncthingtray to request a syncthing

@@ -44,6 +44,7 @@
     - [[#hide-properties-drawers][Hide Properties Drawers]]
     - [[#preserve-folds-on-auto-revert][Preserve Folds on Auto-Revert]]
     - [[#fold-entries-completed-outside-emacs][Fold Entries Completed Outside Emacs]]
+    - [[#merge-external-edits-into-unsaved-org-buffers][Merge External Edits Into Unsaved Org Buffers]]
     - [[#trigger-syncthing-sync-on-save][Trigger Syncthing Sync on Save]]
     - [[#copy-inside-code-blocks][Copy Inside Code Blocks]]
 - [[#org-mode][Org Mode]]
@@ -1421,6 +1422,10 @@ add more matches to the filter as well.
       (when (and (derived-mode-p 'org-mode)
                  (buffer-file-name)
                  (buffer-modified-p)
+                 ;; Unresolved merge conflict markers (see "Merge External
+                 ;; Edits Into Unsaved Org Buffers") must not be saved.
+                 (not (and (fboundp 'start/org-sync-conflict-p)
+                           (start/org-sync-conflict-p)))
     			 (not
     			  ;; Exempt buffer names
     			  (string-match-p "init\\.org" (buffer-file-name))
@@ -2459,18 +2464,21 @@ drawer, change the line's text instead of the whole line."
 
   (defun my/org-repair-stealth-drawers (beg end _len)
     "After-change: re-hide around hidden-drawer overlays the change broke."
-    (let ((broken (seq-filter (lambda (ov) (and (overlay-get ov 'my-stealth-drawer)
-                                                (not (my/org-stealth-drawer-intact-p ov))))
-                              (overlays-in (max (point-min) (1- beg))
-                                           (min (point-max) (1+ end))))))
-      (dolist (ov broken)
-        (let ((s (overlay-start ov)) (e (overlay-end ov)))
-          (delete-overlay ov)
-          ;; Hides the span again only where it still holds a whole drawer.
-          (save-excursion
-            (my/hide-drawers-completely
-             (progn (goto-char s) (line-beginning-position))
-             (progn (goto-char (min (point-max) (1+ e))) (line-end-position))))))))
+    ;; Change hooks must not clobber the match data: commands like
+    ;; `smerge-keep-upper' edit and then keep using it.
+    (save-match-data
+      (let ((broken (seq-filter (lambda (ov) (and (overlay-get ov 'my-stealth-drawer)
+                                                  (not (my/org-stealth-drawer-intact-p ov))))
+                                (overlays-in (max (point-min) (1- beg))
+                                             (min (point-max) (1+ end))))))
+        (dolist (ov broken)
+          (let ((s (overlay-start ov)) (e (overlay-end ov)))
+            (delete-overlay ov)
+            ;; Hides the span again only where it still holds a whole drawer.
+            (save-excursion
+              (my/hide-drawers-completely
+               (progn (goto-char s) (line-beginning-position))
+               (progn (goto-char (min (point-max) (1+ e))) (line-end-position)))))))))
   (add-hook 'org-mode-hook
             (lambda () (add-hook 'after-change-functions #'my/org-repair-stealth-drawers nil t)))
 
@@ -2742,6 +2750,187 @@ heading line up to that newline before the next heading."
 (add-hook 'before-revert-hook #'start/org-revert-snapshot)
 ;; Run after `start/org-after-revert-refold' has re-hidden the drawers.
 (add-hook 'after-revert-hook #'start/org-revert-restore-folds 90)
+#+end_src
+** Merge External Edits Into Unsaved Org Buffers
+Auto-revert won't touch a buffer with unsaved changes. So if Tasks.org has
+unsaved edits when a voice script changes the file, the buffer goes stale:
+the first keystroke asks whether to edit anyway, and the next save asks to
+overwrite the file, which would drop the voice edit.
+
+For Org buffers under =start/org-root=, Emacs keeps the text it last read or
+wrote (the base). When the file changes on disk while the buffer is modified,
+it runs =git merge-file= on base, buffer and disk:
+- **Clean merge:** the merged text replaces the buffer, keeping folds, point
+  and windows. Entries completed by voice fold, using the same code as
+  "Fold Entries Completed Outside Emacs". Then it saves.
+- **Same lines edited on both sides:** the conflict goes into the buffer with
+  =smerge-mode= (=smerge-keep-upper= keeps yours, =smerge-keep-lower= keeps the
+  disk version). Saving, including the idle auto-save, is blocked until no
+  conflict markers are left, so they never reach the file or the server.
+- **Only the modified flag is set, with no text changes** (org-indent and
+  fontification can do this): it reverts normally.
+
+This runs from auto-revert and before every save, and it skips the "file
+changed on disk; really edit?" prompt. Without git it does nothing, and the
+old prompts come back.
+#+begin_src emacs-lisp
+(defvar-local start/org-sync--base nil
+  "File text as this buffer last read or wrote it: the merge ancestor.")
+(put 'start/org-sync--base 'permanent-local t)
+
+(defvar-local start/org-sync--conflict nil
+  "Non-nil while this buffer holds unresolved merge conflict markers.")
+(put 'start/org-sync--conflict 'permanent-local t)
+
+(defun start/org-sync--applies-p ()
+  "Non-nil if external edits to this buffer's file get merged."
+  (and (start/org-revert--applies-p) (executable-find "git")))
+
+(defun start/org-sync--text ()
+  "Return the whole buffer text without properties."
+  (save-restriction
+    (widen)
+    (buffer-substring-no-properties (point-min) (point-max))))
+
+(defun start/org-sync-remember-base ()
+  "Record the buffer text as the merge base (it matches the file now)."
+  (when (start/org-sync--applies-p)
+    (setq start/org-sync--base (start/org-sync--text))))
+(add-hook 'find-file-hook #'start/org-sync-remember-base)
+(add-hook 'after-save-hook #'start/org-sync-remember-base)
+(add-hook 'after-revert-hook #'start/org-sync-remember-base)
+
+(defun start/org-sync--disk-newer-p ()
+  "Non-nil if the visited file changed on disk since Emacs last read or wrote it."
+  (and buffer-file-name
+       (file-exists-p buffer-file-name)
+       (not (verify-visited-file-modtime (current-buffer)))))
+
+(defun start/org-sync--read-disk ()
+  "Return the visited file's current text, decoded like the buffer."
+  (let ((coding buffer-file-coding-system)
+        (file buffer-file-name))
+    (with-temp-buffer
+      (let ((coding-system-for-read coding))
+        (insert-file-contents file))
+      (buffer-string))))
+
+(defun start/org-sync--merge-texts (ours base theirs)
+  "Three-way merge with git. Return (CONFLICTS . MERGED-TEXT)."
+  (let ((files (list (make-temp-file "org-sync-ours")
+                     (make-temp-file "org-sync-base")
+                     (make-temp-file "org-sync-disk"))))
+    (unwind-protect
+        (progn
+          (cl-mapc (lambda (file text)
+                     (let ((coding-system-for-write 'utf-8-unix))
+                       (write-region text nil file nil 'silent)))
+                   files (list ours base theirs))
+          (with-temp-buffer
+            (let* ((coding-system-for-read 'utf-8-unix)
+                   (code (apply #'call-process "git" nil t nil "merge-file" "-p"
+                                "-L" "Emacs" "-L" "saved" "-L" "disk" files)))
+              ;; The exit code is the number of conflicts; >= 128 means git failed.
+              (unless (and (integerp code) (<= 0 code 127))
+                (error "git merge-file failed (%s): %s" code (buffer-string)))
+              (cons code (buffer-string)))))
+      (mapc #'delete-file files))))
+
+(defun start/org-sync--replace-text (text)
+  "Replace the buffer with TEXT, touching only the parts that differ."
+  (let ((src (generate-new-buffer " *org-sync*")))
+    (unwind-protect
+        (progn
+          (with-current-buffer src (insert text))
+          (save-restriction
+            (widen)
+            (org-fold-core-ignore-modifications
+              (if (version< emacs-version "31")
+                  (with-no-warnings (replace-buffer-contents src))
+                (replace-region-contents (point-min) (point-max) src)))))
+      (kill-buffer src))))
+
+(defun start/org-sync-merge (&optional no-save)
+  "Merge the file's external changes into this modified buffer.
+Saves the result unless NO-SAVE (set when called from `before-save-hook',
+by the save advice, where the save is already under way). Returns non-nil
+if conflicts remain."
+  (when (and (start/org-sync--applies-p)
+             (buffer-modified-p)
+             start/org-sync--base
+             (start/org-sync--disk-newer-p))
+    (with-demoted-errors "Org sync merge failed: %S"
+      (let ((ours (start/org-sync--text))
+            (base start/org-sync--base)
+            (theirs (start/org-sync--read-disk)))
+        (cond
+         ;; Only the modified flag was set: reload as auto-revert would.
+         ((equal ours base)
+          (set-buffer-modified-p nil)
+          (revert-buffer t t t)
+          nil)
+         ;; The disk text is unchanged (touched, or our own save came back).
+         ((or (equal theirs base) (equal theirs ours))
+          (setq start/org-sync--base theirs)
+          (set-visited-file-modtime)
+          (when (equal theirs ours) (set-buffer-modified-p nil))
+          nil)
+         (t
+          (pcase-let ((`(,conflicts . ,merged) (start/org-sync--merge-texts ours base theirs)))
+            ;; Same snapshot/restore as a revert: folds, point, windows, and
+            ;; folding entries that voice completed.
+            (start/org-revert-snapshot)
+            (start/org-sync--replace-text merged)
+            (start/org-revert-restore-folds)
+            (setq start/org-sync--base theirs)
+            (set-visited-file-modtime)
+            (if (zerop conflicts)
+                (progn
+                  (message "Merged external changes into %s" (buffer-name))
+                  (unless no-save (save-buffer))
+                  nil)
+              (setq start/org-sync--conflict t)
+              (require 'smerge-mode)
+              (smerge-mode 1)
+              (display-warning
+               'org-sync
+               (format "%s: %d conflict(s) with external changes. Resolve them with smerge (keep upper = yours, lower = disk); saving is blocked until then."
+                       (buffer-name) conflicts))
+              t))))))))
+
+(defun start/org-sync-conflict-p ()
+  "Non-nil if this buffer still has merge conflict markers.
+Clears `start/org-sync--conflict' once none are left."
+  (when start/org-sync--conflict
+    (require 'smerge-mode)
+    (or (save-excursion
+          (save-restriction
+            (widen)
+            (goto-char (point-min))
+            (re-search-forward smerge-begin-re nil t)))
+        (progn (setq start/org-sync--conflict nil) nil))))
+
+(defun start/org-sync-before-save (&rest _)
+  "Merge external changes before saving, and refuse to save conflict markers."
+  (when (start/org-sync--applies-p)
+    (start/org-sync-merge t)
+    (when (start/org-sync-conflict-p)
+      (user-error "Resolve the merge conflicts in %s before saving" (buffer-name)))))
+;; Advice rather than `before-save-hook': `basic-save-buffer' asks "changed
+;; since visited, save anyway?" before it runs that hook.
+(advice-add 'basic-save-buffer :before #'start/org-sync-before-save)
+
+(defun start/org-sync-before-auto-revert (&rest _)
+  "Before auto-revert skips a modified buffer, merge the file's changes into it."
+  (start/org-sync-merge))
+(advice-add 'auto-revert-handler :before #'start/org-sync-before-auto-revert)
+
+(defun start/org-sync-skip-supersession-prompt (orig &rest args)
+  "Allow editing a buffer whose file changed on disk; the merge reconciles it."
+  (unless (start/org-sync--applies-p)
+    (apply orig args)))
+(advice-add 'ask-user-about-supersession-threat :around
+            #'start/org-sync-skip-supersession-prompt)
 #+end_src
 ** Trigger Syncthing Sync on Save
 Uses syncthingtray to request a syncthing
