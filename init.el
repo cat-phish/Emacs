@@ -1415,12 +1415,74 @@ Pushes the inverse entry (with OTHER-RUNS) so redo restores those folds."
 (defun start/org-sort-by-state ()
   "Sort children by TODO state (see `start/org-sort-state-order')."
   (interactive) (start/org-sort-by '(state)))
+;; Title sorts also sort the heading's own checklist, Orgzly-style: open
+;; items ([ ] and [-]) first, then checked ones, each group by text.
+(defun start/org-sort--checklist-key ()
+  "Return (CHECKEDP . TEXT) for the item at point."
+  (save-excursion
+    (forward-line 0)
+    (if (looking-at org-list-full-item-re)
+        (cons (equal (match-string 3) "[X]")
+              (downcase (string-trim (buffer-substring-no-properties
+                                      (match-end 0) (line-end-position)))))
+      '(nil . ""))))
+
+(defun start/org-sort--checklist-less (a b reverse)
+  "Non-nil if checklist key A goes before B; REVERSE flips only the text order."
+  ;; `org-sort-list' gives nil when its own item regexp fails; treat that as
+  ;; an empty open item.
+  (let ((a (or a '(nil . ""))) (b (or b '(nil . ""))))
+    (cond ((and (car b) (not (car a))) t)
+          ((and (car a) (not (car b))) nil)
+          (reverse (string< (cdr b) (cdr a)))
+          (t (string< (cdr a) (cdr b))))))
+
+(defun start/org-sort-checklists (&optional reverse)
+  "Sort the top-level plain lists in the body of the heading at point.
+Only the heading's own text (up to its first child) is touched. Return the
+number of lists sorted."
+  (if (org-before-first-heading-p)
+      0
+    (save-excursion
+      (org-back-to-heading t)
+      (let ((end (copy-marker (save-excursion (outline-next-heading) (point))))
+            (count 0))
+        (org-end-of-meta-data t)
+        (while (re-search-forward (org-item-beginning-re) end t)
+          (forward-line 0)
+          (let* ((struct (org-list-struct))
+                 (top (org-list-get-top-point struct))
+                 (bottom (copy-marker (org-list-get-bottom-point struct))))
+            (goto-char top)
+            (let ((inhibit-message t))
+              (org-sort-list nil ?f #'start/org-sort--checklist-key
+                             (lambda (a b) (start/org-sort--checklist-less a b reverse))))
+            (cl-incf count)
+            (goto-char bottom)
+            (set-marker bottom nil)))
+        (set-marker end nil)
+        count))))
+
+(defun start/org-sort--has-children-p ()
+  "Non-nil if `org-sort-entries' at point has headings to sort."
+  (or (use-region-p)
+      (org-before-first-heading-p)
+      (save-excursion (org-back-to-heading t) (org-goto-first-child))))
+
+(defun start/org-sort-title-and-checklist (reverse)
+  "Sort the heading's own checklist, then its children by title."
+  (let ((lists (save-excursion (start/org-sort-checklists reverse))))
+    (cond ((start/org-sort--has-children-p)
+           (start/org-sort-by (if reverse '(.title) '(title))))
+          ((> lists 0) (message "Sorted checklist"))
+          (t (user-error "Nothing to sort")))))
+
 (defun start/org-sort-by-title ()
-  "Sort children by title, A–Z."
-  (interactive) (start/org-sort-by '(title)))
+  "Sort children by title, A–Z, and the heading's own checklist."
+  (interactive) (start/org-sort-title-and-checklist nil))
 (defun start/org-sort-by-title-reverse ()
-  "Sort children by title, Z–A."
-  (interactive) (start/org-sort-by '(.title)))
+  "Sort children by title, Z–A, and the heading's own checklist."
+  (interactive) (start/org-sort-title-and-checklist t))
 (defun start/org-sort-by-created ()
   "Sort children by the CREATED property."
   (interactive) (start/org-sort-by '(created)))

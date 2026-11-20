@@ -456,6 +456,11 @@ with `.` to reverse it (`.priority`). Entries missing a value (no date, no
 `:CREATED:`) always go last. The file is actually reordered, so `u` undoes it.
 `SPC o S o` is still the classic `org-sort` for lists and tables.
 
+The title sorts (`SPC o S a` / `A`) also sort the plain lists in the heading's
+own body, Orgzly-style: open items (`[ ]`, `[-]`) first, then checked ones, each
+group by text. Sub-items move with their parent; lists under child headings are
+left alone.
+
 Keys: `state` (order from `start/org-sort-state-order`), `priority`,
 `scheduled`, `deadline`, `title`, `created` (`:CREATED:` property).
 
